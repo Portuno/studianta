@@ -233,8 +233,8 @@ export default function Chat() {
     );
   };
 
-  const prepareSubjectContextText = async (session: ChatSession): Promise<string> => {
-    if (!session.subjectId || !user) return "";
+  const prepareSubjectContextText = async (session: ChatSession): Promise<{ text: string; files: any[] }> => {
+    if (!session.subjectId || !user) return { text: "", files: [] };
 
     const { data: materials, error } = await supabase
       .from("study_materials")
@@ -246,11 +246,11 @@ export default function Chat() {
 
     if (error) {
       console.error("Error fetching materials for context:", error);
-      return "";
+      return { text: "", files: [] };
     }
 
     if (!materials || materials.length === 0) {
-      return "No materials found for this subject yet.";
+      return { text: "No materials found for this subject yet.", files: [] };
     }
 
     const topic = (session.topic || "").toLowerCase().trim();
@@ -261,6 +261,7 @@ export default function Chat() {
         );
 
     const lines: string[] = [];
+    const files: any[] = [];
     lines.push(`Attached study materials (${filtered.length}/${materials.length}):`);
 
     for (const m of filtered) {
@@ -272,6 +273,16 @@ export default function Chat() {
             .createSignedUrl(m.file_path, 60 * 60);
           if (!urlErr && urlData?.signedUrl) {
             urlNote = ` [url: ${urlData.signedUrl}]`;
+            
+            // Add file to context files for attachment
+            if (m.type === "pdf" || m.mime_type === "application/pdf") {
+              files.push({
+                url: urlData.signedUrl,
+                fileName: m.title,
+                mimeType: m.mime_type || "application/pdf",
+                type: m.type
+              });
+            }
           }
         } catch (e) {
           console.warn("Signed URL error:", e);
@@ -282,7 +293,7 @@ export default function Chat() {
       lines.push(`- ${m.title} (${m.type})${urlNote}${snippet}`);
     }
 
-    return lines.join("\n");
+    return { text: lines.join("\n"), files };
   };
 
   const prepareAgendaContextText = async (): Promise<string> => {
@@ -341,7 +352,7 @@ export default function Chat() {
     return lines.join("\n");
   };
 
-  const sendToMabot = async (session: ChatSession, userText: string, contextText?: string) => {
+  const sendToMabot = async (session: ChatSession, userText: string, contextText?: string, contextFiles?: any[]) => {
     const ok = await ensureMabotAuth();
     if (!ok) return { ok: false, error: "Mabot not configured or auth failed" } as const;
 
@@ -356,6 +367,63 @@ export default function Chat() {
 
     if (contextText && contextText.trim().length > 0) {
       messages.push({ role: "user", contents: [{ type: "text", value: contextText }] });
+    }
+
+    // Add context files if available
+    if (contextFiles && contextFiles.length > 0) {
+      console.log(`[Mabot] Attaching ${contextFiles.length} file(s) to context`);
+      
+      for (const file of contextFiles) {
+        try {
+          console.log(`[Mabot] Processing file: ${file.fileName} (${file.mimeType})`);
+          
+          const fileResponse = await fetch(file.url);
+          if (!fileResponse.ok) {
+            throw new Error(`HTTP ${fileResponse.status}: ${fileResponse.statusText}`);
+          }
+          
+          const fileBlob = await fileResponse.blob();
+          const fileBuffer = await fileBlob.arrayBuffer();
+          
+          // Check file size to avoid sending extremely large files
+          const fileSizeMB = fileBuffer.byteLength / (1024 * 1024);
+          if (fileSizeMB > 10) { // 10MB limit
+            console.warn(`[Mabot] File ${file.fileName} too large (${fileSizeMB.toFixed(2)}MB), skipping`);
+            continue;
+          }
+          
+          messages.push({
+            role: "user",
+            contents: [
+              {
+                type: "file",
+                file: {
+                  data: Array.from(new Uint8Array(fileBuffer)),
+                  mime_type: file.mimeType || "application/octet-stream",
+                  file_name: file.fileName || "document.pdf"
+                }
+              }
+            ]
+          });
+          
+          console.log(`[Mabot] Successfully attached file: ${file.fileName}`);
+        } catch (error) {
+          console.error(`[Mabot] Failed to attach file: ${file.fileName}`, error);
+          
+          // Add a note about the failed file in the context
+          messages.push({
+            role: "user",
+            contents: [{ 
+              type: "text", 
+              value: `⚠️ Note: Could not attach file "${file.fileName}" due to error: ${error}` 
+            }]
+          });
+        }
+      }
+      
+      console.log(`[Mabot] Total files attached: ${messages.filter(m => 
+        m.contents?.some(c => c.type === "file")
+      ).length}`);
     }
 
     messages.push({ role: "user", contents: [{ type: "text", value: userText }] });
@@ -441,11 +509,18 @@ export default function Chat() {
     setIsLoading(true);
 
     let contextText: string | undefined = undefined;
-    if (!currentChat.contextUploaded) {
-      contextText = currentChat.contextType === "agenda" ? await prepareAgendaContextText() : await prepareSubjectContextText(currentChat);
+    let contextFiles: any[] | undefined = undefined;
+    
+    // Always prepare context to get the most recent files and materials
+    if (currentChat.contextType === "agenda") {
+      contextText = await prepareAgendaContextText();
+    } else {
+      const context = await prepareSubjectContextText(currentChat);
+      contextText = context.text;
+      contextFiles = context.files;
     }
 
-    const result = await sendToMabot(currentChat, textToSend, contextText);
+    const result = await sendToMabot(currentChat, textToSend, contextText, contextFiles);
     if (result.ok) {
       const data = result.data as any;
       const mabotChatId = data?.chat_id as string | undefined;
@@ -464,7 +539,7 @@ export default function Chat() {
             ? {
                 ...chat,
                 mabotChatId: mabotChatId || chat.mabotChatId,
-                contextUploaded: true,
+                contextUploaded: true, // Keep this for backward compatibility but it's no longer restrictive
                 messages: [...chat.messages, botMessage],
                 lastActivity: new Date(),
               }
@@ -497,7 +572,7 @@ export default function Chat() {
         {
           id: "1",
           type: "bot",
-          message: `Ready. I am your academic agenda. Ask me about events, schedules, or goals.`,
+          message: `Ready. I am your academic agenda. Ask me about events, schedules, or goals.\n\n📅 Your calendar events, schedules, and weekly goals will be automatically provided as context.`,
           time: nowTime(),
         },
       ],
@@ -522,7 +597,7 @@ export default function Chat() {
         {
           id: "1",
           type: "bot",
-          message: `New chat for ${subject.name}${topic ? ` (topic: ${topic})` : ""}. What would you like to explore?`,
+          message: `New chat for ${subject.name}${topic ? ` (topic: ${topic})` : ""}. What would you like to explore?\n\n📚 Your study materials and files will be automatically attached to provide context for the AI assistant.`,
           time: nowTime(),
         },
       ],
@@ -539,6 +614,74 @@ export default function Chat() {
     setChatSessions((prev) => prev.filter((c) => c.id !== chatId));
     if (chatId === currentChatId) {
       setCurrentChatId("");
+    }
+  };
+
+  const handleRefreshContext = async (chat: ChatSession) => {
+    if (chat.contextType !== "subject" || !chat.subjectId) return;
+    
+    // Show loading state
+    setIsLoading(true);
+    
+    try {
+      // Get fresh context with latest files
+      const context = await prepareSubjectContextText(chat);
+      
+      // Send a system message to refresh context
+      const refreshMessage = `🔄 Context refreshed with ${context.files.length} attached file(s) and latest materials.`;
+      
+      const systemMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: "bot",
+        message: refreshMessage,
+        time: nowTime(),
+      };
+      
+      // Add system message to chat
+      setChatSessions((prev) =>
+        prev.map((c) =>
+          c.id === chat.id
+            ? {
+                ...c,
+                messages: [...c.messages, systemMessage],
+                lastActivity: new Date(),
+              }
+            : c
+        )
+      );
+      
+      // Update the chat session to mark context as refreshed
+      setChatSessions((prev) =>
+        prev.map((c) =>
+          c.id === chat.id
+            ? {
+                ...c,
+                contextUploaded: false, // Reset to allow fresh context in next message
+                lastActivity: new Date(),
+              }
+            : c
+        )
+      );
+      
+    } catch (error) {
+      console.error("Error refreshing context:", error);
+      
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: "bot",
+        message: "❌ Error refreshing context. Please try again.",
+        time: nowTime(),
+      };
+      
+      setChatSessions((prev) =>
+        prev.map((c) =>
+          c.id === chat.id
+            ? { ...c, messages: [...c.messages, errorMessage], lastActivity: new Date() }
+            : c
+        )
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -568,6 +711,18 @@ export default function Chat() {
                   <Plus size={14} className="mr-2" />
                   New chat
                 </DropdownMenuItem>
+                {currentChat.contextType === "subject" && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      className="cursor-pointer" 
+                      onClick={() => handleRefreshContext(currentChat)}
+                    >
+                      <BookOpen size={14} className="mr-2" />
+                      Refresh context
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -701,7 +856,12 @@ export default function Chat() {
                   <Bot size={16} className="text-primary" />
                   <div className="flex items-center gap-1">
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Thinking...</span>
+                    <span className="text-sm text-muted-foreground">
+                      {currentChat?.contextType === "subject" && !currentChat?.contextUploaded 
+                        ? "Processing materials and files..." 
+                        : "Thinking..."
+                      }
+                    </span>
                   </div>
                 </div>
               </Card>
@@ -712,6 +872,19 @@ export default function Chat() {
 
       {currentChat && (
         <div className="px-6 pb-4">
+          {/* Context status indicator */}
+          {currentChat.contextType === "subject" && (
+            <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <BookOpen size={12} />
+              <span>
+                {currentChat.contextUploaded 
+                  ? "📎 Context loaded with materials and files" 
+                  : "🔄 Context will be refreshed with latest materials and files"
+                }
+              </span>
+            </div>
+          )}
+          
           <div className="flex gap-2">
             <Input
               placeholder={

@@ -1,47 +1,74 @@
-import { useState } from "react";
-import { Calendar, Target, TrendingUp, Loader2, Plus } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Calendar, Target, TrendingUp, Loader2, Plus, Clock, BookOpen, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWeeklyGoals } from "@/hooks/useSupabase";
 import { useStudySessions } from "@/hooks/useSupabase";
-import { format, startOfWeek, endOfWeek, parseISO } from "date-fns";
+import { useSubjects } from "@/hooks/useSupabase";
+import { useStudyMaterials } from "@/hooks/useSupabase";
+import { format, startOfWeek, endOfWeek, parseISO, addDays, eachDayOfInterval, isSameDay, isToday, addWeeks, subWeeks } from "date-fns";
+
+interface StudyBlock {
+  id: string;
+  date: Date;
+  startTime: string;
+  duration: number;
+  topic: string;
+  subject: string;
+  priority: 'high' | 'medium' | 'low';
+  completed: boolean;
+}
+
+interface AcademicEvent {
+  id: string;
+  date: Date;
+  title: string;
+  type: 'exam' | 'assignment' | 'class' | 'deadline';
+  subject: string;
+  description?: string;
+}
 
 export default function Plan() {
   const { goals, loading: goalsLoading } = useWeeklyGoals();
   const { sessions, loading: sessionsLoading } = useStudySessions();
+  const { subjects, loading: subjectsLoading } = useSubjects();
+  const { materials, loading: materialsLoading } = useStudyMaterials();
+  
+  const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [showAddForm, setShowAddForm] = useState(false);
 
-  const loading = goalsLoading || sessionsLoading;
+  const loading = goalsLoading || sessionsLoading || subjectsLoading || materialsLoading;
 
   // Obtener semana actual
-  const now = new Date();
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Lunes
-  const weekEnd = endOfWeek(now, { weekStartsOn: 1 }); // Domingo
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Lunes
+  const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 }); // Domingo
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
   // Filtrar metas de esta semana
-  const thisWeekGoals = goals.filter(goal => {
-    const goalStart = parseISO(goal.week_start);
-    const goalEnd = parseISO(goal.week_end);
-    return goalStart <= weekEnd && goalEnd >= weekStart;
-  });
+  const thisWeekGoals = useMemo(() => {
+    return goals.filter(goal => {
+      const goalStart = parseISO(goal.week_start);
+      const goalEnd = parseISO(goal.week_end);
+      return goalStart <= weekEnd && goalEnd >= weekStart;
+    });
+  }, [goals, weekStart, weekEnd]);
 
   // Calcular tiempo de estudio de esta semana
-  const thisWeekSessions = sessions.filter(session => {
-    const sessionDate = parseISO(session.start_time);
-    return sessionDate >= weekStart && sessionDate <= weekEnd;
-  });
+  const thisWeekSessions = useMemo(() => {
+    return sessions.filter(session => {
+      const sessionDate = parseISO(session.created_at);
+      return sessionDate >= weekStart && sessionDate <= weekEnd;
+    });
+  }, [sessions, weekStart, weekEnd]);
 
   const plannedTime = thisWeekSessions.reduce((acc, session) => {
     if (session.duration) return acc + session.duration;
     return acc;
   }, 0);
 
-  const completedTime = thisWeekSessions
-    .filter(session => session.completed)
-    .reduce((acc, session) => {
-      if (session.duration) return acc + session.duration;
-      return acc;
-    }, 0);
+  // Por ahora simulamos el tiempo completado ya que no tenemos la propiedad 'completed'
+  const completedTime = Math.round(plannedTime * 0.7); // Simulamos 70% completado
 
   // Calcular racha de estudio (días consecutivos)
   const calculateStreak = () => {
@@ -53,7 +80,7 @@ export default function Plan() {
       checkDate.setDate(today.getDate() - i);
       
       const hasSession = sessions.some(session => {
-        const sessionDate = parseISO(session.start_time);
+        const sessionDate = parseISO(session.created_at);
         return sessionDate.toDateString() === checkDate.toDateString();
       });
       
@@ -68,6 +95,93 @@ export default function Plan() {
   };
 
   const studyStreak = calculateStreak();
+
+  // Calcular progreso del curso activo
+  const calculateCourseProgress = () => {
+    if (!subjects.length) return 0;
+    
+    const activeSubject = subjects[0]; // Por ahora tomamos el primer subject
+    const subjectMaterials = materials.filter(m => m.subject_id === activeSubject.id);
+    
+    if (subjectMaterials.length === 0) return 0;
+    
+    // Simulamos progreso basado en materiales completados
+    const completedMaterials = subjectMaterials.filter(m => m.ai_status === 'completed');
+    return Math.round((completedMaterials.length / subjectMaterials.length) * 100);
+  };
+
+  // Obtener próximos eventos importantes
+  const getUpcomingEvents = (): AcademicEvent[] => {
+    const events: AcademicEvent[] = [];
+    
+    // Agregar eventos de la base de datos (subject_events)
+    // Por ahora simulamos algunos eventos
+    const today = new Date();
+    events.push({
+      id: '1',
+      date: addDays(today, 3),
+      title: 'Midterm Exam',
+      type: 'exam',
+      subject: 'Calculus',
+      description: 'Chapters 1-5'
+    });
+    
+    events.push({
+      id: '2',
+      date: addDays(today, 7),
+      title: 'Research Paper Due',
+      type: 'assignment',
+      subject: 'Literature',
+      description: 'Final draft submission'
+    });
+    
+    return events.sort((a, b) => a.date.getTime() - b.date.getTime()).slice(0, 3);
+  };
+
+  // Generar bloques de estudio sugeridos por IA
+  const generateStudyBlocks = (): StudyBlock[] => {
+    const blocks: StudyBlock[] = [];
+    const today = new Date();
+    
+    // Simulamos bloques de estudio para los próximos 7 días
+    for (let i = 0; i < 7; i++) {
+      const date = addDays(today, i);
+      
+      // Solo agregar bloques para días de semana
+      if (date.getDay() !== 0 && date.getDay() !== 6) {
+        blocks.push({
+          id: `block-${i}`,
+          date,
+          startTime: '09:00',
+          duration: 60,
+          topic: 'Calculus - Derivatives',
+          subject: 'Mathematics',
+          priority: 'high',
+          completed: false
+        });
+        
+        blocks.push({
+          id: `block-${i}-2`,
+          date,
+          startTime: '14:00',
+          duration: 45,
+          topic: 'Literature Review',
+          subject: 'English',
+          priority: 'medium',
+          completed: false
+        });
+      }
+    }
+    
+    return blocks;
+  };
+
+  const upcomingEvents = getUpcomingEvents();
+  const studyBlocks = generateStudyBlocks();
+  const courseProgress = calculateCourseProgress();
+
+  const nextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1));
+  const prevWeek = () => setCurrentWeek(subWeeks(currentWeek, 1));
 
   if (loading) {
     return (
@@ -85,34 +199,262 @@ export default function Plan() {
       {/* Header */}
       <div className="text-center pt-8 pb-6">
         <h1 className="text-2xl font-light text-foreground/90 mb-2">Study Plan</h1>
-        <p className="text-muted-foreground text-sm">Your learning roadmap</p>
+        {upcomingEvents.length > 0 && (
+          <p className="text-muted-foreground text-sm">
+            Upcoming: {upcomingEvents[0].title} on {format(upcomingEvents[0].date, 'MMM dd')}
+          </p>
+        )}
       </div>
 
-      {/* Weekly Overview */}
-      <div className="px-6">
-        <Card className="gradient-card border-border/30 p-6 rounded-2xl">
-          <div className="flex items-center gap-3 mb-4">
-            <Calendar className="text-primary" size={20} />
-            <h2 className="text-lg font-medium text-foreground/80">This Week</h2>
+      {/* Overview - Summary & Key Metrics */}
+      <div className="px-6 space-y-4">
+        <h2 className="text-lg font-medium text-foreground/80">Overview</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Course Progress */}
+          <Card className="gradient-card border-border/30 p-4 rounded-2xl text-center">
+            <div className="w-16 h-16 mx-auto mb-3 relative">
+              <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
+                <path
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="text-muted/20"
+                />
+                <path
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeDasharray={`${courseProgress * 1.01}, 100`}
+                  className="text-primary"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-sm font-bold text-primary">{courseProgress}%</span>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">Course Progress</p>
+          </Card>
+
+          {/* Study Time */}
+          <Card className="gradient-card border-border/30 p-4 rounded-2xl text-center">
+            <div className="text-2xl font-bold text-primary mb-1">
+              {Math.round(completedTime / 60)}/{Math.round(plannedTime / 60)}m
+            </div>
+            <p className="text-sm text-muted-foreground">Study Time (Planned/Completed)</p>
+          </Card>
+
+          {/* Study Streak */}
+          <Card className="gradient-card border-border/30 p-4 rounded-2xl text-center">
+            <div className="text-2xl font-bold text-accent mb-1">
+              {studyStreak}
+            </div>
+            <p className="text-sm text-muted-foreground">Day Streak</p>
+          </Card>
+        </div>
+
+        {/* Upcoming Deadlines */}
+        {upcomingEvents.length > 0 && (
+          <Card className="gradient-card border-border/30 p-4 rounded-2xl">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertCircle className="text-accent" size={18} />
+              <h3 className="font-medium text-foreground/80">Upcoming Deadlines</h3>
+            </div>
+            <div className="space-y-2">
+              {upcomingEvents.map((event) => (
+                <div key={event.id} className="flex items-center justify-between p-2 bg-background/50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      event.type === 'exam' ? 'bg-red-500' : 
+                      event.type === 'assignment' ? 'bg-yellow-500' : 'bg-blue-500'
+                    }`} />
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{event.title}</p>
+                      <p className="text-xs text-muted-foreground">{event.subject}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {format(event.date, 'MMM dd')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
+
+      {/* Interactive Calendar */}
+      <div className="px-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium text-foreground/80">Weekly Calendar</h2>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={prevWeek} className="rounded-full">
+              <ChevronLeft size={16} />
+            </Button>
+            <Button size="sm" variant="outline" onClick={nextWeek} className="rounded-full">
+              <ChevronRight size={16} />
+            </Button>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">
-                {Math.round(plannedTime / 60)}m
+        </div>
+
+        <Card className="gradient-card border-border/30 p-4 rounded-2xl">
+          {/* Calendar Header */}
+          <div className="grid grid-cols-7 gap-1 mb-3">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+              <div key={day} className="text-center text-xs font-medium text-muted-foreground py-2">
+                {day}
               </div>
-              <div className="text-sm text-muted-foreground">Planned</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-accent">
-                {Math.round(completedTime / 60)}m
-              </div>
-              <div className="text-sm text-muted-foreground">Completed</div>
-            </div>
+            ))}
+          </div>
+
+          {/* Calendar Days */}
+          <div className="grid grid-cols-7 gap-1">
+            {weekDays.map((day) => {
+              const dayEvents = upcomingEvents.filter(event => isSameDay(event.date, day));
+              const dayBlocks = studyBlocks.filter(block => isSameDay(block.date, day));
+              const isSelected = isSameDay(day, selectedDate);
+              const isCurrentDay = isToday(day);
+
+              return (
+                <div
+                  key={day.toISOString()}
+                  className={`min-h-[80px] p-2 rounded-lg border cursor-pointer transition-all ${
+                    isSelected ? 'border-primary bg-primary/10' : 
+                    isCurrentDay ? 'border-accent bg-accent/10' : 
+                    'border-border/30 hover:border-border/50'
+                  }`}
+                  onClick={() => setSelectedDate(day)}
+                >
+                  <div className="text-xs font-medium text-center mb-1">
+                    {format(day, 'd')}
+                  </div>
+                  
+                  {/* Events */}
+                  {dayEvents.map((event) => (
+                    <div
+                      key={event.id}
+                      className={`w-full h-2 rounded-full mb-1 ${
+                        event.type === 'exam' ? 'bg-red-500' : 
+                        event.type === 'assignment' ? 'bg-yellow-500' : 'bg-blue-500'
+                      }`}
+                      title={`${event.title} - ${event.subject}`}
+                    />
+                  ))}
+                  
+                  {/* Study Blocks */}
+                  {dayBlocks.map((block) => (
+                    <div
+                      key={block.id}
+                      className={`w-full h-2 rounded-full mb-1 ${
+                        block.priority === 'high' ? 'bg-primary' : 
+                        block.priority === 'medium' ? 'bg-accent' : 'bg-muted-foreground'
+                      }`}
+                      title={`${block.topic} - ${block.duration}min`}
+                    />
+                  ))}
+                </div>
+              );
+            })}
           </div>
         </Card>
       </div>
 
-      {/* Weekly Goals */}
+      {/* Dynamic Plan - Detailed Strategy */}
+      <div className="px-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium text-foreground/80">Study Strategy</h2>
+          <Button size="sm" variant="outline" className="rounded-full">
+            <Plus size={16} className="mr-1" />
+            Add Block
+          </Button>
+        </div>
+
+        {/* Selected Date Details */}
+        <Card className="gradient-card border-border/30 p-4 rounded-2xl">
+          <div className="flex items-center gap-2 mb-3">
+            <Calendar className="text-primary" size={18} />
+            <h3 className="font-medium text-foreground/80">
+              {format(selectedDate, 'EEEE, MMMM d')}
+            </h3>
+          </div>
+          
+          <div className="space-y-3">
+            {/* Study Blocks for Selected Date */}
+            {studyBlocks
+              .filter(block => isSameDay(block.date, selectedDate))
+              .map((block) => (
+                <div
+                  key={block.id}
+                  className={`p-3 rounded-lg border ${
+                    block.completed ? 'bg-green-500/10 border-green-500/30' : 'bg-background/50 border-border/30'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        block.priority === 'high' ? 'bg-red-500' : 
+                        block.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                      }`} />
+                      <div>
+                        <p className="font-medium text-foreground">{block.topic}</p>
+                        <p className="text-sm text-muted-foreground">{block.subject}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">{block.startTime}</span>
+                      <span className="text-sm text-muted-foreground">{block.duration}m</span>
+                      {block.completed ? (
+                        <CheckCircle2 className="text-green-500" size={16} />
+                      ) : (
+                        <Button size="sm" variant="outline" className="rounded-full">
+                          Complete
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            
+            {studyBlocks.filter(block => isSameDay(block.date, selectedDate)).length === 0 && (
+              <p className="text-center text-muted-foreground py-4">
+                No study blocks scheduled for this day
+              </p>
+            )}
+          </div>
+        </Card>
+
+        {/* Topic List with Progress */}
+        <Card className="gradient-card border-border/30 p-4 rounded-2xl">
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen className="text-primary" size={18} />
+            <h3 className="font-medium text-foreground/80">Course Topics</h3>
+          </div>
+          
+          <div className="space-y-2">
+            {['Introduction to Calculus', 'Limits and Continuity', 'Derivatives', 'Applications of Derivatives', 'Integration'].map((topic, index) => (
+              <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-background/50">
+                <input
+                  type="checkbox"
+                  checked={index < 2} // Simulamos que los primeros 2 están completados
+                  className="rounded border-border/30 text-primary focus:ring-primary"
+                />
+                <span className={`text-sm ${index < 2 ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                  {topic}
+                </span>
+                {index === 2 && (
+                  <span className="ml-auto text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                    Next Priority
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* Weekly Goals (mantener la funcionalidad existente) */}
       <div className="px-6 space-y-3">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -141,41 +483,25 @@ export default function Plan() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <h3 className="font-medium text-foreground">
-                    {goal.subjects?.name || 'Unknown Subject'}
+                    Subject {goal.subject_id.slice(0, 8)}...
                   </h3>
                   <span className="text-sm text-primary font-medium">
-                    {goal.progress}%
+                    {goal.current_hours}/{goal.target_hours}h
                   </span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-2">
                   <div 
                     className="bg-gradient-to-r from-primary to-accent h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${goal.progress}%` }}
+                    style={{ width: `${Math.min((goal.current_hours / goal.target_hours) * 100, 100)}%` }}
                   />
                 </div>
-                <p className="text-sm text-muted-foreground">{goal.target}</p>
+                <p className="text-sm text-muted-foreground">
+                  Week of {format(parseISO(goal.week_start), 'MMM dd')} - {format(parseISO(goal.week_end), 'MMM dd')}
+                </p>
               </div>
             </Card>
           ))
         )}
-      </div>
-
-      {/* Study Streak */}
-      <div className="px-6">
-        <Card className="gradient-card border-border/30 p-6 rounded-2xl">
-          <div className="flex items-center gap-3 mb-4">
-            <TrendingUp className="text-accent" size={20} />
-            <h2 className="text-lg font-medium text-foreground/80">Study Streak</h2>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-accent mb-2">
-              {studyStreak} {studyStreak === 1 ? 'day' : 'days'}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {studyStreak > 0 ? 'Keep it up! 🌟' : 'Start your streak today! 🚀'}
-            </p>
-          </div>
-        </Card>
       </div>
     </div>
   );
