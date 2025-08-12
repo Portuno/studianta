@@ -312,9 +312,42 @@ serve(async (req) => {
       if (contents.length === 0) continue;
       normalizedMessages.push({ role, contents });
     }
-    
+
+    // Collapse all user messages into a single message with one text + all files
+    const nonUserMessages = normalizedMessages.filter((m) => m.role !== 'user');
+    const userMessages = normalizedMessages.filter((m) => m.role === 'user');
+
+    let collapsedMessages: any[] = normalizedMessages;
+    if (userMessages.length > 1) {
+      const allFileContents: any[] = [];
+      const textPieces: string[] = [];
+      let textParseMode: string | undefined = 'Markdown';
+
+      for (const um of userMessages) {
+        for (const c of um.contents) {
+          if (c?.type === 'text') {
+            if (typeof c?.value === 'string' && c.value.trim().length > 0) {
+              textPieces.push(c.value);
+            }
+            if (c?.parse_mode) textParseMode = c.parse_mode;
+          } else {
+            allFileContents.push(c);
+          }
+        }
+      }
+
+      const mergedContents: any[] = [];
+      if (textPieces.length > 0) {
+        mergedContents.push({ type: 'text', value: textPieces.join('\n\n'), parse_mode: textParseMode || 'Markdown' });
+      }
+      mergedContents.push(...allFileContents);
+
+      const combinedUserMessage = { role: 'user', contents: mergedContents };
+      collapsedMessages = [...nonUserMessages, combinedUserMessage];
+    }
+
     // Validate that we have messages
-    if (!normalizedMessages || !Array.isArray(normalizedMessages) || normalizedMessages.length === 0) {
+    if (!collapsedMessages || !Array.isArray(collapsedMessages) || collapsedMessages.length === 0) {
       throw new Error('messages array is required and must contain at least one message');
     }
 
@@ -331,7 +364,7 @@ serve(async (req) => {
     // Initialize Supabase client with service role key for admin access
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    console.log(`Sending ${normalizedMessages.length} messages to Mabot for chat`, {
+    console.log(`Sending ${collapsedMessages.length} messages to Mabot for chat`, {
       chat_id: mabotUUID || null,
       platform_chat_id: finalPlatformChatId
     });
@@ -354,7 +387,7 @@ serve(async (req) => {
     const callMabotInput = async (token: string) => {
       const requestBody: any = {
         platform: finalPlatform,
-        messages: normalizedMessages,
+        messages: collapsedMessages,
         bot_username,
         platform_chat_id: finalPlatformChatId,
       };
