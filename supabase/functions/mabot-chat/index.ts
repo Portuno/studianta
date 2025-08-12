@@ -27,28 +27,67 @@ serve(async (req) => {
     // Parse request body
     const { session, userText, contextText, contextFiles } = await req.json()
 
-    if (!session || !session.userId || !session.subjectId) {
-      throw new Error('Session information missing: userId and subjectId required')
+    // Log the received data for debugging
+    console.log('Received request data:', {
+      session: session ? {
+        userId: session.userId,
+        subjectId: session.subjectId,
+        topicId: session.topicId,
+        contextType: session.contextType
+      } : null,
+      userText: userText ? userText.substring(0, 100) + '...' : null,
+      contextTextLength: contextText ? contextText.length : 0,
+      contextFilesCount: contextFiles ? contextFiles.length : 0
+    })
+
+    // Validate session data with better error messages
+    if (!session) {
+      throw new Error('Session object is missing from request')
     }
+
+    if (!session.userId) {
+      console.error('Session data received:', JSON.stringify(session, null, 2))
+      throw new Error('userId is missing from session')
+    }
+
+    // Make subjectId optional - user can chat without selecting a subject
+    const subjectId = session.subjectId || null
+    const topicId = session.topicId || null
+
+    console.log('Processing chat for user:', session.userId, 'subject:', subjectId, 'topic:', topicId)
 
     // Initialize Supabase client with service role key for admin access
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Get or create chat ID
-    const chatId = session.mabotChatId || `web_${session.userId}_${session.subjectId}_${Date.now()}`
+    // Get or create chat ID - handle case where subjectId might be null
+    const chatId = session.mabotChatId || `web_${session.userId}_${subjectId || 'general'}_${Date.now()}`
 
-    // Get unsent study materials from database
-    const { data: studyMaterials, error: materialsError } = await supabase
-      .rpc('get_unsent_study_materials', {
-        p_user_id: session.userId,
-        p_subject_id: session.subjectId,
-        p_topic_id: session.topicId || null,
-        p_chat_id: chatId
-      })
+    // Get unsent study materials from database (only if subjectId exists)
+    let studyMaterials: any[] = []
+    if (subjectId) {
+      try {
+        const { data: materials, error: materialsError } = await supabase
+          .rpc('get_unsent_study_materials', {
+            p_user_id: session.userId,
+            p_subject_id: subjectId,
+            p_topic_id: topicId || null,
+            p_chat_id: chatId
+          })
 
-    if (materialsError) {
-      console.error('Error fetching study materials:', materialsError)
-      throw new Error('Failed to fetch study materials')
+        if (materialsError) {
+          console.error('Error fetching study materials:', materialsError)
+          // Don't fail the entire request for materials error
+          studyMaterials = []
+        } else {
+          studyMaterials = materials || []
+          console.log(`Found ${studyMaterials.length} unsent study materials`)
+        }
+      } catch (error) {
+        console.error('Exception while fetching study materials:', error)
+        studyMaterials = []
+      }
+    } else {
+      console.log('No subjectId provided, skipping study materials fetch')
     }
 
     // Prepare messages for Mabot
@@ -209,10 +248,20 @@ serve(async (req) => {
 })
 
 function buildDeveloperInstruction(session: any): string {
-  const subjectName = session.subjectName || 'the subject'
+  const subjectName = session.subjectName || 'general studies'
   const topic = session.topic || 'general topics'
+  const contextType = session.contextType || 'general'
   
-  return `You are Mabot, an AI study assistant. You're helping a student with ${subjectName}, specifically focusing on ${topic}.
+  let contextDescription = ''
+  if (contextType === 'agenda') {
+    contextDescription = 'You are helping with academic planning, scheduling, and goal setting.'
+  } else if (session.subjectId) {
+    contextDescription = `You are helping with ${subjectName}, specifically focusing on ${topic}.`
+  } else {
+    contextDescription = 'You are helping with general academic questions and study guidance.'
+  }
+  
+  return `You are Mabot, an AI study assistant. ${contextDescription}
 
 Key instructions:
 - Be encouraging and supportive
@@ -223,6 +272,7 @@ Key instructions:
 - If the student uploads files or study materials, analyze them thoroughly and reference their content in your responses
 - When referencing study materials, mention their titles and key points
 - Help the student understand how the materials relate to their current study topic
+- If no specific subject is selected, provide general academic guidance
 
 Current context: ${subjectName} - ${topic}
 

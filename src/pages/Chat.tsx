@@ -427,7 +427,14 @@ export default function Chat() {
           "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
-          session,
+          session: {
+            userId: user?.id,
+            subjectId: session.subjectId,
+            topicId: session.topic,
+            mabotChatId: session.mabotChatId,
+            subjectName: session.subjectName,
+            contextType: session.contextType
+          },
           userText,
           contextText,
           contextFiles
