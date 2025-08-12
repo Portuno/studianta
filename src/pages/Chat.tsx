@@ -409,15 +409,6 @@ export default function Chat() {
 
     messages.push({ role: "user", contents: [{ type: "text", value: userText }] });
 
-    const payload = {
-      platform: "web",
-      chat_id: session.mabotChatId || null,
-      platform_chat_id: platformChatId,
-      bot_username: "cuaderbot",
-      prefix_with_bot_name: false,
-      messages,
-    };
-
     try {
       // Use Supabase Edge Function for Mabot communication
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mabot-chat`, {
@@ -427,6 +418,12 @@ export default function Chat() {
           "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
+          platform: "web",
+          bot_username: "cuaderbot",
+          chat_id: session.mabotChatId || null,
+          platform_chat_id: platformChatId,
+          messages,
+          // legacy support fields also sent for compatibility
           session: {
             userId: user?.id,
             subjectId: session.subjectId,
@@ -448,7 +445,7 @@ export default function Chat() {
       }
 
       const data = await res.json();
-      return { ok: true, data: data.data } as const;
+      return { ok: true, data } as const;
     } catch (error) {
       console.error("[Mabot Error]", error);
       return { ok: false, error: "Network error" } as const;
@@ -505,9 +502,10 @@ export default function Chat() {
 
     const result = await sendToMabot(currentChat, textToSend, contextText, contextFiles);
     if (result.ok) {
-      const data = result.data as any;
-      const mabotChatId = data?.chat_id as string | undefined;
-      const plainText = extractAssistantText(data) || "...";
+      const payload = result.data as any;
+      const apiData = payload?.data;
+      const resolvedChatId: string | undefined = payload?.chatId || apiData?.chat_id;
+      const plainText = extractAssistantText(apiData) || "...";
 
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -521,8 +519,8 @@ export default function Chat() {
           chat.id === currentChatId
             ? {
                 ...chat,
-                mabotChatId: mabotChatId || chat.mabotChatId,
-                contextUploaded: true, // Keep this for backward compatibility but it's no longer restrictive
+                mabotChatId: resolvedChatId || chat.mabotChatId,
+                contextUploaded: true,
                 messages: [...chat.messages, botMessage],
                 lastActivity: new Date(),
               }
