@@ -38,10 +38,8 @@ serve(async (req) => {
       platform_chat_id
     });
     
-    // Validate required fields
-    if (!platform) {
-      throw new Error('platform is required');
-    }
+    // Validate required fields - make platform optional with default
+    const finalPlatform = platform || 'web';
     
     if (!messages || !Array.isArray(messages)) {
       throw new Error('messages array is required');
@@ -69,7 +67,7 @@ serve(async (req) => {
         'Authorization': `Basic ${btoa(`${mabotUsername}:${mabotPassword}`)}`
       },
       body: JSON.stringify({
-        platform,
+        platform: finalPlatform,
         messages,
         bot_username,
         chat_id: finalChatId,
