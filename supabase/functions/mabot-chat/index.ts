@@ -98,6 +98,48 @@ serve(async (req) => {
       if (typeof value !== 'string') return false;
       return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
     };
+
+    // Helpers to convert files to base64 and infer names/types expected by Mabot
+    const inferFilenameFromUrl = (url: string, fallback: string): string => {
+      try {
+        const u = new URL(url);
+        const last = u.pathname.split('/').pop() || fallback;
+        return decodeURIComponent(last) || fallback;
+      } catch {
+        return fallback;
+      }
+    };
+
+    const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    };
+
+    const fetchAsBase64 = async (url: string): Promise<{ base64: string; mimetype: string; filename: string }> => {
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        throw new Error(`Failed to fetch file: ${resp.status} ${errText}`);
+      }
+      const contentType = resp.headers.get('content-type') || 'application/octet-stream';
+      const arrayBuf = await resp.arrayBuffer();
+      const base64 = arrayBufferToBase64(arrayBuf);
+      const filename = inferFilenameFromUrl(url, 'file');
+      return { base64, mimetype: contentType, filename };
+    };
+
+    const mapMimeToMabotType = (mimetype: string): 'audio' | 'image' | 'video' | 'document' => {
+      const top = (mimetype || '').split('/')[0];
+      if (top === 'audio') return 'audio';
+      if (top === 'image') return 'image';
+      if (top === 'video') return 'video';
+      if (top === 'text' || top === 'application') return 'document';
+      return 'document';
+    };
     
     // Handle different payload formats
     let finalMessages = messages;
@@ -111,34 +153,168 @@ serve(async (req) => {
       if (contextText && contextText.trim().length > 0) {
         finalMessages.push({
           role: "user",
-          contents: [{ type: "text", value: contextText }]
+          contents: [{ type: "text", value: contextText, parse_mode: "Markdown" }]
         });
       }
       
-      // Add context files if provided
+      // Add context files if provided (download -> base64 -> typed content)
       if (contextFiles && contextFiles.length > 0) {
-        contextFiles.forEach((file: any) => {
-          finalMessages!.push({
-            role: "user",
-            contents: [
-              { type: "text", value: `Context File: ${file.title || 'Untitled'}` },
-              { type: "document", filename: file.title || 'document.pdf', mimetype: file.mime_type || 'application/octet-stream', value: file.url }
-            ]
-          });
-        });
+        for (const file of contextFiles) {
+          try {
+            const sourceUrl: string = file.url;
+            const declaredMime: string | undefined = file.mime_type;
+            const title: string | undefined = file.title;
+            const fetched = await fetchAsBase64(sourceUrl);
+            const effectiveMime = declaredMime || fetched.mimetype;
+            const mabotType = mapMimeToMabotType(effectiveMime);
+
+            const baseFileContent: any = {
+              type: mabotType,
+              filename: title || fetched.filename,
+              mimetype: effectiveMime,
+              value: fetched.base64
+            };
+
+            const contents: any[] = [baseFileContent];
+            // Optional caption as a single text content (keeps at most one text per message)
+            if (title && typeof title === 'string' && title.trim().length > 0) {
+              contents.push({ type: 'text', value: `Context File: ${title}`, parse_mode: 'Markdown' });
+            }
+
+            finalMessages!.push({
+              role: 'user',
+              contents
+            });
+          } catch (err) {
+            console.error('Failed to attach context file', file?.title || file?.url, err);
+            finalMessages!.push({
+              role: 'user',
+              contents: [{ type: 'text', value: `⚠️ Note: Could not attach file "${file?.title || file?.url}".`, parse_mode: 'Markdown' }]
+            });
+          }
+        }
       }
       
       // Add user text if provided
       if (userText && userText.trim().length > 0) {
         finalMessages.push({
           role: "user",
-          contents: [{ type: "text", value: userText }]
+          contents: [{ type: "text", value: userText, parse_mode: "Markdown" }]
         });
       }
     }
+
+    // Normalize any provided messages to Mabot schema
+    const isHttpUrl = (v: unknown): v is string => typeof v === 'string' && /^https?:\/\//i.test(v);
+
+    const normalizeContents = async (contents: any[]): Promise<any[]> => {
+      if (!Array.isArray(contents)) return [];
+      const normalized: any[] = [];
+      for (const c of contents) {
+        if (!c || typeof c !== 'object') continue;
+        // Normalize text
+        if (c.type === 'text') {
+          normalized.push({ type: 'text', value: String(c.value ?? ''), parse_mode: c.parse_mode || 'Markdown' });
+          continue;
+        }
+        // Legacy 'file'
+        if (c.type === 'file') {
+          const m = c.mimetype || c.mime_type || 'application/octet-stream';
+          const t = mapMimeToMabotType(m);
+          let base64 = '';
+          let fileName = c.filename;
+          if (isHttpUrl(c.value)) {
+            const fetched = await fetchAsBase64(c.value);
+            base64 = fetched.base64;
+            fileName = fileName || fetched.filename;
+          } else if (typeof c.value === 'string') {
+            base64 = c.value; // assume already base64
+          }
+          if (!fileName) {
+            // Try to infer from value if it looks like a path, else fallback
+            fileName = inferFilenameFromUrl(String(c.value || ''), 'file');
+          }
+          normalized.push({
+            type: t,
+            filename: fileName,
+            mimetype: m,
+            value: base64
+          });
+          continue;
+        }
+        // Known types: image/audio/video/document
+        if (c.type === 'image' || c.type === 'audio' || c.type === 'video' || c.type === 'document') {
+          const m = c.mimetype || c.mime_type || 'application/octet-stream';
+          let base64 = '';
+          let fileName = c.filename;
+          if (isHttpUrl(c.value)) {
+            const fetched = await fetchAsBase64(c.value);
+            base64 = fetched.base64;
+            fileName = fileName || fetched.filename;
+          } else if (typeof c.value === 'string') {
+            base64 = c.value;
+          }
+          if (!fileName) {
+            fileName = inferFilenameFromUrl(String(c.value || ''), 'file');
+          }
+          normalized.push({
+            type: c.type,
+            filename: fileName,
+            mimetype: m,
+            value: base64
+          });
+          continue;
+        }
+        // Fallback: coerce to document
+        const m = c.mimetype || c.mime_type || 'application/octet-stream';
+        let base64 = '';
+        let fileName = c.filename;
+        if (isHttpUrl(c.value)) {
+          const fetched = await fetchAsBase64(c.value);
+          base64 = fetched.base64;
+          fileName = fileName || fetched.filename;
+        } else if (typeof c.value === 'string') {
+          base64 = c.value;
+        }
+        if (!fileName) {
+          fileName = inferFilenameFromUrl(String(c.value || ''), 'file');
+        }
+        normalized.push({
+          type: 'document',
+          filename: fileName,
+          mimetype: m,
+          value: base64
+        });
+      }
+      // Enforce single text per message by merging extras into the first
+      const textIndices = normalized.map((x, i) => (x.type === 'text' ? i : -1)).filter(i => i >= 0);
+      if (textIndices.length > 1) {
+        const primaryIndex = textIndices[0];
+        let merged = normalized[primaryIndex].value || '';
+        for (let j = 1; j < textIndices.length; j++) {
+          const idx = textIndices[j];
+          const val = normalized[idx]?.value || '';
+          if (val) merged = merged ? `${merged}\n\n${val}` : val;
+        }
+        normalized[primaryIndex].value = merged;
+        // Remove the extra text contents (from the end to keep indices)
+        for (let j = textIndices.length - 1; j >= 1; j--) {
+          normalized.splice(textIndices[j], 1);
+        }
+      }
+      return normalized;
+    };
+
+    const normalizedMessages = [] as any[];
+    for (const msg of finalMessages || []) {
+      const role = msg?.role || 'user';
+      const contents = await normalizeContents(msg?.contents || []);
+      if (contents.length === 0) continue;
+      normalizedMessages.push({ role, contents });
+    }
     
     // Validate that we have messages
-    if (!finalMessages || !Array.isArray(finalMessages) || finalMessages.length === 0) {
+    if (!normalizedMessages || !Array.isArray(normalizedMessages) || normalizedMessages.length === 0) {
       throw new Error('messages array is required and must contain at least one message');
     }
 
@@ -155,7 +331,7 @@ serve(async (req) => {
     // Initialize Supabase client with service role key for admin access
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    console.log(`Sending ${finalMessages.length} messages to Mabot for chat`, {
+    console.log(`Sending ${normalizedMessages.length} messages to Mabot for chat`, {
       chat_id: mabotUUID || null,
       platform_chat_id: finalPlatformChatId
     });
@@ -178,7 +354,7 @@ serve(async (req) => {
     const callMabotInput = async (token: string) => {
       const requestBody: any = {
         platform: finalPlatform,
-        messages: finalMessages,
+        messages: normalizedMessages,
         bot_username,
         platform_chat_id: finalPlatformChatId,
       };
