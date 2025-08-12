@@ -111,18 +111,18 @@ export default function Plan() {
   // Filtrar metas de esta semana
   const thisWeekGoals = useMemo(() => {
     return goals.filter(goal => {
-      const goalStart = parseISO(goal.week_start);
-      const goalEnd = parseISO(goal.week_end);
-      return goalStart <= weekEnd && goalEnd >= weekStart;
-    });
+    const goalStart = parseISO(goal.week_start);
+    const goalEnd = parseISO(goal.week_end);
+    return goalStart <= weekEnd && goalEnd >= weekStart;
+  });
   }, [goals, weekStart, weekEnd]);
 
   // Calcular tiempo de estudio de esta semana
   const thisWeekSessions = useMemo(() => {
     return sessions.filter(session => {
       const sessionDate = parseISO(session.created_at);
-      return sessionDate >= weekStart && sessionDate <= weekEnd;
-    });
+    return sessionDate >= weekStart && sessionDate <= weekEnd;
+  });
   }, [sessions, weekStart, weekEnd]);
 
   const plannedTime = thisWeekSessions.reduce((acc, session) => {
@@ -512,7 +512,7 @@ export default function Plan() {
                     Next Priority
                   </span>
                 )}
-              </div>
+            </div>
             ))}
           </div>
         </Card>
