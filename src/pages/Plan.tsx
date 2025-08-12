@@ -7,6 +7,8 @@ import { useStudySessions } from "@/hooks/useSupabase";
 import { useSubjects } from "@/hooks/useSupabase";
 import { useStudyMaterials } from "@/hooks/useSupabase";
 import { format, startOfWeek, endOfWeek, parseISO, addDays, eachDayOfInterval, isSameDay, isToday, addWeeks, subWeeks } from "date-fns";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StudyBlock {
   id: string;
@@ -29,6 +31,7 @@ interface AcademicEvent {
 }
 
 export default function Plan() {
+  const { user } = useAuth();
   const { goals, loading: goalsLoading } = useWeeklyGoals();
   const { sessions, loading: sessionsLoading } = useStudySessions();
   const { subjects, loading: subjectsLoading } = useSubjects();
@@ -37,13 +40,73 @@ export default function Plan() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showAddForm, setShowAddForm] = useState(false);
+  const [academicEvents, setAcademicEvents] = useState<AcademicEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
 
-  const loading = goalsLoading || sessionsLoading || subjectsLoading || materialsLoading;
+  const loading = goalsLoading || sessionsLoading || subjectsLoading || materialsLoading || eventsLoading;
 
   // Obtener semana actual
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Lunes
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 }); // Domingo
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  // Cargar eventos académicos reales de la base de datos
+  useEffect(() => {
+    const fetchAcademicEvents = async () => {
+      if (!user) return;
+      
+      try {
+        setEventsLoading(true);
+        
+                 // Obtener eventos de subject_events
+         const { data: eventsData, error: eventsError } = await supabase
+           .from('subject_events')
+           .select(`
+             id,
+             name,
+             event_type,
+             event_date,
+             description,
+             subjects(name)
+           `)
+           .eq('user_id', user.id)
+           .gte('event_date', new Date().toISOString().split('T')[0]) // Solo eventos futuros
+           .order('event_date', { ascending: true });
+
+        if (eventsError) {
+          console.error('Error fetching academic events:', eventsError);
+          return;
+        }
+
+                 // Convertir a formato AcademicEvent
+         const events: AcademicEvent[] = eventsData.map(event => ({
+           id: event.id,
+           date: new Date(event.event_date),
+           title: event.name,
+           type: mapEventType(event.event_type),
+           subject: event.subjects?.[0]?.name || 'Unknown Subject',
+           description: event.description || undefined
+         }));
+
+        setAcademicEvents(events);
+      } catch (error) {
+        console.error('Error fetching academic events:', error);
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+
+    fetchAcademicEvents();
+  }, [user]);
+
+  // Mapear tipos de eventos de la base de datos a nuestros tipos
+  const mapEventType = (eventType: string): 'exam' | 'assignment' | 'class' | 'deadline' => {
+    const type = eventType.toLowerCase();
+    if (type.includes('exam') || type.includes('test')) return 'exam';
+    if (type.includes('assignment') || type.includes('homework') || type.includes('paper')) return 'assignment';
+    if (type.includes('class') || type.includes('lecture')) return 'class';
+    return 'deadline';
+  };
 
   // Filtrar metas de esta semana
   const thisWeekGoals = useMemo(() => {
@@ -110,34 +173,6 @@ export default function Plan() {
     return Math.round((completedMaterials.length / subjectMaterials.length) * 100);
   };
 
-  // Obtener próximos eventos importantes
-  const getUpcomingEvents = (): AcademicEvent[] => {
-    const events: AcademicEvent[] = [];
-    
-    // Agregar eventos de la base de datos (subject_events)
-    // Por ahora simulamos algunos eventos
-    const today = new Date();
-    events.push({
-      id: '1',
-      date: addDays(today, 3),
-      title: 'Midterm Exam',
-      type: 'exam',
-      subject: 'Calculus',
-      description: 'Chapters 1-5'
-    });
-    
-    events.push({
-      id: '2',
-      date: addDays(today, 7),
-      title: 'Research Paper Due',
-      type: 'assignment',
-      subject: 'Literature',
-      description: 'Final draft submission'
-    });
-    
-    return events.sort((a, b) => a.date.getTime() - b.date.getTime()).slice(0, 3);
-  };
-
   // Generar bloques de estudio sugeridos por IA
   const generateStudyBlocks = (): StudyBlock[] => {
     const blocks: StudyBlock[] = [];
@@ -176,7 +211,6 @@ export default function Plan() {
     return blocks;
   };
 
-  const upcomingEvents = getUpcomingEvents();
   const studyBlocks = generateStudyBlocks();
   const courseProgress = calculateCourseProgress();
 
@@ -199,9 +233,9 @@ export default function Plan() {
       {/* Header */}
       <div className="text-center pt-8 pb-6">
         <h1 className="text-2xl font-light text-foreground/90 mb-2">Study Plan</h1>
-        {upcomingEvents.length > 0 && (
+        {academicEvents.length > 0 && (
           <p className="text-muted-foreground text-sm">
-            Upcoming: {upcomingEvents[0].title} on {format(upcomingEvents[0].date, 'MMM dd')}
+            Upcoming: {academicEvents[0].title} on {format(academicEvents[0].date, 'MMM dd')}
           </p>
         )}
       </div>
@@ -256,14 +290,14 @@ export default function Plan() {
         </div>
 
         {/* Upcoming Deadlines */}
-        {upcomingEvents.length > 0 && (
+        {academicEvents.length > 0 && (
           <Card className="gradient-card border-border/30 p-4 rounded-2xl">
             <div className="flex items-center gap-2 mb-3">
               <AlertCircle className="text-accent" size={18} />
               <h3 className="font-medium text-foreground/80">Upcoming Deadlines</h3>
             </div>
             <div className="space-y-2">
-              {upcomingEvents.map((event) => (
+              {academicEvents.slice(0, 3).map((event) => (
                 <div key={event.id} className="flex items-center justify-between p-2 bg-background/50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className={`w-2 h-2 rounded-full ${
@@ -312,7 +346,7 @@ export default function Plan() {
           {/* Calendar Days */}
           <div className="grid grid-cols-7 gap-1">
             {weekDays.map((day) => {
-              const dayEvents = upcomingEvents.filter(event => isSameDay(event.date, day));
+              const dayEvents = academicEvents.filter(event => isSameDay(event.date, day));
               const dayBlocks = studyBlocks.filter(block => isSameDay(block.date, day));
               const isSelected = isSameDay(day, selectedDate);
               const isCurrentDay = isToday(day);
@@ -381,6 +415,35 @@ export default function Plan() {
           </div>
           
           <div className="space-y-3">
+            {/* Academic Events for Selected Date */}
+            {academicEvents
+              .filter(event => isSameDay(event.date, selectedDate))
+              .map((event) => (
+                <div
+                  key={event.id}
+                  className="p-3 rounded-lg border bg-background/50 border-border/30"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        event.type === 'exam' ? 'bg-red-500' : 
+                        event.type === 'assignment' ? 'bg-yellow-500' : 'bg-blue-500'
+                      }`} />
+                      <div>
+                        <p className="font-medium text-foreground">{event.title}</p>
+                        <p className="text-sm text-muted-foreground">{event.subject}</p>
+                        {event.description && (
+                          <p className="text-xs text-muted-foreground mt-1">{event.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+
             {/* Study Blocks for Selected Date */}
             {studyBlocks
               .filter(block => isSameDay(block.date, selectedDate))
@@ -417,9 +480,10 @@ export default function Plan() {
                 </div>
               ))}
             
-            {studyBlocks.filter(block => isSameDay(block.date, selectedDate)).length === 0 && (
+            {academicEvents.filter(event => isSameDay(event.date, selectedDate)).length === 0 && 
+             studyBlocks.filter(block => isSameDay(block.date, selectedDate)).length === 0 && (
               <p className="text-center text-muted-foreground py-4">
-                No study blocks scheduled for this day
+                No events or study blocks scheduled for this day
               </p>
             )}
           </div>
