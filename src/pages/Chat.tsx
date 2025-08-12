@@ -88,35 +88,8 @@ export default function Chat() {
   const [selectedSubject, setSelectedSubject] = useState<SubjectRow | null>(null);
   const [topicInput, setTopicInput] = useState("");
 
-  const MABOT_BASE_URL = useMemo(() => {
-    const envAny = (import.meta as any)?.env || {};
-    const fromEnv = envAny.VITE_MABOT_BASE_URL;
-    const fromStorage = typeof window !== "undefined" ? window.localStorage.getItem("mabot_base_url") : null;
-    return (fromStorage || fromEnv || "").toString();
-  }, []);
-
-  const MABOT_USERNAME = useMemo(() => {
-    const envAny = (import.meta as any)?.env || {};
-    const fromEnv = envAny.VITE_MABOT_USERNAME;
-    const fromStorage = typeof window !== "undefined" ? window.localStorage.getItem("mabot_username") : null;
-    return (fromStorage || fromEnv || "").toString();
-  }, []);
-
-  const MABOT_PASSWORD = useMemo(() => {
-    const envAny = (import.meta as any)?.env || {};
-    const fromEnv = envAny.VITE_MABOT_PASSWORD;
-    const fromStorage = typeof window !== "undefined" ? window.localStorage.getItem("mabot_password") : null;
-    return (fromStorage || fromEnv || "").toString();
-  }, []);
-
-  const [mabotAccessToken, setMabotAccessToken] = useState<string>(() =>
-    typeof window !== "undefined" ? window.localStorage.getItem("mabot_access_token") || "" : ""
-  );
-  const [mabotRefreshToken, setMabotRefreshToken] = useState<string>(() =>
-    typeof window !== "undefined" ? window.localStorage.getItem("mabot_refresh_token") || "" : ""
-  );
-
-  const mabotConfigured = Boolean(MABOT_BASE_URL);
+  // Mabot configuration now handled by Supabase Edge Function
+  const mabotConfigured = true; // Always true since we're using Edge Function
 
   const currentChat = chatSessions.find((c) => c.id === currentChatId) || null;
 
@@ -148,28 +121,27 @@ export default function Chat() {
 
   const loginToMabot = async (): Promise<boolean> => {
     try {
-      if (!mabotConfigured || !MABOT_USERNAME || !MABOT_PASSWORD) return false;
-      const body = new URLSearchParams();
-      body.set("username", MABOT_USERNAME);
-      body.set("password", MABOT_PASSWORD);
-      body.set("grant_type", "password");
-      const res = await fetch(`${MABOT_BASE_URL}/auth/login`, {
+      // Use Supabase Edge Function for authentication
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mabot-auth`, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: body.toString(),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
       });
+      
       if (!res.ok) return false;
       const data = await res.json();
-      const access = data?.access_token as string | undefined;
-      const refresh = data?.refresh_token as string | undefined;
-      if (!access || !refresh) return false;
-      setMabotAccessToken(access);
-      setMabotRefreshToken(refresh);
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("mabot_access_token", access);
-        window.localStorage.setItem("mabot_refresh_token", refresh);
+      
+      if (data.success && data.token) {
+        // Store token for future use
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("mabot_token", data.token);
+        }
+        return true;
       }
-      return true;
+      
+      return false;
     } catch (error) {
       console.error("[Mabot Login]", error);
       return false;
@@ -178,32 +150,41 @@ export default function Chat() {
 
   const refreshMabotTokens = async (): Promise<boolean> => {
     try {
-      if (!mabotConfigured || !mabotRefreshToken) return false;
-      const res = await fetch(`${MABOT_BASE_URL}/auth/refresh`, {
+      // Use Supabase Edge Function for token refresh
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mabot-refresh`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: mabotRefreshToken }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
       });
+      
       if (!res.ok) return false;
       const data = await res.json();
-      const access = data?.access_token as string | undefined;
-      const refresh = data?.refresh_token as string | undefined;
-      if (!access || !refresh) return false;
-      setMabotAccessToken(access);
-      setMabotRefreshToken(refresh);
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("mabot_access_token", access);
-        window.localStorage.setItem("mabot_refresh_token", refresh);
+      
+      if (data.success && data.token) {
+        // Store new token
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("mabot_token", data.token);
+        }
+        return true;
       }
-      return true;
-    } catch {
+      
+      return false;
+    } catch (error) {
+      console.error("[Mabot Refresh]", error);
       return false;
     }
   };
 
   const ensureMabotAuth = async (): Promise<boolean> => {
     if (!mabotConfigured) return false;
-    if (mabotAccessToken) return true;
+    
+    // Check if we have a valid token
+    const token = typeof window !== "undefined" ? window.localStorage.getItem("mabot_token") : null;
+    if (token) return true;
+    
+    // Try to login
     if (await loginToMabot()) return true;
     return false;
   };
@@ -437,39 +418,34 @@ export default function Chat() {
       messages,
     };
 
-    const res = await fetch(`${MABOT_BASE_URL}/io/input`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${mabotAccessToken}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.status === 401) {
-      const refreshed = await refreshMabotTokens();
-      if (!refreshed) return { ok: false, error: "Unauthorized" } as const;
-      const retry = await fetch(`${MABOT_BASE_URL}/io/input`, {
+    try {
+      // Use Supabase Edge Function for Mabot communication
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mabot-chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${window.localStorage.getItem("mabot_access_token") || ""}`,
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          session,
+          userText,
+          contextText,
+          contextFiles
+        }),
       });
-      if (!retry.ok) return { ok: false, error: `HTTP ${retry.status}` } as const;
-      const data = await retry.json();
-      return { ok: true, data } as const;
-    }
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error("[Mabot Error]", errorText);
-      return { ok: false, error: `HTTP ${res.status}` } as const;
-    }
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("[Mabot Error]", errorText);
+        return { ok: false, error: `HTTP ${res.status}` } as const;
+      }
 
-    const data = await res.json();
-    return { ok: true, data } as const;
+      const data = await res.json();
+      return { ok: true, data: data.data } as const;
+    } catch (error) {
+      console.error("[Mabot Error]", error);
+      return { ok: false, error: "Network error" } as const;
+    }
   };
 
   const extractAssistantText = (updateOut: any): string => {
@@ -685,7 +661,7 @@ export default function Chat() {
     }
   };
 
-  const showMabotBanner = !mabotConfigured || !MABOT_USERNAME || !MABOT_PASSWORD;
+      const showMabotBanner = !mabotConfigured;
 
   return (
     <div className="flex flex-col h-screen pb-20">
@@ -733,7 +709,7 @@ export default function Chat() {
         <div className="mx-6 mb-2 rounded-xl border border-yellow-300/40 bg-yellow-500/5 px-3 py-2 text-yellow-700 flex items-center gap-2" role="alert" aria-live="polite">
           <AlertTriangle size={16} />
           <p className="text-xs">
-            Configure `VITE_MABOT_BASE_URL`, `VITE_MABOT_USERNAME`, and `VITE_MABOT_PASSWORD` or use localStorage (`mabot_base_url`, `mabot_username`, `mabot_password`).
+            Mabot is now configured through Supabase Edge Functions. Contact your administrator if you need access.
           </p>
         </div>
       )}
