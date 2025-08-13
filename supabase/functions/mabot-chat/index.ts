@@ -204,6 +204,41 @@ serve(async (req) => {
       }
     }
 
+    // NEW: Even when messages are provided, also attach contextFiles (download -> base64 -> contents)
+    if (finalMessages && contextFiles && Array.isArray(contextFiles) && contextFiles.length > 0) {
+      console.log('Appending contextFiles to provided messages:', contextFiles.length);
+      for (const file of contextFiles) {
+        try {
+          const sourceUrl: string = file.url;
+          const declaredMime: string | undefined = file.mime_type || file.mimetype;
+          const title: string | undefined = file.title || file.fileName;
+          const fetched = await fetchAsBase64(sourceUrl);
+          const effectiveMime = declaredMime || fetched.mimetype;
+          const mabotType = mapMimeToMabotType(effectiveMime);
+
+          const baseFileContent: any = {
+            type: mabotType,
+            filename: title || fetched.filename,
+            mimetype: effectiveMime,
+            value: fetched.base64
+          };
+
+          const contents: any[] = [baseFileContent];
+          if (title && typeof title === 'string' && title.trim().length > 0) {
+            contents.push({ type: 'text', value: `Context File: ${title}`, parse_mode: 'Markdown' });
+          }
+
+          finalMessages.push({ role: 'user', contents });
+        } catch (err) {
+          console.error('Failed to append context file', file?.title || file?.url, err);
+          finalMessages.push({
+            role: 'user',
+            contents: [{ type: 'text', value: `⚠️ Note: Could not attach file "${file?.title || file?.url}".`, parse_mode: 'Markdown' }]
+          });
+        }
+      }
+    }
+
     // Normalize any provided messages to Mabot schema
     const isHttpUrl = (v: unknown): v is string => typeof v === 'string' && /^https?:\/\//i.test(v);
 

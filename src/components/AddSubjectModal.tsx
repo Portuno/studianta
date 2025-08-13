@@ -41,14 +41,14 @@ const DAYS_OF_WEEK = [
 ];
 
 const EVENT_TYPES = [
-  "Exam",
-  "Practical Activity",
-  "Project Submission",
-  "Presentation",
-  "Quiz",
-  "Assignment Due",
-  "Lab Session",
-  "Other"
+  { label: "Exam", value: "exam" },
+  { label: "Practical Activity", value: "practical_activity" },
+  { label: "Project Submission", value: "project_submission" },
+  { label: "Presentation", value: "presentation" },
+  { label: "Quiz", value: "quiz" },
+  { label: "Assignment Due", value: "assignment_due" },
+  { label: "Lab Session", value: "lab_session" },
+  { label: "Other", value: "other" }
 ];
 
 export const AddSubjectModal = ({ 
@@ -94,7 +94,7 @@ export const AddSubjectModal = ({
     const newEvent: SubjectEvent = {
       id: Date.now().toString(),
       name: "",
-      eventType: "Exam",
+      eventType: "exam",
       eventDate: "",
       description: ""
     };
@@ -188,7 +188,7 @@ export const AddSubjectModal = ({
             subject_id: subjectId,
             user_id: user.id,
             name: event.name.trim(),
-            event_type: event.eventType.toLowerCase(),
+            event_type: event.eventType,
             event_date: event.eventDate,
             description: event.description.trim() || null
           }));
@@ -408,8 +408,8 @@ export const AddSubjectModal = ({
                         className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-pink-400 focus:ring-pink-100"
                         aria-label="Event type"
                       >
-                        {EVENT_TYPES.map(type => (
-                          <option key={type} value={type}>{type}</option>
+                        {EVENT_TYPES.map((type) => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
                         ))}
                       </select>
                     </div>

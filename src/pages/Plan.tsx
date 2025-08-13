@@ -9,6 +9,7 @@ import { useStudyMaterials } from "@/hooks/useSupabase";
 import { format, startOfWeek, endOfWeek, parseISO, addDays, eachDayOfInterval, isSameDay, isToday, addWeeks, subWeeks } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { MobileNavigation } from "@/components/MobileNavigation";
 
 interface StudyBlock {
   id: string;
@@ -42,8 +43,10 @@ export default function Plan() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [academicEvents, setAcademicEvents] = useState<AcademicEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
+  const [studyBlocks, setStudyBlocks] = useState<StudyBlock[]>([]);
+  const [blocksLoading, setBlocksLoading] = useState(false);
 
-  const loading = goalsLoading || sessionsLoading || subjectsLoading || materialsLoading || eventsLoading;
+  const loading = goalsLoading || sessionsLoading || subjectsLoading || materialsLoading || eventsLoading || blocksLoading;
 
   // Obtener semana actual
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Lunes
@@ -84,7 +87,7 @@ export default function Plan() {
            date: new Date(event.event_date),
            title: event.name,
            type: mapEventType(event.event_type),
-           subject: event.subjects?.[0]?.name || 'Unknown Subject',
+           subject: Array.isArray(event.subjects) && event.subjects.length > 0 ? event.subjects[0].name : 'Unknown Subject',
            description: event.description || undefined
          }));
 
@@ -130,13 +133,20 @@ export default function Plan() {
     return acc;
   }, 0);
 
-  // Por ahora simulamos el tiempo completado ya que no tenemos la propiedad 'completed'
-  const completedTime = Math.round(plannedTime * 0.7); // Simulamos 70% completado
+  // Calcular tiempo real completado basado en sesiones con duración
+  // Por ahora usamos todas las sesiones como completadas ya que no tenemos la propiedad 'completed'
+  const completedTime = thisWeekSessions.reduce((acc, session) => {
+    if (session.duration) return acc + session.duration;
+    return acc;
+  }, 0);
 
   // Calcular racha de estudio (días consecutivos)
   const calculateStreak = () => {
+    if (sessions.length === 0) return 0;
+    
     let streak = 0;
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day
     
     for (let i = 0; i < 30; i++) {
       const checkDate = new Date(today);
@@ -144,7 +154,8 @@ export default function Plan() {
       
       const hasSession = sessions.some(session => {
         const sessionDate = parseISO(session.created_at);
-        return sessionDate.toDateString() === checkDate.toDateString();
+        sessionDate.setHours(0, 0, 0, 0);
+        return sessionDate.getTime() === checkDate.getTime();
       });
       
       if (hasSession) {
@@ -163,55 +174,74 @@ export default function Plan() {
   const calculateCourseProgress = () => {
     if (!subjects.length) return 0;
     
-    const activeSubject = subjects[0]; // Por ahora tomamos el primer subject
-    const subjectMaterials = materials.filter(m => m.subject_id === activeSubject.id);
+    // Calcular progreso general de todos los subjects
+    let totalMaterials = 0;
+    let completedMaterials = 0;
     
-    if (subjectMaterials.length === 0) return 0;
+    subjects.forEach(subject => {
+      const subjectMaterials = materials.filter(m => m.subject_id === subject.id);
+      totalMaterials += subjectMaterials.length;
+      completedMaterials += subjectMaterials.filter(m => m.ai_status === 'completed').length;
+    });
     
-    // Simulamos progreso basado en materiales completados
-    const completedMaterials = subjectMaterials.filter(m => m.ai_status === 'completed');
-    return Math.round((completedMaterials.length / subjectMaterials.length) * 100);
+    if (totalMaterials === 0) return 0;
+    
+    return Math.round((completedMaterials / totalMaterials) * 100);
   };
 
-  // Generar bloques de estudio sugeridos por IA
-  const generateStudyBlocks = (): StudyBlock[] => {
-    const blocks: StudyBlock[] = [];
-    const today = new Date();
-    
-    // Simulamos bloques de estudio para los próximos 7 días
-    for (let i = 0; i < 7; i++) {
-      const date = addDays(today, i);
+  // Cargar bloques de estudio reales
+  useEffect(() => {
+    const fetchStudyBlocks = async () => {
+      if (!user) return;
       
-      // Solo agregar bloques para días de semana
-      if (date.getDay() !== 0 && date.getDay() !== 6) {
-        blocks.push({
-          id: `block-${i}`,
-          date,
-          startTime: '09:00',
-          duration: 60,
-          topic: 'Calculus - Derivatives',
-          subject: 'Mathematics',
-          priority: 'high',
-          completed: false
-        });
+      try {
+        setBlocksLoading(true);
         
-        blocks.push({
-          id: `block-${i}-2`,
-          date,
-          startTime: '14:00',
-          duration: 45,
-          topic: 'Literature Review',
-          subject: 'English',
-          priority: 'medium',
-          completed: false
-        });
-      }
-    }
-    
-    return blocks;
-  };
+        // Obtener bloques de estudio de study_blocks
+        const { data: blocksData, error: blocksError } = await supabase
+          .from('study_blocks')
+          .select(`
+            id,
+            scheduled_date,
+            start_time,
+            duration_minutes,
+            topic_name,
+            subject_id,
+            priority,
+            completed,
+            subjects(name)
+          `)
+          .eq('user_id', user.id)
+          .gte('scheduled_date', new Date().toISOString().split('T')[0])
+          .order('scheduled_date', { ascending: true });
 
-  const studyBlocks = generateStudyBlocks();
+        if (blocksError) {
+          console.error('Error fetching study blocks:', blocksError);
+          return;
+        }
+
+        // Convertir a formato StudyBlock
+        const blocks: StudyBlock[] = blocksData.map(block => ({
+          id: block.id,
+          date: new Date(block.scheduled_date + 'T' + block.start_time),
+          startTime: block.start_time,
+          duration: block.duration_minutes || 60,
+          topic: block.topic_name || 'Study Session',
+          subject: Array.isArray(block.subjects) && block.subjects.length > 0 ? block.subjects[0].name : 'Unknown Subject',
+          priority: (block.priority as 'high' | 'medium' | 'low') || 'medium',
+          completed: block.completed || false
+        }));
+
+        setStudyBlocks(blocks);
+      } catch (error) {
+        console.error('Error fetching study blocks:', error);
+      } finally {
+        setBlocksLoading(false);
+      }
+    };
+
+    fetchStudyBlocks();
+  }, [user]);
   const courseProgress = calculateCourseProgress();
 
   const nextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1));
@@ -219,7 +249,7 @@ export default function Plan() {
 
   if (loading) {
     return (
-      <div className="space-y-6 pb-20">
+      <div className="space-y-6 pb-24">
         <div className="text-center pt-8 pb-6">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">Loading your study plan...</p>
@@ -229,20 +259,30 @@ export default function Plan() {
   }
 
   return (
-    <div className="space-y-6 pb-20">
-      {/* Header */}
-      <div className="text-center pt-8 pb-6">
-        <h1 className="text-2xl font-light text-foreground/90 mb-2">Study Plan</h1>
-        {academicEvents.length > 0 && (
-          <p className="text-muted-foreground text-sm">
-            Upcoming: {academicEvents[0].title} on {format(academicEvents[0].date, 'MMM dd')}
-          </p>
-        )}
+    <div className="flex flex-col h-screen">
+      {/* UPPER LAYER - Fixed Header + Navigation (Always Visible) */}
+      <div className="flex-shrink-0 z-50">
+        {/* Header */}
+        <div className="text-center pt-8 pb-6 bg-background">
+          <h1 className="text-2xl font-light text-foreground/90 mb-2">Study Plan</h1>
+          {academicEvents.length > 0 && (
+            <p className="text-muted-foreground text-sm">
+              Upcoming: {academicEvents[0].title} on {format(academicEvents[0].date, 'MMM dd')}
+            </p>
+          )}
+        </div>
+        
+        {/* Mobile Navigation - Fixed at bottom of upper layer */}
+        <MobileNavigation />
       </div>
+      
+      {/* LOWER LAYER - Scrollable Content (Independent Scroll) */}
+      <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="space-y-6">
 
-      {/* Overview - Summary & Key Metrics */}
-      <div className="px-6 space-y-4">
-        <h2 className="text-lg font-medium text-foreground/80">Overview</h2>
+          {/* Overview - Summary & Key Metrics */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-medium text-foreground/80">Overview</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Course Progress */}
@@ -318,9 +358,10 @@ export default function Plan() {
           </Card>
         )}
       </div>
+        
 
-      {/* Interactive Calendar */}
-      <div className="px-6 space-y-4">
+                                           {/* Interactive Calendar */}
+          <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium text-foreground/80">Weekly Calendar</h2>
           <div className="flex items-center gap-2">
@@ -388,6 +429,13 @@ export default function Plan() {
                       title={`${block.topic} - ${block.duration}min`}
                     />
                   ))}
+                  
+                  {/* Show message when no blocks exist */}
+                  {dayBlocks.length === 0 && studyBlocks.length === 0 && (
+                    <div className="text-center text-xs text-muted-foreground mt-2">
+                      No blocks
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -395,8 +443,8 @@ export default function Plan() {
         </Card>
       </div>
 
-      {/* Dynamic Plan - Detailed Strategy */}
-      <div className="px-6 space-y-4">
+                                           {/* Dynamic Plan - Detailed Strategy */}
+          <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium text-foreground/80">Study Strategy</h2>
           <Button size="sm" variant="outline" className="rounded-full">
@@ -483,7 +531,10 @@ export default function Plan() {
             {academicEvents.filter(event => isSameDay(event.date, selectedDate)).length === 0 && 
              studyBlocks.filter(block => isSameDay(block.date, selectedDate)).length === 0 && (
               <p className="text-center text-muted-foreground py-4">
-                No events or study blocks scheduled for this day
+                {studyBlocks.length === 0 ? 
+                  'No study blocks created yet. Create your first study block to get started!' :
+                  'No events or study blocks scheduled for this day'
+                }
               </p>
             )}
           </div>
@@ -493,33 +544,45 @@ export default function Plan() {
         <Card className="gradient-card border-border/30 p-4 rounded-2xl">
           <div className="flex items-center gap-2 mb-3">
             <BookOpen className="text-primary" size={18} />
-            <h3 className="font-medium text-foreground/80">Course Topics</h3>
+            <h3 className="font-medium text-foreground/80">Study Materials Progress</h3>
           </div>
           
           <div className="space-y-2">
-            {['Introduction to Calculus', 'Limits and Continuity', 'Derivatives', 'Applications of Derivatives', 'Integration'].map((topic, index) => (
-              <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-background/50">
-                <input
-                  type="checkbox"
-                  checked={index < 2} // Simulamos que los primeros 2 están completados
-                  className="rounded border-border/30 text-primary focus:ring-primary"
-                />
-                <span className={`text-sm ${index < 2 ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                  {topic}
-                </span>
-                {index === 2 && (
-                  <span className="ml-auto text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
-                    Next Priority
-                  </span>
-                )}
-            </div>
-            ))}
+            {materials.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                No study materials added yet
+              </p>
+            ) : (
+              materials.slice(0, 5).map((material, index) => {
+                const isCompleted = material.ai_status === 'completed';
+                const isNextPriority = index === 0 && !isCompleted;
+                
+                return (
+                  <div key={material.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-background/50">
+                    <input
+                      type="checkbox"
+                      checked={isCompleted}
+                      className="rounded border-border/30 text-primary focus:ring-primary"
+                      readOnly
+                    />
+                    <span className={`text-sm ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                      {material.title}
+                    </span>
+                    {isNextPriority && (
+                      <span className="ml-auto text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                        Next Priority
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </Card>
       </div>
 
-      {/* Weekly Goals (mantener la funcionalidad existente) */}
-      <div className="px-6 space-y-3">
+          {/* Weekly Goals (mantener la funcionalidad existente) */}
+          <div className="space-y-3">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Target className="text-primary" size={20} />
@@ -567,6 +630,8 @@ export default function Plan() {
           ))
         )}
       </div>
+    </div>
+  </div>
     </div>
   );
 }

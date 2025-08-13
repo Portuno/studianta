@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Plus, Upload, Clock, User, MapPin, Folder } from "lucide-react";
+import { FileText, Calendar, Plus, Upload, Clock, User, MapPin, Folder, ChevronDown } from "lucide-react";
 import { FileStatusBadge } from "./FileStatusBadge";
 import { Input } from "@/components/ui/input";
 import { PDFViewer } from "./PDFViewer";
@@ -78,6 +78,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [showAddMenu, setShowAddMenu] = useState(false);
   
   // Real data from database
   const [events, setEvents] = useState<SubjectEvent[]>([]);
@@ -98,6 +99,32 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
       fetchSubjectData();
     }
   }, [subject?.id, user]);
+
+  // Cerrar menú cuando se haga clic fuera o se presione Escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.add-menu-container')) {
+        setShowAddMenu(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowAddMenu(false);
+      }
+    };
+
+    if (showAddMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showAddMenu]);
 
   const fetchSubjectData = async () => {
     setLoading(true);
@@ -460,27 +487,11 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
 
           {/* Folders Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <span className="text-lg">📁</span>
                 Folders
               </h3>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => onAddFile({ subjectId: subject.id })}
-                  className="bg-pink-400 hover:bg-pink-500 text-white rounded-lg px-4 py-2"
-                >
-                  <Upload size={16} className="mr-2" />
-                  Add File
-                </Button>
-                <Button
-                  onClick={() => setShowCreateFolder(true)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-4 py-2"
-                >
-                  <Plus size={16} className="mr-2" />
-                  Create Folder
-                </Button>
-              </div>
             </div>
 
             {folders.length === 0 ? (
@@ -745,6 +756,50 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
         onClose={() => setShowCreateFolder(false)}
         onCreateFolder={handleCreateFolder}
       />
+
+      {/* Floating Action Button - Add File/Folder */}
+      <div className="fixed bottom-24 right-6 z-50">
+        <div className="relative add-menu-container">
+          {/* Botón rosa principal */}
+          <button
+            onClick={() => setShowAddMenu(!showAddMenu)}
+            className="w-16 h-16 bg-pink-400 hover:bg-pink-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center relative"
+            title="Add File or Folder"
+          >
+            <Plus size={28} />
+            <ChevronDown 
+              size={14} 
+              className={`absolute bottom-1 right-1 transition-transform duration-200 ${showAddMenu ? 'rotate-180' : ''}`} 
+            />
+          </button>
+          
+          {/* Menú desplegable */}
+          {showAddMenu && (
+            <div className="absolute right-0 bottom-20 w-48 bg-white rounded-2xl shadow-xl border border-gray-200 py-2 z-50 animate-in slide-in-from-bottom-2 duration-200">
+              <button
+                onClick={() => {
+                  onAddFile({ subjectId: subject.id });
+                  setShowAddMenu(false);
+                }}
+                className="w-full px-4 py-3 text-left hover:bg-pink-50 transition-colors flex items-center gap-3 rounded-lg mx-2"
+              >
+                <Upload size={18} className="text-pink-500" />
+                <span className="text-gray-700 font-medium">Add File</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowCreateFolder(true);
+                  setShowAddMenu(false);
+                }}
+                className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors flex items-center gap-3 rounded-lg mx-2"
+              >
+                <Folder size={18} className="text-blue-500" />
+                <span className="text-gray-700 font-medium">Create Folder</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }; 

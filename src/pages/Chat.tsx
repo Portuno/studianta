@@ -81,6 +81,7 @@ export default function Chat() {
 
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
 
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [subjects, setSubjects] = useState<SubjectRow[]>([]);
@@ -195,8 +196,9 @@ export default function Chat() {
       return (
         `ROLE: You are the student's academic agenda assistant.\n` +
         `Student: ${name}.\n` +
+        `LANGUAGE INSTRUCTION: Detect the language of the user's question and respond in the SAME language. If they ask in Spanish, respond in Spanish. If they ask in English, respond in English.\n` +
         `Use ONLY the provided calendar, schedules, and goals data. If missing, ask for details or suggest adding them in Plan.\n` +
-        `Answer concisely and in the user's language.\n` +
+        `Answer concisely and in the user's detected language.\n` +
         `Then suggest a relevant next action (e.g., schedule a session, review material).\n` +
         `Question:`
       );
@@ -208,8 +210,9 @@ export default function Chat() {
       `ROLE: You are an AI study assistant.\n` +
       `Student: ${name}.\n` +
       `Primary context: ${ctx}${topicHint}.\n` +
+      `LANGUAGE INSTRUCTION: Detect the language of the user's question and respond in the SAME language. If they ask in Spanish, respond in Spanish. If they ask in English, respond in English.\n` +
       `Use ONLY the provided materials and notes. If insufficient, ask for more uploads (via Library).\n` +
-      `Answer in the user's language and keep it clear.\n` +
+      `Keep it clear and in the user's detected language.\n` +
       `Question:`
     );
   };
@@ -255,12 +258,12 @@ export default function Chat() {
           if (!urlErr && urlData?.signedUrl) {
             urlNote = ` [url: ${urlData.signedUrl}]`;
             
-            // Add file to context files for attachment
+            // Add file to context files for attachment (use keys expected by Edge Function)
             if (m.type === "pdf" || m.mime_type === "application/pdf") {
               files.push({
                 url: urlData.signedUrl,
-                fileName: m.title,
-                mimeType: m.mime_type || "application/pdf",
+                title: m.title,
+                mime_type: m.mime_type || "application/pdf",
                 type: m.type
               });
             }
@@ -339,78 +342,75 @@ export default function Chat() {
 
     const platformChatId = session.mabotChatId || `web_${session.id}_${Date.now()}`;
 
+    // 🔧 CONSOLIDAR TODO EN UN SOLO MENSAJE (OPTIMIZADO)
+    let consolidatedContent = buildDeveloperInstruction(session);
+    
+    // Agregar instrucción de idioma específica (SIMPLIFICADA)
+    consolidatedContent += `\n🌐 IDIOMA: Responde en el mismo idioma de la pregunta del usuario.\n`;
+    
+    // Agregar instrucción para archivos por URL
+    if (contextFiles && contextFiles.length > 0) {
+      consolidatedContent += `\n📎 ARCHIVOS: Los archivos se adjuntan como binarios por el backend (a partir de las URLs). Analiza su contenido para responder.\n`;
+    }
+    
+    // Agregar contexto si existe (LIMITADO)
+    if (contextText && contextText.trim().length > 0) {
+      // Limitar el contexto a 1000 caracteres para evitar mensajes muy largos
+      const limitedContext = contextText.length > 1000 
+        ? contextText.substring(0, 1000) + "... [contexto truncado]"
+        : contextText;
+      consolidatedContent += `\n📋 CONTEXTO:\n${limitedContext}`;
+    }
+
+    // Agregar listado de archivos adjuntos sin crear mensajes extra
+    if (contextFiles && contextFiles.length > 0) {
+      const fileList = contextFiles
+        .map((f: any, idx: number) => `- ${f.title || f.fileName || `file_${idx+1}`}`)
+        .join("\n");
+      consolidatedContent += `\n📄 Archivos adjuntos:\n${fileList}`;
+    }
+
+    // Agregar pregunta del usuario
+    consolidatedContent += `\n\n❓ PREGUNTA:\n${userText}`;
+
     const messages: any[] = [
       {
         role: "user",
-        contents: [{ type: "text", value: buildDeveloperInstruction(session), parse_mode: "Markdown" }],
+        contents: [{ 
+          type: "text", 
+          value: consolidatedContent, 
+          parse_mode: "Markdown" 
+        }],
       },
     ];
 
-    if (contextText && contextText.trim().length > 0) {
-      messages.push({ role: "user", contents: [{ type: "text", value: contextText }] });
-    }
-
-    // Add context files if available
+    // No agregamos mensajes adicionales por archivo. La Edge Function recibirá contextFiles
+    // y se encargará de descargar y adjuntar los binarios en un solo mensaje.
     if (contextFiles && contextFiles.length > 0) {
-      console.log(`[Mabot] Attaching ${contextFiles.length} file(s) to context`);
-      
-      for (const file of contextFiles) {
-        try {
-          console.log(`[Mabot] Processing file: ${file.fileName} (${file.mimeType})`);
-          
-          const fileResponse = await fetch(file.url);
-          if (!fileResponse.ok) {
-            throw new Error(`HTTP ${fileResponse.status}: ${fileResponse.statusText}`);
-          }
-          
-          const fileBlob = await fileResponse.blob();
-          const fileBuffer = await fileBlob.arrayBuffer();
-          
-          // Check file size to avoid sending extremely large files
-          const fileSizeMB = fileBuffer.byteLength / (1024 * 1024);
-          if (fileSizeMB > 10) { // 10MB limit
-            console.warn(`[Mabot] File ${file.fileName} too large (${fileSizeMB.toFixed(2)}MB), skipping`);
-            continue;
-          }
-          
-          messages.push({
-            role: "user",
-            contents: [
-              {
-                type: "file",
-                file: {
-                  data: Array.from(new Uint8Array(fileBuffer)),
-                  mime_type: file.mimeType || "application/octet-stream",
-                  file_name: file.fileName || "document.pdf"
-                }
-              }
-            ]
-          });
-          
-          console.log(`[Mabot] Successfully attached file: ${file.fileName}`);
-        } catch (error) {
-          console.error(`[Mabot] Failed to attach file: ${file.fileName}`, error);
-          
-          // Add a note about the failed file in the context
-          messages.push({
-            role: "user",
-            contents: [{ 
-              type: "text", 
-              value: `⚠️ Note: Could not attach file "${file.fileName}" due to error: ${error}` 
-            }]
-          });
-        }
-      }
-      
-      console.log(`[Mabot] Total files attached: ${messages.filter(m => 
-        m.contents?.some(c => c.type === "file")
-      ).length}`);
+      console.log(`[Mabot] contextFiles provided: ${contextFiles.length}. Relying on Edge Function to attach binaries.`);
     }
 
-    messages.push({ role: "user", contents: [{ type: "text", value: userText }] });
+    // 🔍 DEBUG: Ver qué se está enviando a Mabot (ahora consolidado)
+    console.group("🚀 MABOT REQUEST DEBUG - ENVIANDO (CONSOLIDADO)");
+    console.log("📤 PLATFORM:", "web");
+    console.log("🤖 BOT USERNAME:", "cuaderbot");
+    console.log("💬 CHAT ID:", session.mabotChatId || null);
+    console.log("🆔 PLATFORM CHAT ID:", platformChatId);
+    console.log("📝 TOTAL MESSAGES:", messages.length);
+    console.log("📋 MESSAGES DETAIL:", messages);
+    console.log("🔧 CONTENIDO CONSOLIDADO:", consolidatedContent.substring(0, 300) + "...");
+    console.groupEnd();
 
     try {
       // Use Supabase Edge Function for Mabot communication
+      const controller = new AbortController();
+      // Timeout más largo para PDFs ya que procesar URLs toma más tiempo
+      const timeoutSeconds = contextFiles && contextFiles.length > 0 ? 45000 : 30000;
+      const timeoutId = setTimeout(() => {
+        console.log(`[Mabot] Timeout reached after ${timeoutSeconds/1000}s, aborting request`);
+        controller.abort();
+      }, timeoutSeconds);
+      
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mabot-chat`, {
         method: "POST",
         headers: {
@@ -436,42 +436,201 @@ export default function Chat() {
           contextText,
           contextFiles
         }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         const errorText = await res.text();
         console.error("[Mabot Error]", errorText);
+        
+        // Manejar errores específicos de Supabase
+        if (res.status === 546 || errorText.includes("WORKER_LIMIT")) {
+          return { 
+            ok: false, 
+            error: "El servidor está sobrecargado. Intenta de nuevo en unos minutos o reduce el tamaño del archivo." 
+          } as const;
+        }
+        
         return { ok: false, error: `HTTP ${res.status}` } as const;
       }
 
       const data = await res.json();
+      
+      // 🔍 DEBUG: Ver qué se recibió de Mabot
+      console.group("📥 MABOT RESPONSE DEBUG - RECIBIDO");
+      console.log("📊 RESPONSE STATUS:", res.status);
+      console.log("📋 RESPONSE HEADERS:", Object.fromEntries(res.headers.entries()));
+      console.log("📦 RESPONSE DATA:", data);
+      console.log("🔍 DATA STRUCTURE:", {
+        hasData: !!data?.data,
+        hasChatId: !!data?.chatId,
+        dataType: typeof data?.data,
+        dataKeys: data?.data ? Object.keys(data?.data) : []
+      });
+      console.groupEnd();
+      
       return { ok: true, data } as const;
     } catch (error) {
       console.error("[Mabot Error]", error);
+      
+      // Manejar errores específicos
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          return { 
+            ok: false, 
+            error: "La solicitud tardó demasiado en procesarse. Intenta de nuevo o reduce la complejidad de tu pregunta." 
+          } as const;
+        }
+        
+        if (error.message.includes('fetch')) {
+          return { 
+            ok: false, 
+            error: "Error de conexión. Verifica tu conexión a internet e intenta de nuevo." 
+          } as const;
+        }
+      }
+      
       return { ok: false, error: "Network error" } as const;
     }
   };
 
   const extractAssistantText = (updateOut: any): string => {
     try {
+      // 1. DEBUG SIMPLIFICADO: Ahora solo debería haber una respuesta
+      debugMabotResponse(updateOut);
+      
+      // 2. SOLUCIÓN: Tomar SOLO la primera respuesta del asistente
       const msgs: any[] = updateOut?.messages || [];
       const assistantMsgs = msgs.filter((m) => m?.role === "assistant");
+      
       if (!assistantMsgs.length) return "";
+      
+      // 🔧 NUEVA LÓGICA: Solo la primera respuesta
+      const firstAssistantMsg = assistantMsgs[0];
+      const contents = firstAssistantMsg?.contents || [];
+      
       const parts: string[] = [];
-      for (const m of assistantMsgs) {
-        const contents = m?.contents || [];
-        for (const c of contents) {
-          if (c?.type === "text" && typeof c?.value === "string") parts.push(c.value);
+      for (const c of contents) {
+        if (c?.type === "text" && typeof c?.value === "string") {
+          parts.push(c.value);
         }
       }
-      return parts.join("\n\n");
+      
+      const firstResponse = parts.join("\n\n");
+      
+      // 🔍 DEBUG: Confirmar que solo tomamos la primera
+      console.log(`✅ EXTRACTED: Solo primera respuesta (${firstResponse.length} chars)`);
+      
+      return firstResponse;
     } catch {
       return "";
     }
   };
 
+  // 🔍 FUNCIÓN DE DEBUGGING SIMPLIFICADA (ahora para una sola respuesta)
+  const debugMabotResponse = (apiData: any) => {
+    console.group("🔍 MABOT RESPONSE DEBUG - INICIO");
+    console.log("📊 DATOS COMPLETOS RECIBIDOS:", apiData);
+    
+    const messages: any[] = apiData?.messages || [];
+    console.log("📝 TOTAL DE MENSAJES:", messages.length);
+    
+    if (messages.length === 0) {
+      console.warn("⚠️ NO HAY MENSAJES EN LA RESPUESTA");
+      console.groupEnd();
+      return;
+    }
+    
+    // Analizar cada mensaje individualmente
+    messages.forEach((message: any, index: number) => {
+      console.group(`📨 MENSAJE ${index + 1} (${message?.role || 'unknown'})`);
+      
+      console.log("🔑 PROPIEDADES DEL MENSAJE:", {
+        role: message?.role,
+        hasContents: !!message?.contents,
+        contentsLength: message?.contents?.length || 0,
+        messageId: message?.id || 'No ID',
+        timestamp: message?.timestamp || 'No timestamp'
+      });
+      
+      // Analizar el contenido del mensaje
+      if (message?.contents && Array.isArray(message.contents)) {
+        message.contents.forEach((content: any, contentIndex: number) => {
+          console.group(`📄 CONTENIDO ${contentIndex + 1}`);
+          console.log("📋 TIPO:", content?.type);
+          console.log("📏 VALOR:", {
+            length: content?.value?.length || 0,
+            preview: content?.value?.substring(0, 200) || "No value",
+            fullValue: content?.value || "No value"
+          });
+          console.log("🏷️ METADATOS:", {
+            filename: content?.filename,
+            mimetype: content?.mimetype,
+            parse_mode: content?.parse_mode
+          });
+          console.groupEnd();
+        });
+      } else {
+        console.warn("⚠️ MENSAJE SIN CONTENIDO VÁLIDO");
+      }
+      
+      console.groupEnd();
+    });
+    
+    // Análisis de roles
+    const roleCounts = messages.reduce((acc: any, msg: any) => {
+      const role = msg?.role || 'unknown';
+      acc[role] = (acc[role] || 0) + 1;
+      return acc;
+    }, {});
+    
+    console.log("👥 DISTRIBUCIÓN DE ROLES:", roleCounts);
+    
+    // Análisis de contenido
+    const contentTypes = messages.flatMap((msg: any) => 
+      msg?.contents?.map((c: any) => c?.type) || []
+    );
+    const contentTypeCounts = contentTypes.reduce((acc: any, type: any) => {
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+    
+    console.log("📊 TIPOS DE CONTENIDO:", contentTypeCounts);
+    
+    // Verificar si ahora solo hay una respuesta
+    const assistantMessages = messages.filter((m) => m?.role === "assistant");
+    if (assistantMessages.length === 1) {
+      console.log("✅ ÉXITO: Ahora solo hay una respuesta del asistente");
+    } else if (assistantMessages.length > 1) {
+      console.warn("🚨 PROBLEMA PERSISTE: Múltiples mensajes del asistente");
+      console.log("📋 MENSAJES DE ASISTENTE:", assistantMessages.map((msg, i) => ({
+        index: i + 1,
+        contentPreview: msg?.contents?.[0]?.value?.substring(0, 100) || "No content",
+        contentLength: msg?.contents?.length || 0
+      })));
+    }
+    
+    console.groupEnd();
+    console.log("🔍 MABOT RESPONSE DEBUG - FIN");
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading || !currentChat) return;
+
+    // 🔍 DEBUG: Inicio del proceso de envío
+    console.group("💬 CHAT MESSAGE FLOW - INICIO");
+    console.log("📝 INPUT MESSAGE:", inputMessage);
+    console.log("💬 CURRENT CHAT:", {
+      id: currentChat.id,
+      contextType: currentChat.contextType,
+      subjectId: currentChat.subjectId,
+      subjectName: currentChat.subjectName,
+      topic: currentChat.topic,
+      mabotChatId: currentChat.mabotChatId
+    });
+    console.groupEnd();
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -494,18 +653,44 @@ export default function Chat() {
     // Always prepare context to get the most recent files and materials
     if (currentChat.contextType === "agenda") {
       contextText = await prepareAgendaContextText();
+      console.log("📅 AGENDA CONTEXT PREPARED:", {
+        contextLength: contextText?.length || 0,
+        contextPreview: contextText?.substring(0, 200) || "No context"
+      });
     } else {
       const context = await prepareSubjectContextText(currentChat);
       contextText = context.text;
       contextFiles = context.files;
+      // Actualizar estado para mostrar indicador de procesamiento de archivos
+      setIsProcessingFiles(contextFiles && contextFiles.length > 0);
+      console.log("📚 SUBJECT CONTEXT PREPARED:", {
+        contextLength: contextText?.length || 0,
+        contextFilesCount: contextFiles?.length || 0,
+        contextPreview: contextText?.substring(0, 200) || "No context"
+      });
     }
 
     const result = await sendToMabot(currentChat, textToSend, contextText, contextFiles);
+    
+    // 🔍 DEBUG: Resultado de sendToMabot
+    console.group("📤 SEND TO MABOT RESULT");
+    console.log("✅ SUCCESS:", result.ok);
+    console.log("📊 DATA:", result.data);
+    console.log("❌ ERROR:", result.error);
+    console.groupEnd();
+    
     if (result.ok) {
       const payload = result.data as any;
       const apiData = payload?.data;
       const resolvedChatId: string | undefined = payload?.chatId || apiData?.chat_id;
       const plainText = extractAssistantText(apiData) || "...";
+
+      // 🔍 DEBUG: Texto extraído
+      console.group("📝 EXTRACTED TEXT DEBUG");
+      console.log("🔍 API DATA:", apiData);
+      console.log("📋 EXTRACTED TEXT:", plainText);
+      console.log("📏 TEXT LENGTH:", plainText.length);
+      console.groupEnd();
 
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -513,6 +698,12 @@ export default function Chat() {
         message: plainText,
         time: nowTime(),
       };
+
+      // 🔧 INDICADOR: Mostrar si se filtró respuesta múltiple
+      const totalAssistantMsgs = (apiData?.messages || []).filter((m: any) => m?.role === "assistant").length;
+      if (totalAssistantMsgs > 1) {
+        botMessage.message += `\n\n---\n*Nota: Se filtró la respuesta para mostrar solo la información principal.*`;
+      }
 
       setChatSessions((prev) =>
         prev.map((chat) =>
@@ -528,6 +719,7 @@ export default function Chat() {
         )
       );
       setIsLoading(false);
+      setIsProcessingFiles(false);
       return;
     }
 
@@ -542,6 +734,7 @@ export default function Chat() {
       prev.map((chat) => (chat.id === currentChatId ? { ...chat, messages: [...chat.messages, errorMessage], lastActivity: new Date() } : chat))
     );
     setIsLoading(false);
+    setIsProcessingFiles(false);
   };
 
   const startAgendaChat = () => {
@@ -840,8 +1033,10 @@ export default function Chat() {
                     <span className="text-sm text-muted-foreground">
                       {currentChat?.contextType === "subject" && !currentChat?.contextUploaded 
                         ? "Processing materials and files..." 
-                        : "Thinking..."
-                      }
+                        : isProcessingFiles
+                         ? "Processing PDF files (this may take a moment)..." 
+                         : "Thinking..."
+                       }
                     </span>
                   </div>
                 </div>
