@@ -260,8 +260,8 @@ export default function Plan() {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* UPPER LAYER - Fixed Header + Navigation (Always Visible) */}
-      <div className="flex-shrink-0 z-50">
+      {/* UPPER LAYER - Fixed Header */}
+      <div className="flex-shrink-0 z-40">
         {/* Header */}
         <div className="text-center pt-8 pb-6 bg-background">
           <h1 className="text-2xl font-light text-foreground/90 mb-2">Study Plan</h1>
@@ -272,8 +272,7 @@ export default function Plan() {
           )}
         </div>
         
-        {/* Mobile Navigation - Fixed at bottom of upper layer */}
-        <MobileNavigation />
+        {/* Mobile navigation global se monta en App */}
       </div>
       
       {/* LOWER LAYER - Scrollable Content (Independent Scroll) */}

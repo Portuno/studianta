@@ -112,7 +112,7 @@ All colors MUST be HSL.
 
   /* Mobile-first approach */
   .mobile-container {
-    @apply max-w-sm mx-auto bg-card/50 backdrop-blur-sm border border-border/50 min-h-screen relative overflow-hidden;
+    @apply max-w-sm mx-auto bg-card/50 backdrop-blur-sm border border-border/50 min-h-[100dvh] relative overflow-hidden;
     box-shadow: var(--shadow-soft);
   }
 
