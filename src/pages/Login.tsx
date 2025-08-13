@@ -45,7 +45,7 @@ export default function Login() {
             setError(error.message || 'Error al iniciar sesión')
           }
         } else {
-          navigate('/today', { replace: true })
+          navigate('/', { replace: true })
         }
       }
     } catch (error: any) {
