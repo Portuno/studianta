@@ -53,19 +53,25 @@ const formatYMD = (d: Date) => d.toISOString().split("T")[0];
 const formatDayMonth = (d: Date) => d.toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
 
 const iconByType: Record<string, JSX.Element> = {
-  examen: <Bell className="h-4 w-4" />, // Examen/entrega
-  entrega: <Bell className="h-4 w-4" />, // alias
-  clase: <School className="h-4 w-4" />, // Clase
-  estudio: <BookOpenCheck className="h-4 w-4" />, // Bloque estudio
-  otro: <Sparkles className="h-4 w-4" />, // Otro
+  exam: <Bell className="h-4 w-4" />, // Examen
+  practical_activity: <BookOpenCheck className="h-4 w-4" />, // Actividad práctica
+  project_submission: <Target className="h-4 w-4" />, // Entrega de proyecto
+  presentation: <School className="h-4 w-4" />, // Presentación
+  quiz: <CheckCircle2 className="h-4 w-4" />, // Quiz
+  assignment_due: <Clock className="h-4 w-4" />, // Tarea pendiente
+  lab_session: <BookOpenCheck className="h-4 w-4" />, // Sesión de laboratorio
+  other: <Sparkles className="h-4 w-4" />, // Otro
 };
 
 const colorByType: Record<string, string> = {
-  examen: "bg-red-100 text-red-700 border-red-200",
-  entrega: "bg-orange-100 text-orange-700 border-orange-200",
-  clase: "bg-blue-100 text-blue-700 border-blue-200",
-  estudio: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  otro: "bg-violet-100 text-violet-700 border-violet-200",
+  exam: "bg-red-100 text-red-700 border-red-200",
+  practical_activity: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  project_submission: "bg-orange-100 text-orange-700 border-orange-200",
+  presentation: "bg-blue-100 text-blue-700 border-blue-200",
+  quiz: "bg-purple-100 text-purple-700 border-purple-200",
+  assignment_due: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  lab_session: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  other: "bg-violet-100 text-violet-700 border-violet-200",
 };
 
 const Agenda = () => {
@@ -86,9 +92,11 @@ const Agenda = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const subjectMap = useMemo(() => Object.fromEntries(subjects.map(s => [s.id, s.name])), [subjects]);
   const [loading, setLoading] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [showRealtimeUpdate, setShowRealtimeUpdate] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEventName, setNewEventName] = useState("");
-  const [newEventType, setNewEventType] = useState<string>("estudio");
+  const [newEventType, setNewEventType] = useState<string>("other");
   const [newEventSubjectId, setNewEventSubjectId] = useState<string | "">("");
   const [newEventDate, setNewEventDate] = useState<string>("");
   const [newEventDescription, setNewEventDescription] = useState<string>("");
@@ -140,12 +148,83 @@ const Agenda = () => {
         if (upcoming?.name) {
           setRecommendedTask(`Estudiar ahora: ${upcoming.name}`);
         }
+        
+        // Actualizar timestamp de última actualización
+        setLastUpdate(new Date());
       } finally {
         setLoading(false);
       }
     };
     if (user) fetchData();
   }, [user]);
+
+  // Suscripción en tiempo real a cambios en subject_events
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('subject_events_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'subject_events',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload);
+                  // Recargar eventos cuando hay cambios
+        fetchData();
+        setLastUpdate(new Date());
+        setShowRealtimeUpdate(true);
+        setTimeout(() => setShowRealtimeUpdate(false), 3000); // Ocultar después de 3 segundos
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Función para recargar datos (extraída para reutilización)
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // Eventos (subject_events)
+      const { data: evs } = await supabase
+        .from("subject_events")
+        .select("id,name,event_type,event_date,description,subject_id")
+        .eq("user_id", user!.id);
+      setEvents(evs || []);
+
+      // Horarios (subject_schedules)
+      const { data: sch } = await supabase
+        .from("subject_schedules")
+        .select("id,day_of_week,start_time,end_time,description,location,subject_id")
+        .eq("user_id", user!.id);
+      setSchedules(sch || []);
+
+      // Asignaturas (subjects)
+      const { data: subs } = await supabase
+        .from("subjects")
+        .select("id,name")
+        .eq("user_id", user!.id)
+        .order("name");
+      setSubjects(subs || []);
+
+      // Tarea recomendada (placeholder basado en primer evento próximo)
+      const upcoming = (evs || [])
+        .filter((e) => e.event_date)
+        .sort((a, b) => (a.event_date! < b.event_date! ? -1 : 1))[0];
+      if (upcoming?.name) {
+        setRecommendedTask(`Estudiar ahora: ${upcoming.name}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const selectedDate = weekDays[selectedDayIndex];
   const selectedYMD = formatYMD(selectedDate);
@@ -228,9 +307,25 @@ const Agenda = () => {
 
       {/* 2. Sección Media: Tu Agenda Semanal */}
       <section className="px-4 py-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Calendar className="h-4 w-4 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Tu agenda semanal</h2>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-blue-600" />
+            <h2 className="text-lg font-semibold text-gray-800">Tu agenda semanal</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">
+              Última actualización: {lastUpdate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            <Button
+              onClick={fetchData}
+              variant="outline"
+              size="sm"
+              className="text-xs px-3 py-1"
+              disabled={loading}
+            >
+              {loading ? "Actualizando..." : "Actualizar"}
+            </Button>
+          </div>
         </div>
 
         {/* Barra de días */}
@@ -262,6 +357,11 @@ const Agenda = () => {
 
         {/* Eventos del día */}
         <div className="mt-4 space-y-2">
+          {showRealtimeUpdate && (
+            <Card className="p-4 rounded-xl border-0 text-center text-emerald-500 bg-emerald-50 border-emerald-200">
+              ✅ Agenda actualizada en tiempo real
+            </Card>
+          )}
           {loading && (
             <Card className="p-4 rounded-xl border-0 text-center text-gray-500">Cargando agenda...</Card>
           )}
@@ -399,11 +499,14 @@ const Agenda = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
                   <select value={newEventType} onChange={(e) => setNewEventType(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-                    <option value="estudio">Estudio</option>
-                    <option value="clase">Clase</option>
-                    <option value="examen">Examen</option>
-                    <option value="entrega">Entrega</option>
-                    <option value="otro">Otro</option>
+                    <option value="exam">Examen</option>
+                    <option value="practical_activity">Actividad Práctica</option>
+                    <option value="project_submission">Entrega de Proyecto</option>
+                    <option value="presentation">Presentación</option>
+                    <option value="quiz">Quiz</option>
+                    <option value="assignment_due">Tarea Pendiente</option>
+                    <option value="lab_session">Sesión de Laboratorio</option>
+                    <option value="other">Otro</option>
                   </select>
                 </div>
               </div>
@@ -443,7 +546,7 @@ const Agenda = () => {
                       .eq('user_id', user.id);
                     setEvents(evs || []);
                     setShowAddModal(false);
-                    setNewEventName(""); setNewEventType("estudio"); setNewEventSubjectId(""); setNewEventDescription("");
+                    setNewEventName(""); setNewEventType("other"); setNewEventSubjectId(""); setNewEventDescription("");
                   } catch (e) {
                     console.error(e);
                     alert('No se pudo crear el evento.');
