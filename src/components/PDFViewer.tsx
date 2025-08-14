@@ -58,7 +58,7 @@ export const PDFViewer = ({ fileUrl, fileName, onClose }: PDFViewerProps) => {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-800 truncate">{fileName}</h2>
-              <p className="text-sm text-gray-500">PDF Viewer</p>
+              <p className="text-sm text-gray-500">Visor de PDF</p>
             </div>
           </div>
           
@@ -71,7 +71,7 @@ export const PDFViewer = ({ fileUrl, fileName, onClose }: PDFViewerProps) => {
               className="px-3 py-2 border-blue-300 text-blue-700 hover:bg-blue-50"
             >
               <Download size={16} className="mr-2" />
-              Download
+              Descargar
             </Button>
             <Button
               variant="outline"
@@ -109,7 +109,7 @@ export const PDFViewer = ({ fileUrl, fileName, onClose }: PDFViewerProps) => {
               className="px-3 py-2"
             >
               <X size={16} />
-              Close
+              Cerrar
             </Button>
           </div>
         </div>
@@ -136,8 +136,8 @@ export const PDFViewer = ({ fileUrl, fileName, onClose }: PDFViewerProps) => {
                 <div className="w-full h-[600px] flex items-center justify-center bg-gray-100">
                   <div className="text-center">
                     <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">PDF URL not available</p>
-                    <p className="text-sm text-gray-500 mt-2">Check console for details</p>
+                    <p className="text-gray-600">URL del PDF no disponible</p>
+                    <p className="text-sm text-gray-500 mt-2">Revisa la consola para más detalles</p>
                   </div>
                 </div>
               )}
@@ -148,10 +148,10 @@ export const PDFViewer = ({ fileUrl, fileName, onClose }: PDFViewerProps) => {
         {/* Footer with additional info */}
         <div className="p-4 border-t border-gray-200 bg-gray-50 text-center">
           <p className="text-sm text-gray-500">
-            Use the controls above to zoom, rotate, or download the PDF
+            Usa los controles de arriba para hacer zoom, rotar o descargar el PDF
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            💡 Click outside or press <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">Esc</kbd> to close
+            💡 Haz clic fuera o presiona <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">Esc</kbd> para cerrar
           </p>
         </div>
       </div>

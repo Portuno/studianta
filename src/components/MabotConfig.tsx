@@ -46,7 +46,7 @@ export const MabotConfig = () => {
         className="flex items-center gap-2"
       >
         <Settings className="h-4 w-4" />
-        Mabot Config
+        Configuración de Mabot
         {isConfigured && (
           <div className="w-2 h-2 bg-green-500 rounded-full" />
         )}
@@ -58,39 +58,39 @@ export const MabotConfig = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Settings className="h-5 w-5" />
-                Mabot Configuration
+                Configuración de Mabot
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="baseUrl">Base URL</Label>
+                <Label htmlFor="baseUrl">URL Base</Label>
                 <Input
                   id="baseUrl"
                   type="url"
-                  placeholder="https://your-mabot-service.com"
+                  placeholder="https://tu-servicio-mabot.com"
                   value={config.baseUrl}
                   onChange={(e) => setConfig(prev => ({ ...prev, baseUrl: e.target.value }))}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username">Nombre de Usuario</Label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Your username"
+                  placeholder="Tu nombre de usuario"
                   value={config.username}
                   onChange={(e) => setConfig(prev => ({ ...prev, username: e.target.value }))}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Contraseña</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Your password"
+                    placeholder="Tu contraseña"
                     value={config.password}
                     onChange={(e) => setConfig(prev => ({ ...prev, password: e.target.value }))}
                   />
@@ -109,16 +109,16 @@ export const MabotConfig = () => {
               <div className="flex gap-2 pt-4">
                 <Button onClick={handleSave} className="flex-1">
                   <Save className="h-4 w-4 mr-2" />
-                  Save
+                  Guardar
                 </Button>
                 <Button variant="outline" onClick={handleCancel} className="flex-1">
-                  Cancel
+                  Cancelar
                 </Button>
               </div>
 
               <div className="text-xs text-muted-foreground">
-                <p>These values will be stored in your browser's localStorage.</p>
-                <p>Environment variables take precedence over localStorage values.</p>
+                <p>Estos valores se almacenarán en el localStorage de tu navegador.</p>
+                <p>Las variables de entorno tienen prioridad sobre los valores del localStorage.</p>
               </div>
             </CardContent>
           </Card>

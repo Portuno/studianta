@@ -49,24 +49,24 @@ interface Folder {
 }
 
 const DAYS_OF_WEEK = [
-  { value: 0, label: "Sunday" },
-  { value: 1, label: "Monday" },
-  { value: 2, label: "Tuesday" },
-  { value: 3, label: "Wednesday" },
-  { value: 4, label: "Thursday" },
-  { value: 5, label: "Friday" },
-  { value: 6, label: "Saturday" },
+  { value: 0, label: "Domingo" },
+  { value: 1, label: "Lunes" },
+  { value: 2, label: "Martes" },
+  { value: 3, label: "Miércoles" },
+  { value: 4, label: "Jueves" },
+  { value: 5, label: "Viernes" },
+  { value: 6, label: "Sábado" },
 ];
 
 const EVENT_TYPES = [
-  "Exam",
-  "Practical Activity",
-  "Project Submission",
-  "Presentation",
+  "Examen",
+  "Actividad Práctica",
+  "Entrega de Proyecto",
+  "Presentación",
   "Quiz",
-  "Assignment Due",
-  "Lab Session",
-  "Other"
+  "Tarea Pendiente",
+  "Sesión de Laboratorio",
+  "Otro"
 ];
 
 export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps) => {
@@ -194,13 +194,13 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
         file.type.startsWith("image/")) {
       setSelectedFile(file);
     } else {
-      alert('Please select a supported file type: PDF, Word, Excel, Text, or Image files.');
+      alert('Por favor selecciona un tipo de archivo compatible: PDF, Word, Excel, Texto o archivos de imagen.');
     }
   };
 
   const handleFileUpload = async () => {
     if (!fileName.trim() || !selectedFile) {
-      alert('Please provide a file name and select a file.');
+      alert('Por favor proporciona un nombre de archivo y selecciona un archivo.');
       return;
     }
 
@@ -214,7 +214,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
       setSelectedFile(null);
     } catch (error) {
       console.error('Error uploading file:', error);
-      alert('Error uploading file. Please try again.');
+      alert('Error al subir el archivo. Por favor, inténtalo de nuevo.');
     } finally {
       setIsUploading(false);
     }
@@ -277,8 +277,8 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
     if (!user) return;
     
     const newEvent = {
-      name: "New Event",
-      event_type: "exam",
+      name: "Nuevo Evento",
+      event_type: "examen",
       event_date: new Date().toISOString().split('T')[0],
       description: ""
     };
@@ -298,7 +298,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
       setEvents([...events, data]);
     } catch (error) {
       console.error('Error adding event:', error);
-      alert('Error adding event. Please try again.');
+      alert('Error al agregar el evento. Por favor, inténtalo de nuevo.');
     }
   };
 
@@ -361,7 +361,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
       setSchedules([...schedules, data]);
     } catch (error) {
       console.error('Error adding schedule:', error);
-      alert('Error adding schedule. Please try again.');
+      alert('Error al agregar el horario. Por favor, inténtalo de nuevo.');
     }
   };
 
@@ -408,11 +408,11 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
           className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative z-10 ${
             activeTab === 'files' ? 'text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-800'
           }`}
-          aria-label="Files"
+          aria-label="Archivos"
         >
           <div className="flex items-center gap-2 justify-center">
             <span className="text-lg">📂</span>
-            <span>Files</span>
+            <span>Archivos</span>
           </div>
         </button>
         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 transform -translate-x-1/2 z-0"></div>
@@ -422,11 +422,11 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
           className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative z-10 ${
             activeTab === 'calendar' ? 'text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-800'
           }`}
-          aria-label="Calendar"
+          aria-label="Calendario"
         >
           <div className="flex items-center gap-2 justify-center">
             <span className="text-lg">🗓️</span>
-            <span>Calendar</span>
+            <span>Calendario</span>
           </div>
         </button>
         <div 
@@ -444,7 +444,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <FileText className="h-5 w-5 text-blue-600" />
-                Course Syllabus
+                Programa del Curso
               </h3>
               <Card 
                 className="p-4 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer"
@@ -456,13 +456,13 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-blue-600">
-                      Course syllabus and overview
+                      Programa del curso y descripción general
                       {subject.instructor_name && `, ${subject.instructor_name}`}
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" className="border-blue-300 text-blue-700">
-                      View
+                      Ver
                     </Button>
                     <Button 
                       variant="outline" 
@@ -474,7 +474,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                         const fullUrl = `${baseUrl}/storage/v1/object/public/study-materials/${subject.syllabus_file_path}`;
                         console.log('Debug URL:', fullUrl);
                         console.log('File path:', subject.syllabus_file_path);
-                        alert(`File path: ${subject.syllabus_file_path}\nFull URL: ${fullUrl}`);
+                        alert(`Ruta del archivo: ${subject.syllabus_file_path}\nURL completa: ${fullUrl}`);
                       }}
                     >
                       Debug
@@ -490,7 +490,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
             <div className="flex items-center">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <span className="text-lg">📁</span>
-                Folders
+                Carpetas
               </h3>
             </div>
 
@@ -499,14 +499,14 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                 <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
                   <Folder size={24} className="text-blue-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-700 mb-2">No folders yet</h3>
-                <p className="text-gray-500 mb-4">Create folders to organize your study materials</p>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">Aún no hay carpetas</h3>
+                <p className="text-gray-500 mb-4">Crea carpetas para organizar tus materiales de estudio</p>
                 <Button 
                   onClick={() => setShowCreateFolder(true)}
                   className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg px-6"
                 >
                   <Plus size={16} className="mr-2" />
-                  Create First Folder
+                  Crear Primera Carpeta
                 </Button>
               </Card>
             ) : (
@@ -530,7 +530,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <span className="text-lg">📄</span>
-                Other Files
+                Otros Archivos
               </h3>
               <div className="space-y-2">
                 {materials.filter(m => !folders.some(f => f.files.includes(m))).map((material) => (
@@ -579,29 +579,29 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-red-600" />
-                Key Dates & Events
+                Fechas y Eventos Clave
               </h3>
               <Button
                 onClick={handleAddEvent}
                 className="bg-red-500 hover:bg-red-600 text-white rounded-lg px-4 py-2"
               >
                 <Plus size={16} className="mr-2" />
-                Add Event
+                Agregar Evento
               </Button>
             </div>
             
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
-                <p className="text-gray-500 mt-2">Loading events...</p>
+                <p className="text-gray-500 mt-2">Cargando eventos...</p>
               </div>
             ) : events.length === 0 ? (
               <Card className="p-6 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm text-center">
                 <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                   <Calendar size={24} className="text-red-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-700 mb-2">No events scheduled</h3>
-                <p className="text-gray-500">Add important dates and deadlines for this subject</p>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">No hay eventos programados</h3>
+                <p className="text-gray-500">Agrega fechas importantes y fechas límite para esta asignatura</p>
               </Card>
             ) : (
               <div className="space-y-3">
@@ -625,7 +625,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                         <Input
                           value={event.description || ''}
                           onChange={(e) => handleUpdateEvent(event.id, 'description', e.target.value)}
-                          placeholder="Description (optional)"
+                          placeholder="Descripción (opcional)"
                           className="border-red-200 bg-white"
                         />
                       </div>
@@ -635,7 +635,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                         onClick={() => handleRemoveEvent(event.id)}
                         className="text-red-700 border-red-300 hover:bg-red-50 ml-4"
                       >
-                        Remove
+                        Eliminar
                       </Button>
                     </div>
                   </Card>
@@ -649,29 +649,29 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <Clock className="h-5 w-5 text-green-600" />
-                Class Schedule
+                Horario de Clases
               </h3>
               <Button
                 onClick={handleAddSchedule}
                 className="bg-green-500 hover:bg-green-600 text-white rounded-lg px-4 py-2"
               >
                 <Plus size={16} className="mr-2" />
-                Add Schedule
+                Agregar Horario
               </Button>
             </div>
             
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
-                <p className="text-gray-500 mt-2">Loading schedules...</p>
+                <p className="text-gray-500 mt-2">Cargando horarios...</p>
               </div>
             ) : schedules.length === 0 ? (
               <Card className="p-6 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm text-center">
                 <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                   <Clock size={24} className="text-green-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-700 mb-2">No schedule set</h3>
-                <p className="text-gray-500">Add class times and locations for this subject</p>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">No hay horario establecido</h3>
+                <p className="text-gray-500">Agrega horarios de clase y ubicaciones para esta asignatura</p>
               </Card>
             ) : (
               <div className="space-y-3">
@@ -681,7 +681,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                       <div className="flex-1">
                         <div className="grid grid-cols-2 gap-4 mb-3">
                           <div>
-                            <label className="block text-xs text-green-700 mb-1">Day</label>
+                            <label className="block text-xs text-green-700 mb-1">Día</label>
                             <select
                               value={schedule.day_of_week}
                               onChange={(e) => handleUpdateSchedule(schedule.id, 'day_of_week', parseInt(e.target.value))}
@@ -693,7 +693,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                             </select>
                           </div>
                           <div>
-                            <label className="block text-xs text-green-700 mb-1">Time</label>
+                            <label className="block text-xs text-green-700 mb-1">Hora</label>
                             <div className="flex gap-2">
                               <input
                                 type="time"
@@ -714,13 +714,13 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                         <Input
                           value={schedule.location || ''}
                           onChange={(e) => handleUpdateSchedule(schedule.id, 'location', e.target.value)}
-                          placeholder="Location (optional)"
+                          placeholder="Ubicación (opcional)"
                           className="border-green-300 bg-white mb-2"
                         />
                         <Input
                           value={schedule.description || ''}
                           onChange={(e) => handleUpdateSchedule(schedule.id, 'description', e.target.value)}
-                          placeholder="Description (optional)"
+                          placeholder="Descripción (opcional)"
                           className="border-green-300 bg-white"
                         />
                       </div>
@@ -730,7 +730,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                         onClick={() => handleRemoveSchedule(schedule.id)}
                         className="text-green-700 border-green-300 hover:bg-green-50 ml-4"
                       >
-                        Remove
+                        Eliminar
                       </Button>
                     </div>
                   </Card>
@@ -745,7 +745,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
       {showPDFViewer && subject.syllabus_file_path && (
         <PDFViewer
           fileUrl={`${import.meta.env.VITE_SUPABASE_URL || 'https://hkbgryajkejgvmswglah.supabase.co'}/storage/v1/object/public/study-materials/${subject.syllabus_file_path}`}
-          fileName={subject.syllabus_file_name || 'Syllabus'}
+          fileName={subject.syllabus_file_name || 'Programa de Estudios'}
           onClose={() => setShowPDFViewer(false)}
         />
       )}
@@ -764,7 +764,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
           <button
             onClick={() => setShowAddMenu(!showAddMenu)}
             className="w-16 h-16 bg-pink-400 hover:bg-pink-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center relative"
-            title="Add File or Folder"
+            title="Agregar Archivo o Carpeta"
           >
             <Plus size={28} />
             <ChevronDown 
@@ -784,7 +784,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                 className="w-full px-4 py-3 text-left hover:bg-pink-50 transition-colors flex items-center gap-3 rounded-lg mx-2"
               >
                 <Upload size={18} className="text-pink-500" />
-                <span className="text-gray-700 font-medium">Add File</span>
+                <span className="text-gray-700 font-medium">Agregar Archivo</span>
               </button>
               <button
                 onClick={() => {
@@ -794,7 +794,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                 className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors flex items-center gap-3 rounded-lg mx-2"
               >
                 <Folder size={18} className="text-blue-500" />
-                <span className="text-gray-700 font-medium">Create Folder</span>
+                <span className="text-gray-700 font-medium">Crear Carpeta</span>
               </button>
             </div>
           )}

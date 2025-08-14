@@ -41,7 +41,7 @@ export const AddTopicModal = ({ isOpen, onClose, onTopicCreated, subjectId }: Ad
 
     } catch (error) {
       console.error('Error creating topic:', error);
-      alert('Error creating topic. Please try again.');
+      alert('Error al crear el tema. Por favor, inténtalo de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -63,7 +63,7 @@ export const AddTopicModal = ({ isOpen, onClose, onTopicCreated, subjectId }: Ad
       <div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="text-2xl font-light text-gray-800">Create Topic</h2>
+          <h2 className="text-2xl font-light text-gray-800">Crear Tema</h2>
           <button
             onClick={handleClose}
             disabled={isSubmitting}
@@ -77,19 +77,19 @@ export const AddTopicModal = ({ isOpen, onClose, onTopicCreated, subjectId }: Ad
         <div className="p-6 space-y-6">
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Topic Name *
+              Nombre del Tema *
             </label>
             <Input
               type="text"
               value={topicName}
               onChange={(e) => setTopicName(e.target.value)}
-              placeholder="e.g., Introduction to Constitutional Law, Civil Rights Cases"
+              placeholder="ej., Introducción al Derecho Constitucional, Casos de Derechos Civiles"
               className="w-full rounded-xl border-gray-300 focus:border-pink-400 focus:ring-pink-100 bg-white"
               disabled={isSubmitting}
-              aria-label="Topic Name"
+              aria-label="Nombre del Tema"
             />
             <p className="text-xs text-gray-500 mt-2">
-              Topics help you organize your study materials by specific areas or concepts.
+              Los temas te ayudan a organizar tus materiales de estudio por áreas o conceptos específicos.
             </p>
           </div>
         </div>
@@ -102,7 +102,7 @@ export const AddTopicModal = ({ isOpen, onClose, onTopicCreated, subjectId }: Ad
             disabled={isSubmitting}
             className="rounded-full px-6 border-gray-300 text-gray-700 hover:bg-gray-100"
           >
-            Cancel
+            Cancelar
           </Button>
           <Button
             onClick={handleSubmit}
@@ -110,7 +110,7 @@ export const AddTopicModal = ({ isOpen, onClose, onTopicCreated, subjectId }: Ad
             className="bg-pink-500 hover:bg-pink-600 text-white rounded-full px-6 font-medium"
             aria-disabled={!topicName.trim()}
           >
-            {isSubmitting ? 'Creating...' : 'Create Topic'}
+            {isSubmitting ? 'Creando...' : 'Crear Tema'}
           </Button>
         </div>
       </div>

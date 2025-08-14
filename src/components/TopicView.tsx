@@ -42,24 +42,24 @@ interface TopicSchedule {
 }
 
 const DAYS_OF_WEEK = [
-  { value: 0, label: "Sunday" },
-  { value: 1, label: "Monday" },
-  { value: 2, label: "Tuesday" },
-  { value: 3, label: "Wednesday" },
-  { value: 4, label: "Thursday" },
-  { value: 5, label: "Friday" },
-  { value: 6, label: "Saturday" },
+  { value: 0, label: "Domingo" },
+  { value: 1, label: "Lunes" },
+  { value: 2, label: "Martes" },
+  { value: 3, label: "Miércoles" },
+  { value: 4, label: "Jueves" },
+  { value: 5, label: "Viernes" },
+  { value: 6, label: "Sábado" },
 ];
 
 const EVENT_TYPES = [
-  "Exam",
-  "Practical Activity",
-  "Project Submission",
-  "Presentation",
+  "Examen",
+  "Actividad Práctica",
+  "Entrega de Proyecto",
+  "Presentación",
   "Quiz",
-  "Assignment Due",
-  "Lab Session",
-  "Other"
+  "Tarea Pendiente",
+  "Sesión de Laboratorio",
+  "Otro"
 ];
 
 export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: TopicViewProps) => {
@@ -72,17 +72,17 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
   const topicEvents: TopicEvent[] = [
     {
       id: "1",
-      name: "Midterm Exam",
-      eventType: "Exam",
+      name: "Examen Parcial",
+      eventType: "Examen",
       eventDate: "2024-02-15",
-      description: "Covers chapters 1-5"
+      description: "Cubre capítulos 1-5"
     },
     {
       id: "2",
-      name: "Lab Report Due",
-      eventType: "Assignment Due",
+      name: "Informe de Laboratorio Pendiente",
+      eventType: "Tarea Pendiente",
       eventDate: "2024-02-20",
-      description: "Submit via Canvas"
+      description: "Enviar vía Canvas"
     }
   ];
 
@@ -92,16 +92,16 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
       dayOfWeek: 1, // Monday
       startTime: "09:00",
       endTime: "10:30",
-      location: "Room 201",
-      description: "Lecture"
+      location: "Sala 201",
+      description: "Conferencia"
     },
     {
       id: "2",
       dayOfWeek: 3, // Wednesday
       startTime: "14:00",
       endTime: "16:00",
-      location: "Lab 105",
-      description: "Practical Session"
+      location: "Laboratorio 105",
+      description: "Sesión Práctica"
     }
   ];
 
@@ -138,13 +138,13 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
         file.type.startsWith("image/")) {
       setSelectedFile(file);
     } else {
-      alert('Please select a supported file type: PDF, Word, Excel, Text, or Image files.');
+      alert('Por favor selecciona un tipo de archivo compatible: PDF, Word, Excel, Texto o archivos de imagen.');
     }
   };
 
   const handleFileUpload = async () => {
     if (!fileName.trim() || !selectedFile) {
-      alert('Please provide a file name and select a file.');
+      alert('Por favor proporciona un nombre de archivo y selecciona un archivo.');
       return;
     }
 
@@ -159,7 +159,7 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
       setSelectedFile(null);
     } catch (error) {
       console.error('Error uploading file:', error);
-      alert('Error uploading file. Please try again.');
+      alert('Error al subir el archivo. Por favor, inténtalo de nuevo.');
     } finally {
       setIsUploading(false);
     }
@@ -175,11 +175,11 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
           className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative z-10 ${
             activeTab === 'files' ? 'text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-800'
           }`}
-          aria-label="Files"
+          aria-label="Archivos"
         >
           <div className="flex items-center gap-2 justify-center">
             <span className="text-lg">📂</span>
-            <span>Files</span>
+            <span>Archivos</span>
           </div>
         </button>
         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 transform -translate-x-1/2 z-0"></div>
@@ -189,11 +189,11 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
           className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative z-10 ${
             activeTab === 'calendar' ? 'text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-800'
           }`}
-          aria-label="Calendar"
+          aria-label="Calendario"
         >
           <div className="flex items-center gap-2 justify-center">
             <span className="text-lg">🗓️</span>
-            <span>Calendar</span>
+            <span>Calendario</span>
           </div>
         </button>
         <div 
@@ -211,7 +211,7 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <FileText className="h-5 w-5 text-blue-600" />
-                Course Syllabus
+                Programa del Curso
               </h3>
               <Card className="p-4 rounded-xl border border-blue-200 bg-blue-50">
                 <div className="flex items-center gap-3">
@@ -220,10 +220,10 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                   </div>
                   <div className="flex-1">
                     <h4 className="font-medium text-blue-800">{subject.syllabus_file_name}</h4>
-                    <p className="text-sm text-blue-600">Course syllabus and overview</p>
+                    <p className="text-sm text-blue-600">Programa del curso y descripción general</p>
                   </div>
                   <Button variant="outline" size="sm" className="border-blue-300 text-blue-700">
-                    View
+                    Ver
                   </Button>
                 </div>
               </Card>
@@ -235,7 +235,7 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <span className="text-lg">📚</span>
-                Topic Materials
+                Materiales del Tema
               </h3>
               
             </div>
@@ -245,20 +245,20 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                 <div className="w-16 h-16 rounded-full bg-mint-100 flex items-center justify-center mx-auto mb-4">
                   <FileText size={24} className="text-mint-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-700 mb-2">No files yet</h3>
-                <p className="text-gray-500 mb-4">Upload your first file to this topic</p>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">Aún no hay archivos</h3>
+                <p className="text-gray-500 mb-4">Sube tu primer archivo a este tema</p>
                 
                 {/* File Upload Form */}
                 <div className="space-y-4 max-w-md mx-auto">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 text-left">
-                      File Name *
+                      Nombre del Archivo *
                     </label>
                     <Input
                       type="text"
                       value={fileName}
                       onChange={(e) => setFileName(e.target.value)}
-                      placeholder="e.g., Constitutional Law Notes, Case Study Analysis"
+                      placeholder="ej., Notas de Derecho Constitucional, Análisis de Caso de Estudio"
                       className="w-full rounded-lg border-gray-300 focus:border-mint-400 focus:ring-mint-100"
                       disabled={isUploading}
                     />
@@ -266,7 +266,7 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 text-left">
-                      Attach File *
+                      Adjuntar Archivo *
                     </label>
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-mint-400 transition-colors">
                       {selectedFile ? (
@@ -282,24 +282,24 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                             onClick={() => setSelectedFile(null)}
                             className="border-mint-300 text-mint-700 hover:bg-mint-100"
                           >
-                            Remove File
+                            Eliminar Archivo
                           </Button>
                         </div>
                       ) : (
                         <div className="space-y-2">
                           <Upload className="h-8 w-8 text-gray-500 mx-auto" />
                           <p className="text-sm text-gray-700 font-medium">
-                            Click to browse or drag and drop
+                            Haz clic para explorar o arrastra y suelta
                           </p>
                           <p className="text-xs text-gray-600">
-                            Supports: PDF, Word, Excel, Text, Images
+                            Soporta: PDF, Word, Excel, Texto, Imágenes
                           </p>
                           <Button
                             variant="outline"
                             onClick={() => document.getElementById('file-input')?.click()}
                             className="mt-2 border-gray-400 text-gray-700 hover:bg-gray-100"
                           >
-                            Choose File
+                            Elegir Archivo
                           </Button>
                         </div>
                       )}
@@ -318,7 +318,7 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                     disabled={!fileName.trim() || !selectedFile || isUploading}
                     className="w-full bg-mint-400 hover:bg-mint-500 text-white rounded-lg px-6 py-3 font-medium disabled:opacity-50"
                   >
-                    {isUploading ? 'Uploading...' : 'Upload File'}
+                    {isUploading ? 'Subiendo...' : 'Subir Archivo'}
                   </Button>
                 </div>
               </Card>
@@ -329,19 +329,19 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                   <div className="space-y-4">
                     <h4 className="font-medium text-mint-800 flex items-center gap-2">
                       <Plus size={16} />
-                      Add New File
+                      Agregar Nuevo Archivo
                     </h4>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-mint-700 mb-2">
-                          File Name *
+                          Nombre del Archivo *
                         </label>
                         <Input
                           type="text"
                           value={fileName}
                           onChange={(e) => setFileName(e.target.value)}
-                          placeholder="e.g., Additional Notes, Case Study"
+                          placeholder="ej., Notas Adicionales, Caso de Estudio"
                           className="w-full rounded-lg border-mint-300 focus:border-mint-500 focus:ring-mint-100"
                           disabled={isUploading}
                         />
@@ -349,7 +349,7 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                       
                       <div>
                         <label className="block text-sm font-medium text-mint-700 mb-2">
-                          Attach File *
+                          Adjuntar Archivo *
                         </label>
                         <div className="border-2 border-dashed border-mint-300 rounded-lg p-3 text-center hover:border-mint-500 transition-colors">
                           {selectedFile ? (
@@ -362,20 +362,20 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                                 onClick={() => setSelectedFile(null)}
                                 className="border-mint-300 text-mint-700 hover:bg-mint-100 text-xs"
                               >
-                                Remove
+                                Eliminar
                               </Button>
                             </div>
                           ) : (
                             <div className="space-y-2">
                               <Upload className="h-6 w-6 text-mint-500 mx-auto" />
-                              <p className="text-xs text-mint-600">Click to browse</p>
+                              <p className="text-xs text-mint-600">Haz clic para explorar</p>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => document.getElementById('file-input-existing')?.click()}
                                 className="border-mint-300 text-mint-700 hover:bg-mint-100 text-xs"
                               >
-                                Choose File
+                                Elegir Archivo
                               </Button>
                             </div>
                           )}
@@ -395,7 +395,7 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                       disabled={!fileName.trim() || !selectedFile || isUploading}
                       className="bg-mint-500 hover:bg-mint-600 text-white rounded-lg px-4 py-2 font-medium disabled:opacity-50"
                     >
-                      {isUploading ? 'Uploading...' : 'Upload File'}
+                      {isUploading ? 'Subiendo...' : 'Subir Archivo'}
                     </Button>
                   </div>
                 </Card>
@@ -444,15 +444,15 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Calendar className="h-5 w-5 text-red-600" />
-              Key Dates & Events
+              Fechas y Eventos Clave
             </h3>
             {topicEvents.length === 0 ? (
               <Card className="p-6 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm text-center">
                 <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                   <Calendar size={24} className="text-red-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-700 mb-2">No events scheduled</h3>
-                <p className="text-gray-500">Add important dates and deadlines for this topic</p>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">No hay eventos programados</h3>
+                <p className="text-gray-500">Agrega fechas importantes y fechas límite para este tema</p>
               </Card>
             ) : (
               <div className="space-y-3">
@@ -472,7 +472,7 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                         <p className="text-sm text-red-700">{event.description}</p>
                       </div>
                       <Button variant="outline" size="sm" className="border-red-300 text-red-700">
-                        Edit
+                        Editar
                       </Button>
                     </div>
                   </Card>
@@ -485,15 +485,15 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
           <div className="space-y-3">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
               <Clock className="h-5 w-5 text-green-600" />
-              Class Schedule
+              Horario de Clases
             </h3>
             {topicSchedules.length === 0 ? (
               <Card className="p-6 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm text-center">
                 <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                   <Clock size={24} className="text-green-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-700 mb-2">No schedule set</h3>
-                <p className="text-gray-500">Add class times and locations for this topic</p>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">No hay horario establecido</h3>
+                <p className="text-gray-500">Agrega horarios de clase y ubicaciones para este tema</p>
               </Card>
             ) : (
               <div className="space-y-3">
@@ -516,7 +516,7 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                         </div>
                       </div>
                       <Button variant="outline" size="sm" className="border-green-300 text-green-700">
-                        Edit
+                        Editar
                       </Button>
                     </div>
                   </Card>

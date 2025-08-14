@@ -51,7 +51,7 @@ export const CreateFolderModal = ({ isOpen, onClose, onCreateFolder }: CreateFol
             <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
               <Folder size={20} className="text-blue-600" />
             </div>
-            <h2 className="text-2xl font-light text-gray-800">Create Folder</h2>
+            <h2 className="text-2xl font-light text-gray-800">Crear Carpeta</h2>
           </div>
           <button
             onClick={handleClose}
@@ -66,20 +66,20 @@ export const CreateFolderModal = ({ isOpen, onClose, onCreateFolder }: CreateFol
         <div className="p-6 space-y-6">
           <div>
             <label className="block text-sm font-semibold text-gray-800 mb-2">
-              Folder Name *
+              Nombre de la Carpeta *
             </label>
             <Input
               type="text"
               value={folderName}
               onChange={(e) => setFolderName(e.target.value)}
-              placeholder="e.g., Constitutional Law, Civil Rights Cases, Legal Theory"
+              placeholder="ej., Derecho Constitucional, Casos de Derechos Civiles, Teoría Legal"
               className="w-full rounded-xl border-gray-300 focus:border-blue-400 focus:ring-blue-100 bg-white"
               disabled={isSubmitting}
               autoFocus
-              aria-label="Folder Name"
+              aria-label="Nombre de la Carpeta"
             />
             <p className="text-xs text-gray-500 mt-2">
-              Folders help you organize your study materials by specific topics or concepts.
+              Las carpetas te ayudan a organizar tus materiales de estudio por temas o conceptos específicos.
             </p>
           </div>
         </div>
@@ -92,7 +92,7 @@ export const CreateFolderModal = ({ isOpen, onClose, onCreateFolder }: CreateFol
             disabled={isSubmitting}
             className="rounded-full px-6 border-gray-300 text-gray-700 hover:bg-gray-100"
           >
-            Cancel
+            Cancelar
           </Button>
           <Button
             onClick={handleSubmit}
@@ -100,7 +100,7 @@ export const CreateFolderModal = ({ isOpen, onClose, onCreateFolder }: CreateFol
             className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-6 font-medium"
             aria-disabled={!folderName.trim()}
           >
-            {isSubmitting ? 'Creating...' : 'Create Folder'}
+            {isSubmitting ? 'Creando...' : 'Crear Carpeta'}
           </Button>
         </div>
       </div>

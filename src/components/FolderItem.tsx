@@ -45,7 +45,7 @@ export const FolderItem = ({
   };
 
   const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete the folder "${folder.name}" and all its files?`)) {
+    if (confirm(`¿Estás seguro de que quieres eliminar la carpeta "${folder.name}" y todos sus archivos?`)) {
       onDeleteFolder(folder.id);
     }
   };
@@ -84,17 +84,17 @@ export const FolderItem = ({
                   }}
                 />
                 <Button size="sm" onClick={handleSave} className="bg-blue-500 hover:bg-blue-600">
-                  Save
+                  Guardar
                 </Button>
                 <Button size="sm" variant="outline" onClick={handleCancel}>
-                  Cancel
+                  Cancelar
                 </Button>
               </div>
             ) : (
               <div className="flex-1">
                 <h3 className="font-medium text-gray-800">{folder.name}</h3>
                 <p className="text-sm text-gray-500">
-                  {folder.files.length} file{folder.files.length !== 1 ? 's' : ''}
+                  {folder.files.length} archivo{folder.files.length !== 1 ? 's' : ''}
                 </p>
               </div>
             )}
@@ -109,7 +109,7 @@ export const FolderItem = ({
                 className="border-blue-300 text-blue-700 hover:bg-blue-50"
               >
                 <Plus size={16} className="mr-1" />
-                Add File
+                Agregar Archivo
               </Button>
               <Button
                 size="sm"
@@ -140,14 +140,14 @@ export const FolderItem = ({
               <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
                 <FileText size={20} className="text-gray-400" />
               </div>
-              <p className="text-sm text-gray-500 mb-3">No files in this folder</p>
+              <p className="text-sm text-gray-500 mb-3">No hay archivos en esta carpeta</p>
               <Button
                 size="sm"
                 onClick={() => onAddFile(folder.id)}
                 className="bg-blue-500 hover:bg-blue-600 text-white"
               >
                 <Plus size={16} className="mr-1" />
-                Add First File
+                Agregar Primer Archivo
               </Button>
             </div>
           ) : (
