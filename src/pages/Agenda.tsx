@@ -65,7 +65,7 @@ const colorByType: Record<string, string> = {
   otro: "bg-violet-100 text-violet-700 border-violet-200",
 };
 
-const PlanDeEstudios = () => {
+const Agenda = () => {
   const { user } = useAuth();
   const [recommendedTask, setRecommendedTask] = useState<string>("Estudiar ahora: Revisión general");
   const [timerRunning, setTimerRunning] = useState(false);
@@ -177,7 +177,7 @@ const PlanDeEstudios = () => {
   return (
     <div className="pb-24">
       {/* 1. Sección Superior: Tu Foco Hoy */}
-      <section className={`sticky top-0 z-10 ${gradientBg} border-b border-pink-100/60`}> 
+      <section className={`sticky top-0 z-10 ${gradientBg} border-b border-pink-100/60`}>
         <div className="px-4 pt-5 pb-4">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="h-4 w-4 text-pink-500" />
@@ -259,7 +259,7 @@ const PlanDeEstudios = () => {
           {eventsForSelectedDay.map((item) => {
             const typeKey = item.typeKey in colorByType ? item.typeKey : "otro";
             return (
-              <Card key={item.id} className={`p-3 rounded-xl border ${colorByType[typeKey]} bg-white`}> 
+              <Card key={item.id} className={`p-3 rounded-xl border ${colorByType[typeKey]} bg-white`}>
                 <div className="flex items-start gap-3">
                   <div className={`mt-1 grid place-items-center rounded-md border ${colorByType[typeKey]} w-7 h-7 bg-white/70`}>
                     {iconByType[typeKey]}
@@ -345,6 +345,6 @@ const PlanDeEstudios = () => {
   );
 };
 
-export default PlanDeEstudios;
+export default Agenda;
 
 
