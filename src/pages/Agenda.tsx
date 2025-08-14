@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Calendar, CheckCircle2, Clock, BookOpenCheck, Target, Sparkles, Bell, School } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +12,7 @@ type CalendarEvent = {
   event_type?: string;
   event_date?: string; // YYYY-MM-DD
   description?: string | null;
+  subject_id?: string | null;
 };
 
 type Schedule = {
@@ -20,6 +22,7 @@ type Schedule = {
   end_time: string;    // HH:mm
   description?: string | null;
   location?: string | null;
+  subject_id?: string | null;
 };
 
 type Subject = {
@@ -81,7 +84,14 @@ const Agenda = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const subjectMap = useMemo(() => Object.fromEntries(subjects.map(s => [s.id, s.name])), [subjects]);
   const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newEventName, setNewEventName] = useState("");
+  const [newEventType, setNewEventType] = useState<string>("estudio");
+  const [newEventSubjectId, setNewEventSubjectId] = useState<string | "">("");
+  const [newEventDate, setNewEventDate] = useState<string>("");
+  const [newEventDescription, setNewEventDescription] = useState<string>("");
 
   // Temporizador de estudio (simple)
   useEffect(() => {
@@ -104,14 +114,14 @@ const Agenda = () => {
         // Eventos (subject_events)
         const { data: evs } = await supabase
           .from("subject_events")
-          .select("id,name,event_type,event_date,description")
+          .select("id,name,event_type,event_date,description,subject_id")
           .eq("user_id", user!.id);
         setEvents(evs || []);
 
         // Horarios (subject_schedules)
         const { data: sch } = await supabase
           .from("subject_schedules")
-          .select("id,day_of_week,start_time,end_time,description,location")
+          .select("id,day_of_week,start_time,end_time,description,location,subject_id")
           .eq("user_id", user!.id);
         setSchedules(sch || []);
 
@@ -139,11 +149,14 @@ const Agenda = () => {
 
   const selectedDate = weekDays[selectedDayIndex];
   const selectedYMD = formatYMD(selectedDate);
+  useEffect(() => {
+    setNewEventDate(selectedYMD);
+  }, [selectedYMD]);
 
   const eventsForSelectedDay = useMemo(() => {
-    const calendarItems: Array<{ id: string; typeKey: string; title: string; time?: string; subtitle?: string }> = [];
+    const calendarItems: Array<{ id: string; typeKey: string; title: string; time?: string; subjectName?: string }> = [];
     // Bloques de estudio recomendados por IA (placeholder)
-    calendarItems.push({ id: `ai-${selectedYMD}`, typeKey: "estudio", title: "Bloque de estudio recomendado", time: "60 min", subtitle: "IA" });
+    calendarItems.push({ id: `ai-${selectedYMD}`, typeKey: "estudio", title: "Bloque de estudio recomendado", time: "60 min", subjectName: "IA" });
     // Clases (mapear desde schedules)
     schedules
       .filter((s) => s.day_of_week === selectedDate.getDay())
@@ -153,7 +166,7 @@ const Agenda = () => {
           typeKey: "clase",
           title: s.description || "Clase",
           time: `${s.start_time} - ${s.end_time}`,
-          subtitle: s.location || undefined,
+          subjectName: (s.subject_id && subjectMap[s.subject_id]) || s.location || undefined,
         });
       });
     // Eventos con fecha
@@ -161,7 +174,7 @@ const Agenda = () => {
       .filter((e) => e.event_date === selectedYMD)
       .forEach((e) => {
         const typeKey = (e.event_type || "otro").toLowerCase();
-        calendarItems.push({ id: `ev-${e.id}`, typeKey, title: e.name, subtitle: e.description || undefined });
+        calendarItems.push({ id: `ev-${e.id}`, typeKey, title: e.name, subjectName: (e.subject_id && subjectMap[e.subject_id]) || undefined });
       });
     return calendarItems;
   }, [events, schedules, selectedDate, selectedYMD]);
@@ -185,11 +198,12 @@ const Agenda = () => {
           </div>
           <Card className="p-4 rounded-2xl border-0 shadow-sm bg-white/90">
             <div className="flex flex-col gap-3">
+              <h3 className="text-base font-semibold text-gray-900">{recommendedTask}</h3>
               <Button
                 onClick={() => setTimerRunning((r) => !r)}
                 className="w-full rounded-xl bg-pink-500 hover:bg-pink-600 text-white py-6 text-base font-semibold"
               >
-                {timerRunning ? `En curso • ${elapsedStr}` : recommendedTask}
+                {timerRunning ? `En curso • ${elapsedStr}` : "Iniciar Sesión"}
               </Button>
               <div className="grid grid-cols-2 gap-3">
                 <Card className="p-3 rounded-xl border-0 bg-pink-50">
@@ -296,7 +310,7 @@ const Agenda = () => {
             <Card className="p-4 rounded-xl border-0 text-center text-gray-500">Sin próximas fechas</Card>
           ) : (
             <div className="space-y-2">
-              {upcomingDeadlines.map((e) => (
+              {upcomingDeadlines.slice(0, 3).map((e) => (
                 <Card key={e.id} className="p-3 rounded-xl border-0 bg-white/90">
                   <div className="flex items-center justify-between">
                     <div>
@@ -312,6 +326,20 @@ const Agenda = () => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Progreso general del curso */}
+        <div className="mb-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Progreso del Curso</h3>
+          <Card className="p-3 rounded-xl border-0 bg-white/90">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-700">Progreso general</span>
+              <span className="text-sm font-semibold text-gray-900">25%</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
+              <div className="h-full bg-emerald-500" style={{ width: '25%' }}></div>
+            </div>
+          </Card>
         </div>
 
         {/* Lista de temas (sustituido por asignaturas con progreso) */}
@@ -341,6 +369,95 @@ const Agenda = () => {
           )}
         </div>
       </section>
+      {/* Botón flotante para agregar evento manual */}
+      <button
+        onClick={() => setShowAddModal(true)}
+        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors"
+        title="Agregar evento manual"
+      >
+        +
+      </button>
+
+      {/* Modal Agregar Evento */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900">Agregar Evento</h3>
+              <button onClick={() => setShowAddModal(false)} className="p-2 rounded-full hover:bg-gray-100">✕</button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del evento *</label>
+                <Input value={newEventName} onChange={(e) => setNewEventName(e.target.value)} placeholder="Ej., Estudiar Tema 5" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha *</label>
+                  <input type="date" value={newEventDate} onChange={(e) => setNewEventDate(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                  <select value={newEventType} onChange={(e) => setNewEventType(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                    <option value="estudio">Estudio</option>
+                    <option value="clase">Clase</option>
+                    <option value="examen">Examen</option>
+                    <option value="entrega">Entrega</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Asignatura (opcional)</label>
+                <select value={newEventSubjectId} onChange={(e) => setNewEventSubjectId(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                  <option value="">Sin asignatura</option>
+                  {subjects.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                <textarea value={newEventDescription} onChange={(e) => setNewEventDescription(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm min-h-[80px]" placeholder="Notas adicionales" />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 p-5 border-t border-gray-100 bg-gray-50">
+              <Button variant="outline" onClick={() => setShowAddModal(false)} className="rounded-full px-6">Cancelar</Button>
+              <Button
+                onClick={async () => {
+                  if (!user || !newEventName.trim() || !newEventDate) return;
+                  try {
+                    const { error } = await supabase.from('subject_events').insert({
+                      user_id: user.id,
+                      subject_id: newEventSubjectId || null,
+                      name: newEventName.trim(),
+                      event_type: newEventType,
+                      event_date: newEventDate,
+                      description: newEventDescription || null,
+                    });
+                    if (error) throw error;
+                    // refresh events
+                    const { data: evs } = await supabase
+                      .from('subject_events')
+                      .select('id,name,event_type,event_date,description,subject_id')
+                      .eq('user_id', user.id);
+                    setEvents(evs || []);
+                    setShowAddModal(false);
+                    setNewEventName(""); setNewEventType("estudio"); setNewEventSubjectId(""); setNewEventDescription("");
+                  } catch (e) {
+                    console.error(e);
+                    alert('No se pudo crear el evento.');
+                  }
+                }}
+                className="rounded-full px-6"
+                disabled={!newEventName.trim() || !newEventDate}
+              >
+                Agregar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

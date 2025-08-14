@@ -42,16 +42,16 @@ const Herramientas = () => {
     <div className="px-4 py-5 pb-24">
       <h1 className="text-xl font-semibold text-gray-900 mb-4">Herramientas</h1>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {tools.map((t) => (
           <Link key={t.key} to={t.to} className="block">
-            <Card className={`p-4 rounded-2xl border-0 shadow-sm bg-gradient-to-br ${t.bg} hover:shadow-md transition-shadow`}>
-              <div className="flex flex-col items-center justify-center gap-2 py-2">
+            <Card className={`rounded-2xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow`}>
+              <div className={`aspect-square bg-gradient-to-br ${t.bg} flex flex-col items-center justify-center gap-2 p-4`}>
                 <div className={`w-12 h-12 rounded-xl ${t.iconBg} grid place-items-center`}>
                   <t.icon className="h-6 w-6" />
                 </div>
                 <div className="text-center">
-                  <h3 className="text-sm font-semibold">{t.title}</h3>
+                  <h3 className="text-sm font-semibold leading-tight">{t.title}</h3>
                 </div>
               </div>
             </Card>
