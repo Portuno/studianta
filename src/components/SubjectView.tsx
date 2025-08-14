@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Plus, Upload, Clock, User, MapPin, Folder, ChevronDown } from "lucide-react";
+import { FileText, Calendar, Plus, Upload, Clock, User, MapPin, Folder, ChevronDown, X } from "lucide-react";
 import { FileStatusBadge } from "./FileStatusBadge";
 import { Input } from "@/components/ui/input";
 import { PDFViewer } from "./PDFViewer";
@@ -79,6 +79,11 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [newEventName, setNewEventName] = useState("");
+  const [newEventDate, setNewEventDate] = useState<string>("");
+  const [newEventType, setNewEventType] = useState<string>("estudio");
+  const [newEventDescription, setNewEventDescription] = useState<string>("");
   
   // Real data from database
   const [events, setEvents] = useState<SubjectEvent[]>([]);
@@ -273,33 +278,13 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
     }
   };
 
-  const handleAddEvent = async () => {
-    if (!user) return;
-    
-    const newEvent = {
-      name: "Nuevo Evento",
-      event_type: "examen",
-      event_date: new Date().toISOString().split('T')[0],
-      description: ""
-    };
-
-    try {
-      const { data, error } = await supabase
-        .from('subject_events')
-        .insert({
-          user_id: user.id,
-          subject_id: subject.id,
-          ...newEvent
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setEvents([...events, data]);
-    } catch (error) {
-      console.error('Error adding event:', error);
-      alert('Error al agregar el evento. Por favor, inténtalo de nuevo.');
-    }
+  const handleAddEvent = () => {
+    // abrir modal, sin insertar
+    setNewEventName("");
+    setNewEventDescription("");
+    setNewEventType("estudio");
+    setNewEventDate("");
+    setShowAddEventModal(true);
   };
 
   const handleUpdateEvent = async (id: string, field: keyof SubjectEvent, value: string) => {
@@ -622,6 +607,25 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                           onChange={(e) => handleUpdateEvent(event.id, 'name', e.target.value)}
                           className="border-red-200 bg-white mb-2"
                         />
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          <Input
+                            type="date"
+                            value={event.event_date}
+                            onChange={(e) => handleUpdateEvent(event.id, 'event_date', e.target.value)}
+                            className="border-red-200 bg-white"
+                          />
+                          <select
+                            value={event.event_type}
+                            onChange={(e) => handleUpdateEvent(event.id, 'event_type', e.target.value)}
+                            className="rounded-md border border-red-200 px-3 py-2 text-sm bg-white"
+                          >
+                            <option value="estudio">Estudio</option>
+                            <option value="clase">Clase</option>
+                            <option value="examen">Examen</option>
+                            <option value="entrega">Entrega</option>
+                            <option value="otro">Otro</option>
+                          </select>
+                        </div>
                         <Input
                           value={event.description || ''}
                           onChange={(e) => handleUpdateEvent(event.id, 'description', e.target.value)}
@@ -756,6 +760,64 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
         onClose={() => setShowCreateFolder(false)}
         onCreateFolder={handleCreateFolder}
       />
+
+      {/* Add Event Modal */}
+      {showAddEventModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Agregar Evento</h3>
+              <button onClick={() => setShowAddEventModal(false)} className="p-2 rounded-full hover:bg-gray-100"><X size={16} /></button>
+            </div>
+            <div className="p-4 space-y-3">
+              <Input placeholder="Nombre del evento" value={newEventName} onChange={(e) => setNewEventName(e.target.value)} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input type="date" value={newEventDate} onChange={(e) => setNewEventDate(e.target.value)} />
+                <select value={newEventType} onChange={(e) => setNewEventType(e.target.value)} className="rounded-md border px-3 py-2 text-sm">
+                  <option value="estudio">Estudio</option>
+                  <option value="clase">Clase</option>
+                  <option value="examen">Examen</option>
+                  <option value="entrega">Entrega</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <Input placeholder="Descripción (opcional)" value={newEventDescription} onChange={(e) => setNewEventDescription(e.target.value)} />
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t bg-gray-50">
+              <Button variant="outline" onClick={() => setShowAddEventModal(false)}>Cancelar</Button>
+              <Button
+                onClick={async () => {
+                  if (!user || !newEventName.trim() || !newEventDate) return;
+                  try {
+                    const { data, error } = await supabase
+                      .from('subject_events')
+                      .insert({
+                        user_id: user.id,
+                        subject_id: subject.id,
+                        name: newEventName.trim(),
+                        event_type: newEventType,
+                        event_date: newEventDate,
+                        description: newEventDescription || null
+                      })
+                      .select()
+                      .single();
+                    if (error) throw error;
+                    setEvents(prev => [...prev, data]);
+                    setShowAddEventModal(false);
+                    setNewEventName(""); setNewEventDate(""); setNewEventType("estudio"); setNewEventDescription("");
+                  } catch (e) {
+                    console.error('Error adding event:', e);
+                    alert('No se pudo crear el evento. Verifica la fecha e intenta nuevamente.');
+                  }
+                }}
+                disabled={!newEventName.trim() || !newEventDate}
+              >
+                Agregar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Action Button - Add File/Folder */}
       <div className="fixed bottom-24 right-6 z-50">
