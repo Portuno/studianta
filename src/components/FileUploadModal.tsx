@@ -256,7 +256,7 @@ export const FileUploadModal = ({ isOpen, onClose, onUploadComplete, preselected
               Suelta archivos aquí o haz clic para explorar
             </h3>
             <p className="text-gray-500 mb-4">
-              Soporte para archivos PDF, imágenes, audio y video
+              Soporte para archivos PDF y documentos (Word, Excel, Texto)
             </p>
             <input
               type="file"
@@ -264,7 +264,7 @@ export const FileUploadModal = ({ isOpen, onClose, onUploadComplete, preselected
               onChange={handleFileInput}
               className="hidden"
               id="file-input"
-              accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.mp3,.wav,.mp4,.avi,.mov"
+              accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
             />
             <label
               htmlFor="file-input"

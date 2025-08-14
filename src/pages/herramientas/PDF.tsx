@@ -24,7 +24,7 @@ const PDF = () => {
       <h1 className="text-xl font-semibold text-gray-900">Convertir a PDF</h1>
       <Card className="p-4 rounded-2xl border-0 bg-white/90 space-y-3">
         <div className="flex items-center gap-2">
-          <Input type="file" accept="image/*,.txt,.doc,.docx" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          <Input type="file" accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain" onChange={(e) => setFile(e.target.files?.[0] || null)} />
           <Button onClick={handleConvert} disabled={!file || loading} className="rounded-lg">
             <FileUp className="h-4 w-4 mr-2" /> {loading ? "Convirtiendo..." : "Convertir"}
           </Button>

@@ -307,7 +307,7 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                     <input
                       id="file-input"
                       type="file"
-                      accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,image/*"
+                      accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
                       onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
                       className="hidden"
                     />
@@ -383,7 +383,7 @@ export const TopicView = ({ topic, subject, materials, onAddFile, onBack }: Topi
                         <input
                           id="file-input-existing"
                           type="file"
-                          accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,image/*"
+                          accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.ppt,.pptx,.xls,.xlsx,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain"
                           onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
                           className="hidden"
                         />
