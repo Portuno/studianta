@@ -2,10 +2,10 @@ import { NavLink } from "react-router-dom";
 import { Home, Calendar, BookOpen, MessageCircle } from "lucide-react";
 
 const navItems = [
-  { to: "/", icon: Home, label: "Today" },
+  { to: "/", icon: Home, label: "Hoy" },
   { to: "/plan", icon: Calendar, label: "Plan" },
-  { to: "/library", icon: BookOpen, label: "Library" },
-  { to: "/chat", icon: MessageCircle, label: "AI Chat" },
+  { to: "/library", icon: BookOpen, label: "Biblioteca" },
+  { to: "/chat", icon: MessageCircle, label: "Chat IA" },
 ];
 
 export function MobileNavigation() {
@@ -33,8 +33,7 @@ export function MobileNavigation() {
                 isActive
                   ? "text-primary bg-primary/10"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`
-            }
+              }`}
           >
             <Icon size={20} strokeWidth={1.5} />
             <span className="text-xs font-medium">{label}</span>

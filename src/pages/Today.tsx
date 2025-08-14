@@ -39,7 +39,7 @@ export default function Today() {
       <div className="space-y-6 pb-20">
         <div className="text-center pt-8 pb-6">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading your study sessions...</p>
+          <p className="text-muted-foreground">Cargando tus sesiones de estudio...</p>
         </div>
       </div>
     );
@@ -62,10 +62,10 @@ export default function Today() {
             onClick={handleSignOut}
             className="text-muted-foreground hover:text-foreground"
           >
-            Sign Out
+            Cerrar Sesión
           </Button>
         </div>
-        <h1 className="text-2xl font-light text-foreground/90 mb-2">Today</h1>
+        <h1 className="text-2xl font-light text-foreground/90 mb-2">Hoy</h1>
         <p className="text-muted-foreground text-sm">
           {format(today, 'EEEE, MMMM d')}
         </p>
@@ -78,18 +78,18 @@ export default function Today() {
           onClick={() => setShowAddForm(!showAddForm)}
         >
           <Plus size={18} className="mr-2" />
-          Add Study Session
+          Agregar Sesión de Estudio
         </Button>
       </div>
 
       {/* Today's Schedule */}
       <div className="px-6 space-y-3">
-        <h2 className="text-lg font-medium text-foreground/80 mb-4">Schedule</h2>
+        <h2 className="text-lg font-medium text-foreground/80 mb-4">Horario</h2>
         {todaySessions.length === 0 ? (
           <Card className="gradient-card border-border/30 p-6 rounded-2xl text-center">
-            <p className="text-muted-foreground">No study sessions scheduled for today</p>
+            <p className="text-muted-foreground">No hay sesiones de estudio programadas para hoy</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Add your first session to get started!
+              ¡Agrega tu primera sesión para comenzar!
             </p>
           </Card>
         ) : (
@@ -141,19 +141,19 @@ export default function Today() {
       {/* Study Stats */}
       <div className="px-6">
         <Card className="gradient-card border-border/30 p-6 rounded-2xl">
-          <h3 className="text-lg font-medium text-foreground/80 mb-4">Today's Progress</h3>
+          <h3 className="text-lg font-medium text-foreground/80 mb-4">Progreso de Hoy</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">
                 {Math.round(totalStudyTime / 60)}m
               </div>
-              <div className="text-sm text-muted-foreground">Study Time</div>
+              <div className="text-sm text-muted-foreground">Tiempo de Estudio</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-accent">
                 {completedSessions}/{totalSessions}
               </div>
-              <div className="text-sm text-muted-foreground">Completed</div>
+              <div className="text-sm text-muted-foreground">Completadas</div>
             </div>
           </div>
         </Card>

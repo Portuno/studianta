@@ -129,7 +129,7 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
       <Card className="w-full max-w-md rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4">
-          <h2 className="text-xl font-medium text-gray-800">Add New Program</h2>
+          <h2 className="text-xl font-medium text-gray-800">Agregar Nuevo Programa</h2>
           <button
             onClick={onClose}
             className="p-2 rounded-full hover:bg-gray-100 transition-colors"
@@ -143,13 +143,13 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
           {/* Program Name Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">
-              Program Name
+              Nombre del Programa
             </label>
             <Input
-              placeholder="e.g., Medicine, Computer Science"
+              placeholder="ej., Medicina, Ciencias de la Computación"
               value={programName}
               onChange={(e) => setProgramName(e.target.value)}
-              className="rounded-2xl border-pink-200 bg-white/80 focus:border-pink-300 focus:ring-pink-200"
+              className="rounded-lg"
               required
             />
           </div>
@@ -157,23 +157,23 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
           {/* Institution Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">
-              Institution
+              Institución
             </label>
             <Input
-              placeholder="e.g., University of Cambridge"
+              placeholder="ej., Universidad de Cambridge"
               value={institution}
               onChange={(e) => setInstitution(e.target.value)}
-              className="rounded-2xl border-pink-200 bg-white/80 focus:border-pink-300 focus:ring-pink-200"
+              className="rounded-lg"
             />
           </div>
 
           {/* Syllabus Upload Section */}
           <div className="space-y-3">
             <label className="text-sm font-medium text-gray-700">
-              Upload Program Syllabus <span className="text-gray-500 font-normal">(Optional)</span>
+              Subir Programa de Estudios <span className="text-gray-500 font-normal">(Opcional)</span>
             </label>
             <p className="text-xs text-gray-500">
-              This document (PDF or Word) will help the AI break down subjects and topics for the Plan tab
+              Este documento (PDF o Word) ayudará a la IA a desglosar asignaturas y temas para la pestaña Plan
             </p>
             
             {/* Drag & Drop Area */}
@@ -201,7 +201,7 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
                     onClick={handleRemoveFile}
                     className="text-red-500 border-red-200 hover:bg-red-50"
                   >
-                    Remove File
+                    Eliminar Archivo
                   </Button>
                 </div>
               ) : (
@@ -211,7 +211,7 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 mb-2">
-                      Drag and drop your PDF here, or
+                      Arrastra y suelta tu PDF aquí, o
                     </p>
                     <Button
                       type="button"
@@ -219,7 +219,7 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
                       onClick={() => fileInputRef.current?.click()}
                       className="bg-pink-400 hover:bg-pink-500 text-white border-0 rounded-full px-6"
                     >
-                      Choose PDF or Word File
+                      Elegir Archivo PDF o Word
                     </Button>
                   </div>
                 </div>
@@ -245,12 +245,12 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
               {isUploading ? (
                 <>
                   <Loader2 size={20} className="mr-2 animate-spin" />
-                  Creating Program...
+                  Creando Programa...
                 </>
               ) : (
                 <>
                   <Plus size={20} className="mr-2" />
-                  Create Program
+                  Crear Programa
                 </>
               )}
             </Button>
@@ -261,7 +261,7 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
               onClick={onClose}
               className="w-full border-pink-200 text-pink-600 hover:bg-pink-50 rounded-full py-3"
             >
-              Cancel
+              Cancelar
             </Button>
           </div>
         </form>

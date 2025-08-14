@@ -31,24 +31,24 @@ interface SubjectSchedule {
 }
 
 const DAYS_OF_WEEK = [
-  { value: 0, label: "Sunday" },
-  { value: 1, label: "Monday" },
-  { value: 2, label: "Tuesday" },
-  { value: 3, label: "Wednesday" },
-  { value: 4, label: "Thursday" },
-  { value: 5, label: "Friday" },
-  { value: 6, label: "Saturday" },
+  { value: 0, label: "Domingo" },
+  { value: 1, label: "Lunes" },
+  { value: 2, label: "Martes" },
+  { value: 3, label: "Miércoles" },
+  { value: 4, label: "Jueves" },
+  { value: 5, label: "Viernes" },
+  { value: 6, label: "Sábado" },
 ];
 
 const EVENT_TYPES = [
-  { label: "Exam", value: "exam" },
-  { label: "Practical Activity", value: "practical_activity" },
-  { label: "Project Submission", value: "project_submission" },
-  { label: "Presentation", value: "presentation" },
+  { label: "Examen", value: "exam" },
+  { label: "Actividad Práctica", value: "practical_activity" },
+  { label: "Entrega de Proyecto", value: "project_submission" },
+  { label: "Presentación", value: "presentation" },
   { label: "Quiz", value: "quiz" },
-  { label: "Assignment Due", value: "assignment_due" },
-  { label: "Lab Session", value: "lab_session" },
-  { label: "Other", value: "other" }
+  { label: "Tarea Vencida", value: "assignment_due" },
+  { label: "Sesión de Laboratorio", value: "lab_session" },
+  { label: "Otro", value: "other" }
 ];
 
 export const AddSubjectModal = ({ 
@@ -231,7 +231,7 @@ export const AddSubjectModal = ({
 
     } catch (error) {
       console.error('Error creating subject:', error);
-      alert('Error creating subject. Please try again.');
+      alert('Error al crear la asignatura. Por favor, inténtalo de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -259,7 +259,7 @@ export const AddSubjectModal = ({
       <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="text-2xl font-light text-gray-800">Subject</h2>
+          <h2 className="text-2xl font-light text-gray-800">Asignatura</h2>
           <button
             onClick={handleClose}
             disabled={isSubmitting}
@@ -279,9 +279,9 @@ export const AddSubjectModal = ({
               className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative z-10 ${
                 activeTab === 'subject' ? 'text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-800'
               }`}
-              aria-label="Subject"
+              aria-label="Asignatura"
             >
-              Subject
+              Asignatura
             </button>
             {/* Diagonal separator */}
             <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 transform -translate-x-1/2 z-0"></div>
@@ -291,9 +291,9 @@ export const AddSubjectModal = ({
               className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative z-10 ${
                 activeTab === 'context' ? 'text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-800'
               }`}
-              aria-label="Additional Context"
+              aria-label="Contexto Adicional"
             >
-              Additional Context
+              Contexto Adicional
             </button>
             {/* Active tab indicator */}
             <div 
@@ -309,23 +309,23 @@ export const AddSubjectModal = ({
               {/* Subject Name */}
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
-                  Subject Name *
+                  Nombre de la Asignatura *
                 </label>
                 <Input
                   type="text"
                   value={subjectName}
                   onChange={(e) => setSubjectName(e.target.value)}
-                  placeholder="e.g., Advanced Mathematics, Organic Chemistry"
+                  placeholder="ej., Matemáticas Avanzadas, Química Orgánica"
                   className="w-full rounded-xl border-gray-300 focus:border-pink-400 focus:ring-pink-100 bg-white"
                   disabled={isSubmitting}
-                  aria-label="Subject Name"
+                  aria-label="Nombre de la Asignatura"
                 />
               </div>
 
               {/* Syllabus Upload */}
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
-                  Upload Syllabus (PDF) - Optional
+                  Subir Programa de Estudios (PDF) - Opcional
                 </label>
                 <div
                   className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
@@ -336,7 +336,7 @@ export const AddSubjectModal = ({
                   onDrop={handleDrop}
                   onDragOver={handleDragOver}
                   tabIndex={0}
-                  aria-label="Syllabus upload area"
+                  aria-label="Área de subida del programa de estudios"
                 >
                   {syllabusFile ? (
                     <div className="space-y-2">
@@ -351,24 +351,24 @@ export const AddSubjectModal = ({
                         onClick={() => setSyllabusFile(null)}
                         className="border-green-300 text-green-700 hover:bg-green-100"
                       >
-                        Remove File
+                        Eliminar Archivo
                       </Button>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       <Upload className="h-8 w-8 text-gray-500 mx-auto" />
                       <p className="text-sm text-gray-700 font-medium">
-                        Drag and drop your syllabus PDF here, or click to browse
+                        Arrastra y suelta tu programa de estudios PDF aquí, o haz clic para explorar
                       </p>
                       <p className="text-xs text-gray-600">
-                        Highly recommended to help AI understand course topics
+                        Altamente recomendado para ayudar a la IA a entender los temas del curso
                       </p>
                       <Button
                         variant="outline"
                         onClick={() => fileInputRef.current?.click()}
                         className="mt-2 border-gray-400 text-gray-700 hover:bg-gray-100"
                       >
-                        Choose PDF File
+                        Elegir Archivo PDF
                       </Button>
                     </div>
                   )}
@@ -391,13 +391,13 @@ export const AddSubjectModal = ({
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-pink-600" />
-                  <h4 className="font-semibold text-gray-800">Key Dates & Events</h4>
+                  <h4 className="font-semibold text-gray-800">Fechas y Eventos Clave</h4>
                 </div>
                 {events.map((event) => (
                   <Card key={event.id} className="p-4 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <Input
-                        placeholder="Event name"
+                        placeholder="Nombre del evento"
                         value={event.name}
                         onChange={(e) => handleUpdateEvent(event.id, 'name', e.target.value)}
                         className="rounded-lg border-gray-300 focus:border-pink-400 focus:ring-pink-100"
@@ -406,7 +406,7 @@ export const AddSubjectModal = ({
                         value={event.eventType}
                         onChange={(e) => handleUpdateEvent(event.id, 'eventType', e.target.value)}
                         className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-pink-400 focus:ring-pink-100"
-                        aria-label="Event type"
+                        aria-label="Tipo de evento"
                       >
                         {EVENT_TYPES.map((type) => (
                           <option key={type.value} value={type.value}>{type.label}</option>
@@ -421,7 +421,7 @@ export const AddSubjectModal = ({
                         className="rounded-lg border-gray-300 focus:border-pink-400 focus:ring-pink-100"
                       />
                       <Input
-                        placeholder="Description (optional)"
+                        placeholder="Descripción (opcional)"
                         value={event.description}
                         onChange={(e) => handleUpdateEvent(event.id, 'description', e.target.value)}
                         className="rounded-lg border-gray-300 focus:border-pink-400 focus:ring-pink-100"
@@ -433,7 +433,7 @@ export const AddSubjectModal = ({
                       onClick={() => handleRemoveEvent(event.id)}
                       className="text-red-700 border-red-300 hover:bg-red-50"
                     >
-                      Remove Event
+                      Eliminar Evento
                     </Button>
                   </Card>
                 ))}
@@ -443,7 +443,7 @@ export const AddSubjectModal = ({
                   className="w-full border-pink-300 text-pink-700 hover:bg-pink-50"
                 >
                   <Plus size={16} className="mr-2" />
-                  Add Event
+                  Agregar Evento
                 </Button>
               </div>
 
@@ -451,7 +451,7 @@ export const AddSubjectModal = ({
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-pink-600" />
-                  <h4 className="font-semibold text-gray-800">Course Schedule</h4>
+                  <h4 className="font-semibold text-gray-800">Horario del Curso</h4>
                 </div>
                 {schedules.map((schedule) => (
                   <Card key={schedule.id} className="p-4 space-y-3">
@@ -460,7 +460,7 @@ export const AddSubjectModal = ({
                         value={schedule.dayOfWeek}
                         onChange={(e) => handleUpdateSchedule(schedule.id, 'dayOfWeek', parseInt(e.target.value))}
                         className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-pink-400 focus:ring-pink-100"
-                        aria-label="Day of week"
+                        aria-label="Día de la semana"
                       >
                         {DAYS_OF_WEEK.map(day => (
                           <option key={day.value} value={day.value}>{day.label}</option>
@@ -481,13 +481,13 @@ export const AddSubjectModal = ({
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <Input
-                        placeholder="Location (optional)"
+                        placeholder="Ubicación (opcional)"
                         value={schedule.location}
                         onChange={(e) => handleUpdateSchedule(schedule.id, 'location', e.target.value)}
                         className="rounded-lg border-gray-300 focus:border-pink-400 focus:border-pink-400 focus:ring-pink-100"
                       />
                       <Input
-                        placeholder="Description (optional)"
+                        placeholder="Descripción (opcional)"
                         value={schedule.description}
                         onChange={(e) => handleUpdateSchedule(schedule.id, 'description', e.target.value)}
                         className="rounded-lg border-gray-300 focus:border-pink-400 focus:ring-pink-100"
@@ -499,7 +499,7 @@ export const AddSubjectModal = ({
                       onClick={() => handleRemoveSchedule(schedule.id)}
                       className="text-red-700 border-red-300 hover:bg-red-50"
                     >
-                      Remove Schedule
+                      Eliminar Horario
                     </Button>
                   </Card>
                 ))}
@@ -509,7 +509,7 @@ export const AddSubjectModal = ({
                   className="w-full border-pink-300 text-pink-700 hover:bg-pink-50"
                 >
                   <Plus size={16} className="mr-2" />
-                  Add Class Schedule
+                  Agregar Horario de Clase
                 </Button>
               </div>
 
@@ -517,11 +517,11 @@ export const AddSubjectModal = ({
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-pink-600" />
-                  <h4 className="font-semibold text-gray-800">Course Duration</h4>
+                  <h4 className="font-semibold text-gray-800">Duración del Curso</h4>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1 font-medium">Start Date</label>
+                    <label className="block text-xs text-gray-700 mb-1 font-medium">Fecha de Inicio</label>
                     <Input
                       type="date"
                       value={startDate}
@@ -530,7 +530,7 @@ export const AddSubjectModal = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-700 mb-1 font-medium">End Date</label>
+                    <label className="block text-xs text-gray-700 mb-1 font-medium">Fecha de Fin</label>
                     <Input
                       type="date"
                       value={endDate}
@@ -545,10 +545,10 @@ export const AddSubjectModal = ({
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-pink-600" />
-                  <h4 className="font-semibold text-gray-800">Instructor Information</h4>
+                  <h4 className="font-semibold text-gray-800">Información del Instructor</h4>
                 </div>
                 <Input
-                  placeholder="Instructor name (optional)"
+                  placeholder="Nombre del instructor (opcional)"
                   value={instructorName}
                   onChange={(e) => setInstructorName(e.target.value)}
                   className="rounded-lg border-gray-300 focus:border-pink-400 focus:ring-pink-100"
@@ -566,7 +566,7 @@ export const AddSubjectModal = ({
             disabled={isSubmitting}
             className="rounded-full px-6 border-gray-300 text-gray-700 hover:bg-gray-100"
           >
-            Cancel
+            Cancelar
           </Button>
           <Button
             onClick={handleSubmit}
@@ -574,7 +574,7 @@ export const AddSubjectModal = ({
             className="bg-pink-500 hover:bg-pink-600 text-white rounded-full px-6 font-medium"
             aria-disabled={!subjectName.trim()}
           >
-            {isSubmitting ? 'Creating...' : 'Create Subject'}
+            {isSubmitting ? 'Creando...' : 'Crear Asignatura'}
           </Button>
         </div>
       </div>

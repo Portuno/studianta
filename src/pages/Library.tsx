@@ -130,7 +130,7 @@ export default function Library() {
   };
 
   const handleDeleteSubject = async (subjectId: string) => {
-    if (confirm('Are you sure you want to delete this subject? This action cannot be undone.')) {
+    if (confirm('¿Estás seguro de que quieres eliminar esta asignatura? Esta acción no se puede deshacer.')) {
       try {
         const { error } = await supabase
           .from('subjects')
@@ -146,7 +146,7 @@ export default function Library() {
         }
       } catch (error) {
         console.error('Error deleting subject:', error);
-        alert('Error deleting subject. Please try again.');
+        alert('Error al eliminar la asignatura. Por favor, inténtalo de nuevo.');
       }
     }
   };
@@ -188,19 +188,19 @@ export default function Library() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-lavender-50">
         <div className="text-center p-6">
           <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-medium text-gray-800 mb-2">Error Loading Library</h2>
-          <p className="text-gray-600 mb-4">There was a problem loading your library data.</p>
+          <h2 className="text-xl font-medium text-gray-800 mb-2">Error al Cargar la Biblioteca</h2>
+          <p className="text-gray-600 mb-4">Hubo un problema al cargar los datos de tu biblioteca.</p>
           <div className="text-sm text-gray-500 space-y-1">
-            {programsError && <p>Programs: {programsError.message}</p>}
-            {subjectsError && <p>Subjects: {subjectsError.message}</p>}
-            {materialsError && <p>Materials: {materialsError.message}</p>}
-            {weeklyGoalsError && <p>Weekly Goals: {weeklyGoalsError.message}</p>}
+            {programsError && <p>Programas: {programsError.message}</p>}
+            {subjectsError && <p>Asignaturas: {subjectsError.message}</p>}
+            {materialsError && <p>Materiales: {materialsError.message}</p>}
+            {weeklyGoalsError && <p>Metas Semanales: {weeklyGoalsError.message}</p>}
           </div>
           <Button 
             onClick={() => window.location.reload()} 
             className="mt-4 bg-pink-400 hover:bg-pink-500"
           >
-            Try Again
+            Intentar de Nuevo
           </Button>
         </div>
       </div>
@@ -212,7 +212,7 @@ export default function Library() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-lavender-50">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-pink-400" />
-          <p className="text-gray-600">Loading your library...</p>
+          <p className="text-gray-600">Cargando tu biblioteca...</p>
         </div>
       </div>
     );
@@ -224,7 +224,7 @@ export default function Library() {
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-lavender-50 pb-20">
         {/* Header */}
         <div className="pt-12 pb-6 px-6">
-          <h1 className="text-2xl font-light text-gray-800 text-center">Library</h1>
+          <h1 className="text-2xl font-light text-gray-800 text-center">Biblioteca</h1>
         </div>
 
         {/* Central Area - Empty State */}
@@ -237,7 +237,7 @@ export default function Library() {
             
             {/* Simple Message */}
             <h2 className="text-xl font-medium text-gray-700 mb-3">
-              You haven't added any programs yet
+              Aún no has agregado ningún programa
             </h2>
             
             {/* Call-to-Action Button */}
@@ -246,7 +246,7 @@ export default function Library() {
               className="bg-pink-400 hover:bg-pink-500 text-white rounded-full px-8 py-3 text-lg font-medium shadow-lg hover:shadow-xl transition-all duration-200"
             >
               <Plus size={20} className="mr-2" />
-              Add Program
+              Agregar Programa
             </Button>
           </div>
         </div>
@@ -269,13 +269,13 @@ export default function Library() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-light text-gray-800">{selectedProgram ? selectedProgram.name : 'Library'}</h1>
+              <h1 className="text-2xl font-light text-gray-800">{selectedProgram ? selectedProgram.name : 'Biblioteca'}</h1>
               {/* Always show program selector if there are programs */}
               {programs.length > 0 && (
                 <button
                   onClick={() => setShowProgramSelector(!showProgramSelector)}
                   className="p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white transition-all duration-200 border border-pink-200"
-                  title="Change Program"
+                  title="Cambiar Programa"
                 >
                   <ChevronDown size={18} className="text-pink-400" />
                 </button>
@@ -283,7 +283,7 @@ export default function Library() {
             </div>
             {programs.length > 1 && (
               <span className="text-xs text-pink-500 bg-pink-50 px-2 py-1 rounded-full">
-                {programs.length} programs
+                {programs.length} programas
               </span>
             )}
           </div>
@@ -302,7 +302,7 @@ export default function Library() {
             <Card className="rounded-2xl border-0 shadow-lg bg-white/90 backdrop-blur-sm">
               <div className="p-2">
                 <div className="p-2 border-b border-gray-100 mb-2">
-                  <p className="text-sm font-medium text-gray-600">Select Program</p>
+                  <p className="text-sm font-medium text-gray-600">Seleccionar Programa</p>
                 </div>
                 
                 {/* Existing Programs */}
@@ -343,7 +343,7 @@ export default function Library() {
                   <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
                     <Plus size={20} className="text-green-600" />
                   </div>
-                  <span className="font-medium text-green-700">Add New Program</span>
+                  <span className="font-medium text-green-700">Agregar Nuevo Programa</span>
                 </button>
               </div>
             </Card>
@@ -356,7 +356,7 @@ export default function Library() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-300" size={18} />
               <Input 
-                placeholder="Search your materials..." 
+                placeholder="Buscar en tus materiales..." 
                 className="pl-10 rounded-2xl border-pink-200 bg-white/80 backdrop-blur-sm focus:border-pink-300 focus:ring-pink-200"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -376,7 +376,7 @@ export default function Library() {
               onClick={() => setSelectedSubject(null)}
               className="hover:text-pink-400 transition-colors"
             >
-              {selectedProgram?.name || 'Library'}
+              {selectedProgram?.name || 'Biblioteca'}
             </button>
             <ChevronRight size={14} />
             <span className="text-pink-400">{selectedSubject.name}</span>
@@ -386,20 +386,20 @@ export default function Library() {
         {/* Subjects View - list subjects for selected program */}
         {!selectedSubject && (
           <div className="space-y-4">
-            <h2 className="text-lg font-medium text-gray-700 mb-4">Subjects</h2>
+            <h2 className="text-lg font-medium text-gray-700 mb-4">Asignaturas</h2>
             {subjects.length === 0 ? (
               <Card className="p-6 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm text-center">
                 <div className="w-16 h-16 rounded-full bg-lavender-100 flex items-center justify-center mx-auto mb-4">
                   <BookOpen size={24} className="text-lavender-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-700 mb-2">No subjects yet</h3>
-                <p className="text-gray-500 mb-4">Create your first subject to organize your files</p>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">Aún no hay asignaturas</h3>
+                <p className="text-gray-500 mb-4">Crea tu primera asignatura para organizar tus archivos</p>
                 <Button 
                   onClick={handleAddSubject}
                   className="bg-lavender-400 hover:bg-lavender-500 text-white rounded-full px-6"
                 >
                   <Plus size={16} className="mr-2" />
-                  Add Subject
+                  Agregar Asignatura
                 </Button>
               </Card>
             ) : (
@@ -432,11 +432,11 @@ export default function Library() {
         {/* Search Results */}
         {searchQuery && !selectedSubject && (
           <div className="space-y-4">
-            <h2 className="text-lg font-medium text-gray-700 mb-4">Search Results</h2>
+            <h2 className="text-lg font-medium text-gray-700 mb-4">Resultados de Búsqueda</h2>
             {filteredMaterials.length === 0 ? (
               <Card className="p-6 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm text-center">
-                <p className="text-gray-500">No materials found for "{searchQuery}"</p>
-                <p className="text-sm text-gray-400 mt-2">Try a different search term</p>
+                <p className="text-gray-500">No se encontraron materiales para "{searchQuery}"</p>
+                <p className="text-sm text-gray-400 mt-2">Intenta con un término de búsqueda diferente</p>
               </Card>
             ) : (
               <div className="space-y-3">
@@ -453,7 +453,7 @@ export default function Library() {
                         <h3 className="text-lg font-medium text-gray-800">{material.title}</h3>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-gray-500">
-                            {material.subjects?.name || 'Unknown Subject'}
+                            {material.subjects?.name || 'Asignatura Desconocida'}
                           </span>
                         </div>
                       </div>
@@ -476,7 +476,7 @@ export default function Library() {
           <button
             onClick={handleAddSubject}
             className="w-14 h-14 bg-pink-400 hover:bg-pink-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
-            title="Add Subject"
+            title="Agregar Asignatura"
           >
             <Plus size={24} />
           </button>

@@ -194,7 +194,7 @@ export const FileUploadModal = ({ isOpen, onClose, onUploadComplete, preselected
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden bg-white">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-800">Upload Files</h2>
+          <h2 className="text-xl font-semibold text-gray-800">Subir Archivos</h2>
           <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
             <X size={20} className="text-gray-500" />
           </button>
@@ -205,10 +205,10 @@ export const FileUploadModal = ({ isOpen, onClose, onUploadComplete, preselected
           {/* Subject and Topic Selection */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Asignatura</label>
               {preselectedSubjectId ? (
                 <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600">
-                  {subjects.find(s => s.id === preselectedSubjectId)?.name || 'Selected Subject'}
+                  {subjects.find(s => s.id === preselectedSubjectId)?.name || 'Asignatura Seleccionada'}
                 </div>
               ) : (
                 <select
@@ -216,7 +216,7 @@ export const FileUploadModal = ({ isOpen, onClose, onUploadComplete, preselected
                   onChange={(e) => setSelectedSubject(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-pink-200 focus:border-pink-300"
                 >
-                  <option value="">Select a subject</option>
+                  <option value="">Selecciona una asignatura</option>
                   {subjects.map((subject) => (
                     <option key={subject.id} value={subject.id}>{subject.name}</option>
                   ))}
@@ -225,11 +225,11 @@ export const FileUploadModal = ({ isOpen, onClose, onUploadComplete, preselected
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {isTopicOptional ? 'Folder (optional)' : 'Topic Name'}
+                {isTopicOptional ? 'Carpeta (opcional)' : 'Nombre del Tema'}
               </label>
               <Input
                 type="text"
-                placeholder={isTopicOptional ? 'Leave empty to upload at subject root' : 'Enter topic name'}
+                placeholder={isTopicOptional ? 'Deja vacío para subir en la raíz de la asignatura' : 'Ingresa el nombre del tema'}
                 value={topicName}
                 onChange={(e) => setTopicName(e.target.value)}
                 className="border-gray-200 focus:ring-pink-200 focus:border-pink-300"
@@ -253,10 +253,10 @@ export const FileUploadModal = ({ isOpen, onClose, onUploadComplete, preselected
           >
             <Upload size={32} className="mx-auto mb-4 text-pink-400" />
             <h3 className="text-lg font-medium text-gray-700 mb-2">
-              Drop files here or click to browse
+              Suelta archivos aquí o haz clic para explorar
             </h3>
             <p className="text-gray-500 mb-4">
-              Support for PDF, images, audio, and video files
+              Soporte para archivos PDF, imágenes, audio y video
             </p>
             <input
               type="file"
@@ -270,14 +270,14 @@ export const FileUploadModal = ({ isOpen, onClose, onUploadComplete, preselected
               htmlFor="file-input"
               className="inline-flex items-center px-4 py-2 bg-pink-400 text-white rounded-lg hover:bg-pink-500 cursor-pointer transition-colors"
             >
-              Choose Files
+              Elegir Archivos
             </label>
           </div>
 
           {/* File List */}
           {files.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-lg font-medium text-gray-700">Selected Files</h3>
+              <h3 className="text-lg font-medium text-gray-700">Archivos Seleccionados</h3>
               {files.map((fileWithPreview, index) => (
                 <div
                   key={index}
@@ -334,15 +334,15 @@ export const FileUploadModal = ({ isOpen, onClose, onUploadComplete, preselected
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50">
-          <Button variant="outline" onClick={onClose} disabled={isUploading}>Cancel</Button>
+          <Button variant="outline" onClick={onClose} disabled={isUploading}>Cancelar</Button>
           <Button onClick={handleUpload} disabled={!selectedSubject || files.length === 0 || (!isTopicOptional && !topicName) || isUploading} className="bg-pink-400 hover:bg-pink-500 text-white">
             {isUploading ? (
               <>
                 <Loader2 size={16} className="mr-2 animate-spin" />
-                Uploading...
+                Subiendo...
               </>
             ) : (
-              `Upload ${files.length} File${files.length !== 1 ? 's' : ''}`
+              `Subir ${files.length} Archivo${files.length !== 1 ? 's' : ''}`
             )}
           </Button>
         </div>

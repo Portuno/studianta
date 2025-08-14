@@ -67,10 +67,10 @@ interface StudyMaterialRow {
 }
 
 const nowTime = () =>
-  new Date().toLocaleTimeString("en-US", {
+  new Date().toLocaleTimeString("es-ES", {
     hour: "numeric",
     minute: "2-digit",
-    hour12: true,
+    hour12: false,
   });
 
 export default function Chat() {
@@ -191,7 +191,7 @@ export default function Chat() {
   };
 
   const buildDeveloperInstruction = (session: ChatSession) => {
-    const name = user?.user_metadata?.full_name || user?.email || "the student";
+    const name = user?.user_metadata?.full_name || user?.email || "el estudiante";
     if (session.contextType === "agenda") {
       return (
         `ROLE: You are the student's academic agenda assistant.\n` +
@@ -726,7 +726,7 @@ export default function Chat() {
     const errorMessage: ChatMessage = {
       id: (Date.now() + 1).toString(),
       type: "bot",
-      message: `Error: failed to connect to the AI assistant. ${result.error}`,
+      message: `Error: no se pudo conectar con el asistente de IA. ${result.error}`,
       time: nowTime(),
     };
 
@@ -746,7 +746,7 @@ export default function Chat() {
         {
           id: "1",
           type: "bot",
-          message: `Ready. I am your academic agenda. Ask me about events, schedules, or goals.\n\n📅 Your calendar events, schedules, and weekly goals will be automatically provided as context.`,
+          message: `Listo. Soy tu agenda académica. Pregúntame sobre eventos, horarios o metas.\n\n📅 Tus eventos del calendario, horarios y metas semanales se proporcionarán automáticamente como contexto.`,
           time: nowTime(),
         },
       ],
@@ -771,7 +771,7 @@ export default function Chat() {
         {
           id: "1",
           type: "bot",
-          message: `New chat for ${subject.name}${topic ? ` (topic: ${topic})` : ""}. What would you like to explore?\n\n📚 Your study materials and files will be automatically attached to provide context for the AI assistant.`,
+          message: `Nuevo chat para ${subject.name}${topic ? ` (tema: ${topic})` : ""}. ¿Qué te gustaría explorar?\n\n📚 Tus materiales de estudio y archivos se adjuntarán automáticamente para proporcionar contexto al asistente de IA.`,
           time: nowTime(),
         },
       ],
@@ -802,7 +802,7 @@ export default function Chat() {
       const context = await prepareSubjectContextText(chat);
       
       // Send a system message to refresh context
-      const refreshMessage = `🔄 Context refreshed with ${context.files.length} attached file(s) and latest materials.`;
+      const refreshMessage = `🔄 Contexto actualizado con ${context.files.length} archivo(s) adjunto(s) y materiales más recientes.`;
       
       const systemMessage: ChatMessage = {
         id: Date.now().toString(),
@@ -843,7 +843,7 @@ export default function Chat() {
       const errorMessage: ChatMessage = {
         id: Date.now().toString(),
         type: "bot",
-        message: "❌ Error refreshing context. Please try again.",
+        message: "❌ Error al actualizar el contexto. Por favor, inténtalo de nuevo.",
         time: nowTime(),
       };
       
@@ -867,23 +867,23 @@ export default function Chat() {
         <div className="w-10" />
         <div className="text-center">
           <h1 className="text-2xl font-light text-foreground/90 mb-1">Chat</h1>
-          <p className="text-muted-foreground text-sm">Start a new conversation or continue an existing one</p>
+          <p className="text-muted-foreground text-sm">Inicia una nueva conversación o continúa una existente</p>
         </div>
         <div className="flex items-center gap-2">
           {currentChat && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-xl">Session</Button>
+                <Button variant="outline" size="sm" className="rounded-xl">Sesión</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem className="cursor-pointer" onClick={() => deleteChat(currentChat.id)}>
                   <Trash2 size={14} className="mr-2 text-destructive" />
-                  Delete chat
+                  Eliminar chat
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="cursor-pointer" onClick={() => setIsStartOpen(true)}>
                   <Plus size={14} className="mr-2" />
-                  New chat
+                  Nuevo chat
                 </DropdownMenuItem>
                 {currentChat.contextType === "subject" && (
                   <>
@@ -893,7 +893,7 @@ export default function Chat() {
                       onClick={() => handleRefreshContext(currentChat)}
                     >
                       <BookOpen size={14} className="mr-2" />
-                      Refresh context
+                      Actualizar contexto
                     </DropdownMenuItem>
                   </>
                 )}
@@ -907,7 +907,7 @@ export default function Chat() {
         <div className="mx-6 mb-2 rounded-xl border border-yellow-300/40 bg-yellow-500/5 px-3 py-2 text-yellow-700 flex items-center gap-2" role="alert" aria-live="polite">
           <AlertTriangle size={16} />
           <p className="text-xs">
-            Mabot is now configured through Supabase Edge Functions. Contact your administrator if you need access.
+            Mabot ahora está configurado a través de Supabase Edge Functions. Contacta a tu administrador si necesitas acceso.
           </p>
         </div>
       )}
@@ -918,17 +918,17 @@ export default function Chat() {
             <DialogTrigger asChild>
               <Button
                 className="w-40 h-40 rounded-3xl flex flex-col items-center justify-center text-foreground bg-muted hover:bg-muted/80 border border-border/30 shadow-sm"
-                aria-label="Start a new chat"
+                aria-label="Iniciar un nuevo chat"
               >
                 <Plus size={40} className="mb-2" />
-                New chat
+                Nuevo chat
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-xl">
               <DialogHeader>
-                <DialogTitle>Link conversation</DialogTitle>
+                <DialogTitle>Vincular conversación</DialogTitle>
                 <DialogDescription>
-                  Choose to talk with your agenda or a subject. You can optionally add a topic for focus.
+                  Elige hablar con tu agenda o una asignatura. Opcionalmente puedes agregar un tema para enfocarte.
                 </DialogDescription>
               </DialogHeader>
 
@@ -940,23 +940,23 @@ export default function Chat() {
                     </div>
                     <div>
                       <p className="font-medium">Agenda</p>
-                      <p className="text-sm text-muted-foreground">Academic calendar and schedules</p>
+                      <p className="text-sm text-muted-foreground">Calendario académico y horarios</p>
                     </div>
                   </div>
-                  <Button onClick={startAgendaChat} className="rounded-xl">Chat with Agenda</Button>
+                  <Button onClick={startAgendaChat} className="rounded-xl">Chat con Agenda</Button>
                 </div>
               </Card>
 
               <div className="space-y-3">
-                <p className="text-sm font-medium text-foreground/80">Subjects</p>
+                <p className="text-sm font-medium text-foreground/80">Asignaturas</p>
                 <div className="rounded-xl border border-border/30">
                   <Command className="rounded-xl">
-                    <CommandInput placeholder="Search subject..." />
+                    <CommandInput placeholder="Buscar asignatura..." />
                     <CommandList className="max-h-64 overflow-auto">
-                      <CommandEmpty>No subjects found.</CommandEmpty>
-                      <CommandGroup heading="Available">
+                      <CommandEmpty>No se encontraron asignaturas.</CommandEmpty>
+                      <CommandGroup heading="Disponibles">
                         {subjectsLoading ? (
-                          <div className="p-3 text-sm text-muted-foreground">Loading...</div>
+                          <div className="p-3 text-sm text-muted-foreground">Cargando...</div>
                         ) : (
                           subjects.map((s) => (
                             <CommandItem key={s.id} onSelect={() => setSelectedSubject(s)} className="cursor-pointer">
@@ -973,18 +973,18 @@ export default function Chat() {
                 {selectedSubject && (
                   <div className="mt-2 space-y-2">
                     <Input
-                      placeholder="Optional topic (e.g., Derivatives, Unit 3)"
+                      placeholder="Tema opcional (ej., Derivadas, Unidad 3)"
                       value={topicInput}
                       onChange={(e) => setTopicInput(e.target.value)}
                       className="rounded-xl"
-                      aria-label="Optional topic"
+                      aria-label="Tema opcional"
                     />
                     <div className="flex gap-2">
                       <Button className="rounded-xl" onClick={() => startSubjectChat(selectedSubject, topicInput)}>
-                        Start with topic
+                        Iniciar con tema
                       </Button>
                       <Button variant="outline" className="rounded-xl" onClick={() => startSubjectChat(selectedSubject)}>
-                        Chat with subject
+                        Chat con asignatura
                       </Button>
                     </div>
                   </div>
@@ -1032,10 +1032,10 @@ export default function Chat() {
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
                       {currentChat?.contextType === "subject" && !currentChat?.contextUploaded 
-                        ? "Processing materials and files..." 
+                        ? "Procesando materiales y archivos..." 
                         : isProcessingFiles
-                         ? "Processing PDF files (this may take a moment)..." 
-                         : "Thinking..."
+                         ? "Procesando archivos PDF (esto puede tomar un momento)..." 
+                         : "Pensando..."
                        }
                     </span>
                   </div>
@@ -1054,8 +1054,8 @@ export default function Chat() {
               <BookOpen size={12} />
               <span>
                 {currentChat.contextUploaded 
-                  ? "📎 Context loaded with materials and files" 
-                  : "🔄 Context will be refreshed with latest materials and files"
+                  ? "📎 Contexto cargado con materiales y archivos" 
+                  : "🔄 El contexto se actualizará con los materiales y archivos más recientes"
                 }
               </span>
             </div>
@@ -1064,7 +1064,7 @@ export default function Chat() {
           <div className="flex gap-2">
             <Input
               placeholder={
-                currentChat.contextType === "agenda" ? "Ask your agenda..." : `Ask about ${currentChat.title}...`
+                currentChat.contextType === "agenda" ? "Pregunta a tu agenda..." : `Pregunta sobre ${currentChat.title}...`
               }
               className="flex-1 rounded-2xl border-border/30 bg-card/50 backdrop-blur-sm"
               value={inputMessage}
@@ -1076,14 +1076,14 @@ export default function Chat() {
                 }
               }}
               disabled={isLoading}
-              aria-label="Message"
+              aria-label="Mensaje"
             />
             <Button
               size="icon"
               className="rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || isLoading}
-              aria-label="Send message"
+              aria-label="Enviar mensaje"
             >
               <Send size={18} />
             </Button>

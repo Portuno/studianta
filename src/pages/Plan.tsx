@@ -252,7 +252,7 @@ export default function Plan() {
       <div className="space-y-6 pb-24">
         <div className="text-center pt-8 pb-6">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading your study plan...</p>
+          <p className="text-muted-foreground">Cargando tu plan de estudio...</p>
         </div>
       </div>
     );
@@ -264,10 +264,10 @@ export default function Plan() {
       <div className="flex-shrink-0 z-40">
         {/* Header */}
         <div className="text-center pt-8 pb-6 bg-background">
-          <h1 className="text-2xl font-light text-foreground/90 mb-2">Study Plan</h1>
+          <h1 className="text-2xl font-light text-foreground/90 mb-2">Plan de Estudio</h1>
           {academicEvents.length > 0 && (
             <p className="text-muted-foreground text-sm">
-              Upcoming: {academicEvents[0].title} on {format(academicEvents[0].date, 'MMM dd')}
+              Próximo: {academicEvents[0].title} el {format(academicEvents[0].date, 'MMM dd')}
             </p>
           )}
         </div>
@@ -281,7 +281,7 @@ export default function Plan() {
 
           {/* Overview - Summary & Key Metrics */}
           <div className="space-y-4">
-            <h2 className="text-lg font-medium text-foreground/80">Overview</h2>
+            <h2 className="text-lg font-medium text-foreground/80">Resumen</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Course Progress */}
@@ -308,7 +308,7 @@ export default function Plan() {
                 <span className="text-sm font-bold text-primary">{courseProgress}%</span>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">Course Progress</p>
+            <p className="text-sm text-muted-foreground">Progreso del Curso</p>
           </Card>
 
           {/* Study Time */}
@@ -316,7 +316,7 @@ export default function Plan() {
             <div className="text-2xl font-bold text-primary mb-1">
               {Math.round(completedTime / 60)}/{Math.round(plannedTime / 60)}m
             </div>
-            <p className="text-sm text-muted-foreground">Study Time (Planned/Completed)</p>
+            <p className="text-sm text-muted-foreground">Tiempo de Estudio (Planificado/Completado)</p>
           </Card>
 
           {/* Study Streak */}
@@ -324,7 +324,7 @@ export default function Plan() {
             <div className="text-2xl font-bold text-accent mb-1">
               {studyStreak}
             </div>
-            <p className="text-sm text-muted-foreground">Day Streak</p>
+            <p className="text-sm text-muted-foreground">Racha de Días</p>
           </Card>
         </div>
 
@@ -333,7 +333,7 @@ export default function Plan() {
           <Card className="gradient-card border-border/30 p-4 rounded-2xl">
             <div className="flex items-center gap-2 mb-3">
               <AlertCircle className="text-accent" size={18} />
-              <h3 className="font-medium text-foreground/80">Upcoming Deadlines</h3>
+              <h3 className="font-medium text-foreground/80">Fechas Límite Próximas</h3>
             </div>
             <div className="space-y-2">
               {academicEvents.slice(0, 3).map((event) => (
@@ -362,7 +362,7 @@ export default function Plan() {
                                            {/* Interactive Calendar */}
           <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-foreground/80">Weekly Calendar</h2>
+          <h2 className="text-lg font-medium text-foreground/80">Calendario Semanal</h2>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={prevWeek} className="rounded-full">
               <ChevronLeft size={16} />
@@ -376,7 +376,7 @@ export default function Plan() {
         <Card className="gradient-card border-border/30 p-4 rounded-2xl">
           {/* Calendar Header */}
           <div className="grid grid-cols-7 gap-1 mb-3">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
               <div key={day} className="text-center text-xs font-medium text-muted-foreground py-2">
                 {day}
               </div>
@@ -432,7 +432,7 @@ export default function Plan() {
                   {/* Show message when no blocks exist */}
                   {dayBlocks.length === 0 && studyBlocks.length === 0 && (
                     <div className="text-center text-xs text-muted-foreground mt-2">
-                      No blocks
+                      Sin bloques
                     </div>
                   )}
                 </div>
@@ -445,10 +445,10 @@ export default function Plan() {
                                            {/* Dynamic Plan - Detailed Strategy */}
           <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-foreground/80">Study Strategy</h2>
+          <h2 className="text-lg font-medium text-foreground/80">Estrategia de Estudio</h2>
           <Button size="sm" variant="outline" className="rounded-full">
             <Plus size={16} className="mr-1" />
-            Add Block
+            Agregar Bloque
           </Button>
         </div>
 
@@ -485,7 +485,9 @@ export default function Plan() {
                       </div>
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
+                      {event.type === 'exam' ? 'Examen' : 
+                       event.type === 'assignment' ? 'Tarea' : 
+                       event.type === 'class' ? 'Clase' : 'Fecha Límite'}
                     </span>
                   </div>
                 </div>
@@ -519,7 +521,7 @@ export default function Plan() {
                         <CheckCircle2 className="text-green-500" size={16} />
                       ) : (
                         <Button size="sm" variant="outline" className="rounded-full">
-                          Complete
+                          Completar
                         </Button>
                       )}
                     </div>
@@ -531,8 +533,8 @@ export default function Plan() {
              studyBlocks.filter(block => isSameDay(block.date, selectedDate)).length === 0 && (
               <p className="text-center text-muted-foreground py-4">
                 {studyBlocks.length === 0 ? 
-                  'No study blocks created yet. Create your first study block to get started!' :
-                  'No events or study blocks scheduled for this day'
+                  'Aún no se han creado bloques de estudio. ¡Crea tu primer bloque de estudio para comenzar!' :
+                  'No hay eventos o bloques de estudio programados para este día'
                 }
               </p>
             )}
@@ -543,13 +545,13 @@ export default function Plan() {
         <Card className="gradient-card border-border/30 p-4 rounded-2xl">
           <div className="flex items-center gap-2 mb-3">
             <BookOpen className="text-primary" size={18} />
-            <h3 className="font-medium text-foreground/80">Study Materials Progress</h3>
+            <h3 className="font-medium text-foreground/80">Progreso de Materiales de Estudio</h3>
           </div>
           
           <div className="space-y-2">
             {materials.length === 0 ? (
               <p className="text-center text-muted-foreground py-4">
-                No study materials added yet
+                Aún no se han agregado materiales de estudio
               </p>
             ) : (
               materials.slice(0, 5).map((material, index) => {
@@ -569,7 +571,7 @@ export default function Plan() {
                     </span>
                     {isNextPriority && (
                       <span className="ml-auto text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
-                        Next Priority
+                        Siguiente Prioridad
                       </span>
                     )}
                   </div>
@@ -585,19 +587,19 @@ export default function Plan() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Target className="text-primary" size={20} />
-            <h2 className="text-lg font-medium text-foreground/80">Weekly Goals</h2>
+            <h2 className="text-lg font-medium text-foreground/80">Metas Semanales</h2>
           </div>
           <Button size="sm" variant="outline" className="rounded-full">
             <Plus size={16} className="mr-1" />
-            Add Goal
+            Agregar Meta
           </Button>
         </div>
         
         {thisWeekGoals.length === 0 ? (
           <Card className="gradient-card border-border/30 p-6 rounded-2xl text-center">
-            <p className="text-muted-foreground">No goals set for this week</p>
+            <p className="text-muted-foreground">No se han establecido metas para esta semana</p>
             <p className="text-sm text-muted-foreground mt-2">
-              Set your first goal to track your progress
+              Establece tu primera meta para rastrear tu progreso
             </p>
           </Card>
         ) : (
@@ -609,7 +611,7 @@ export default function Plan() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <h3 className="font-medium text-foreground">
-                    Subject {goal.subject_id.slice(0, 8)}...
+                    Asignatura {goal.subject_id.slice(0, 8)}...
                   </h3>
                   <span className="text-sm text-primary font-medium">
                     {goal.current_hours}/{goal.target_hours}h
@@ -622,7 +624,7 @@ export default function Plan() {
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Week of {format(parseISO(goal.week_start), 'MMM dd')} - {format(parseISO(goal.week_end), 'MMM dd')}
+                  Semana del {format(parseISO(goal.week_start), 'MMM dd')} - {format(parseISO(goal.week_end), 'MMM dd')}
                 </p>
               </div>
             </Card>

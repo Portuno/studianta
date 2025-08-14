@@ -75,10 +75,10 @@ export default function Login() {
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center">
             <BookOpen className="h-8 w-8 text-primary mr-2" />
-            <h1 className="text-2xl font-bold">Study Buddy</h1>
+            <h1 className="text-2xl font-bold">Compañero de Estudio</h1>
           </div>
           <p className="text-muted-foreground">
-            {isSignUp ? 'Create your account' : 'Welcome back'}
+            {isSignUp ? 'Crea tu cuenta' : 'Bienvenido de vuelta'}
           </p>
         </div>
 
@@ -87,12 +87,12 @@ export default function Login() {
           {isSignUp && (
             <div className="space-y-2">
               <label htmlFor="fullName" className="text-sm font-medium">
-                Full Name
+                Nombre Completo
               </label>
               <Input
                 id="fullName"
                 type="text"
-                placeholder="Enter your full name"
+                placeholder="Ingresa tu nombre completo"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required={isSignUp}
@@ -108,7 +108,7 @@ export default function Login() {
             <Input
               id="email"
               type="email"
-              placeholder="Enter your email"
+              placeholder="Ingresa tu email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -118,12 +118,12 @@ export default function Login() {
 
           <div className="space-y-2">
             <label htmlFor="password" className="text-sm font-medium">
-              Password
+              Contraseña
             </label>
             <Input
               id="password"
               type="password"
-              placeholder="Enter your password"
+              placeholder="Ingresa tu contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -141,7 +141,7 @@ export default function Login() {
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : null}
-            {isSignUp ? 'Create Account' : 'Sign In'}
+            {isSignUp ? 'Crear Cuenta' : 'Iniciar Sesión'}
           </Button>
         </form>
 
@@ -155,7 +155,7 @@ export default function Login() {
             }}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+            {isSignUp ? '¿Ya tienes una cuenta? Inicia sesión' : "¿No tienes una cuenta? Regístrate"}
           </button>
         </div>
       </Card>
