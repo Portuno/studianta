@@ -58,16 +58,18 @@ const DAYS_OF_WEEK = [
   { value: 6, label: "Sábado" },
 ];
 
-const EVENT_TYPES = [
-  "Examen",
-  "Actividad Práctica",
-  "Entrega de Proyecto",
-  "Presentación",
-  "Quiz",
-  "Tarea Pendiente",
-  "Sesión de Laboratorio",
-  "Otro"
+const EVENT_TYPE_OPTIONS = [
+  { value: 'exam', label: 'Examen' },
+  { value: 'practical_activity', label: 'Actividad Práctica' },
+  { value: 'project_submission', label: 'Entrega de Proyecto' },
+  { value: 'presentation', label: 'Presentación' },
+  { value: 'quiz', label: 'Quiz' },
+  { value: 'assignment_due', label: 'Tarea Pendiente' },
+  { value: 'lab_session', label: 'Sesión de Laboratorio' },
+  { value: 'other', label: 'Otro' }
 ];
+
+const getEventTypeLabel = (t: string) => EVENT_TYPE_OPTIONS.find(o => o.value === t)?.label || 'Otro';
 
 export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps) => {
   const { user } = useAuth();
@@ -82,7 +84,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [newEventName, setNewEventName] = useState("");
   const [newEventDate, setNewEventDate] = useState<string>("");
-  const [newEventType, setNewEventType] = useState<string>("estudio");
+  const [newEventType, setNewEventType] = useState<string>("other");
   const [newEventDescription, setNewEventDescription] = useState<string>("");
   
   // Real data from database
@@ -596,7 +598,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
-                            {event.event_type}
+                            {getEventTypeLabel(event.event_type)}
                           </span>
                           <span className="text-sm text-red-600 font-medium">
                             {new Date(event.event_date).toLocaleDateString()}
@@ -619,11 +621,9 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                             onChange={(e) => handleUpdateEvent(event.id, 'event_type', e.target.value)}
                             className="rounded-md border border-red-200 px-3 py-2 text-sm bg-white"
                           >
-                            <option value="estudio">Estudio</option>
-                            <option value="clase">Clase</option>
-                            <option value="examen">Examen</option>
-                            <option value="entrega">Entrega</option>
-                            <option value="otro">Otro</option>
+                            {EVENT_TYPE_OPTIONS.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
                           </select>
                         </div>
                         <Input
@@ -774,11 +774,9 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
               <div className="grid grid-cols-2 gap-3">
                 <Input type="date" value={newEventDate} onChange={(e) => setNewEventDate(e.target.value)} />
                 <select value={newEventType} onChange={(e) => setNewEventType(e.target.value)} className="rounded-md border px-3 py-2 text-sm">
-                  <option value="estudio">Estudio</option>
-                  <option value="clase">Clase</option>
-                  <option value="examen">Examen</option>
-                  <option value="entrega">Entrega</option>
-                  <option value="otro">Otro</option>
+                  {EVENT_TYPE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
                 </select>
               </div>
               <Input placeholder="Descripción (opcional)" value={newEventDescription} onChange={(e) => setNewEventDescription(e.target.value)} />
