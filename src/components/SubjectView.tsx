@@ -284,9 +284,12 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
     // abrir modal, sin insertar
     setNewEventName("");
     setNewEventDescription("");
-    setNewEventType("estudio");
+    setNewEventType("other");
     setNewEventDate("");
     setShowAddEventModal(true);
+    
+    // Debug: Log the initial values
+    console.log('Modal opened with newEventType:', "other");
   };
 
   const handleUpdateEvent = async (id: string, field: keyof SubjectEvent, value: string) => {
@@ -786,6 +789,21 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
               <Button
                 onClick={async () => {
                   if (!user || !newEventName.trim() || !newEventDate) return;
+                  
+                  // Debug: Log the values being sent
+                  console.log('Creating event with values:', {
+                    user_id: user.id,
+                    subject_id: subject.id,
+                    name: newEventName.trim(),
+                    event_type: newEventType,
+                    event_date: newEventDate,
+                    description: newEventDescription || null
+                  });
+                  
+                  // Additional debug: Check if newEventType is valid
+                  const isValidEventType = EVENT_TYPE_OPTIONS.some(opt => opt.value === newEventType);
+                  console.log('Event type validation:', { newEventType, isValidEventType, validOptions: EVENT_TYPE_OPTIONS.map(o => o.value) });
+                  
                   try {
                     const { data, error } = await supabase
                       .from('subject_events')
@@ -802,7 +820,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                     if (error) throw error;
                     setEvents(prev => [...prev, data]);
                     setShowAddEventModal(false);
-                    setNewEventName(""); setNewEventDate(""); setNewEventType("estudio"); setNewEventDescription("");
+                    setNewEventName(""); setNewEventDate(""); setNewEventType("other"); setNewEventDescription("");
                   } catch (e) {
                     console.error('Error adding event:', e);
                     alert('No se pudo crear el evento. Verifica la fecha e intenta nuevamente.');
