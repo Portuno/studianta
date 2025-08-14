@@ -10,6 +10,10 @@ import Agenda from "./pages/Agenda";
 import Library from "./pages/Library";
 import Chat from "./pages/Chat";
 import Herramientas from "./pages/Herramientas";
+import Resumenes from "./pages/herramientas/Resumenes";
+import PDF from "./pages/herramientas/PDF";
+import Diario from "./pages/herramientas/Diario";
+import Calculadora from "./pages/herramientas/Calculadora";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +74,10 @@ const AppContent = () => {
         <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/herramientas" element={<ProtectedRoute><Herramientas /></ProtectedRoute>} />
+        <Route path="/herramientas/resumenes" element={<ProtectedRoute><Resumenes /></ProtectedRoute>} />
+        <Route path="/herramientas/pdf" element={<ProtectedRoute><PDF /></ProtectedRoute>} />
+        <Route path="/herramientas/diario" element={<ProtectedRoute><Diario /></ProtectedRoute>} />
+        <Route path="/herramientas/calculadora" element={<ProtectedRoute><Calculadora /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <MobileNavigation />
