@@ -1,11 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { Home, Calendar, BookOpen, MessageCircle } from "lucide-react";
+import { Home, Calendar, BookOpen, MessageCircle, Wrench } from "lucide-react";
 
 const navItems = [
   { to: "/", icon: Home, label: "Hoy" },
   { to: "/plan", icon: Calendar, label: "Plan" },
+  { to: "/plan-de-estudios", icon: BookOpen, label: "Plan de Estudios" },
   { to: "/library", icon: BookOpen, label: "Biblioteca" },
   { to: "/chat", icon: MessageCircle, label: "Chat IA" },
+  { to: "/herramientas", icon: Wrench, label: "Herramientas" },
 ];
 
 export function MobileNavigation() {

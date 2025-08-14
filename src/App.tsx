@@ -8,8 +8,10 @@ import { MobileNavigation } from "@/components/MobileNavigation";
 import Login from "./pages/Login";
 import Today from "./pages/Today";
 import Plan from "./pages/Plan";
+import PlanDeEstudios from "./pages/PlanDeEstudios";
 import Library from "./pages/Library";
 import Chat from "./pages/Chat";
+import Herramientas from "./pages/Herramientas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,10 +68,12 @@ const AppContent = () => {
   return (
     <div className="mobile-container">
       <Routes>
-        <Route path="/" element={<ProtectedRoute><Today /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute><PlanDeEstudios /></ProtectedRoute>} />
         <Route path="/plan" element={<ProtectedRoute><Plan /></ProtectedRoute>} />
+        <Route path="/plan-de-estudios" element={<ProtectedRoute><PlanDeEstudios /></ProtectedRoute>} />
         <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+        <Route path="/herramientas" element={<ProtectedRoute><Herramientas /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <MobileNavigation />
