@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>
+  signInWithGoogle: () => Promise<{ error: any | null }>
   signOut: () => Promise<void>
 }
 
@@ -74,6 +75,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     return { error }
   }
 
+  const signInWithGoogle = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+          queryParams: {
+            // Mejora DX: asegura refresh tokens y evita cuentas default
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+        }
+      })
+      return { error }
+    } catch (error) {
+      return { error }
+    }
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
   }
@@ -84,6 +104,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     loading,
     signIn,
     signUp,
+    signInWithGoogle,
     signOut,
   }
 

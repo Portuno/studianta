@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { BookOpen, Loader2, AlertCircle } from 'lucide-react'
+import { BookOpen, Loader2, AlertCircle, Chrome } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 export default function Login() {
@@ -14,7 +14,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, signInWithGoogle } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,6 +158,34 @@ export default function Login() {
             {isSignUp ? '¿Ya tienes una cuenta? Inicia sesión' : "¿No tienes una cuenta? Regístrate"}
           </button>
         </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground">o</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        {/* Google OAuth */}
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full rounded-lg"
+          onClick={async () => {
+            setLoading(true)
+            setError('')
+            const { error } = await signInWithGoogle()
+            if (error) {
+              setError(error.message || 'No se pudo iniciar sesión con Google')
+              setLoading(false)
+            }
+          }}
+          disabled={loading}
+          aria-label="Continuar con Google"
+        >
+          <Chrome className="h-4 w-4 mr-2" />
+          Continuar con Google
+        </Button>
       </Card>
     </div>
   )
