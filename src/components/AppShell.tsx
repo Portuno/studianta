@@ -76,7 +76,7 @@ export const AppShell = ({ children }: AppShellProps) => {
           </div>
           <div className="font-medium text-sm text-muted-foreground">Tu espacio de estudio</div>
         </div>
-        <div className="mx-auto w-full max-w-7xl px-4 py-6 md:px-6 md:py-8">
+        <div className="mx-auto w-full max-w-7xl px-4 md:px-6 flex-1 min-h-0">
           {children}
         </div>
       </SidebarInset>

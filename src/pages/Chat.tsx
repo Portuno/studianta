@@ -5,29 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { AlertTriangle, Bot, Calendar, Loader2, Plus, Send, Trash2, User, BookOpen } from "lucide-react";
+import { AlertTriangle, Bot, Calendar, Loader2, Send, User, BookOpen, GraduationCap } from "lucide-react";
+import { usePrograms } from "@/hooks/useSupabase";
 
 interface ChatMessage {
   id: string;
@@ -39,10 +28,12 @@ interface ChatMessage {
 interface ChatSession {
   id: string;
   title: string;
-  contextType: "subject" | "agenda";
+  contextType: "general" | "agenda" | "subject" | "program";
   subjectId?: string;
   subjectName?: string;
   topic?: string;
+  programId?: string;
+  programName?: string;
   messages: ChatMessage[];
   createdAt: Date;
   lastActivity: Date;
@@ -53,6 +44,7 @@ interface ChatSession {
 interface SubjectRow {
   id: string;
   name: string;
+  program_id?: string;
 }
 
 interface StudyMaterialRow {
@@ -83,21 +75,42 @@ export default function Chat() {
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
 
-  const [isStartOpen, setIsStartOpen] = useState(false);
+  // Context data
   const [subjects, setSubjects] = useState<SubjectRow[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState<SubjectRow | null>(null);
-  const [topicInput, setTopicInput] = useState("");
+  const { programs } = usePrograms();
+  const [currentProgramId, setCurrentProgramId] = useState<string | null>(null);
+  const currentProgram = useMemo(() => programs.find((p) => p.id === currentProgramId) || null, [programs, currentProgramId]);
 
   // Mabot configuration now handled by Supabase Edge Function
   const mabotConfigured = true; // Always true since we're using Edge Function
 
   const currentChat = chatSessions.find((c) => c.id === currentChatId) || null;
 
+  // Ensure a default chat exists (Chat General)
   useEffect(() => {
-    setChatSessions([]);
-    setCurrentChatId("");
-  }, []);
+    if (!currentChatId) {
+      const session: ChatSession = {
+        id: `${Date.now()}`,
+        title: "Chat General",
+        contextType: "general",
+        messages: [
+          {
+            id: "1",
+            type: "bot",
+            message:
+              "¡Hola! Soy tu asistente de estudio. Pregúntame lo que quieras. Puedes elegir un contexto desde arriba (Agenda, Asignaturas o Carreras) para respuestas más específicas.",
+            time: nowTime(),
+          },
+        ],
+        createdAt: new Date(),
+        lastActivity: new Date(),
+        contextUploaded: false,
+      };
+      setChatSessions([session]);
+      setCurrentChatId(session.id);
+    }
+  }, [currentChatId]);
 
   useEffect(() => {
     const load = async () => {
@@ -106,7 +119,7 @@ export default function Chat() {
       try {
         const { data, error } = await supabase
           .from("subjects")
-          .select("id, name")
+          .select("id, name, program_id")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false });
         if (error) throw error;
@@ -119,6 +132,19 @@ export default function Chat() {
     };
     load();
   }, [user]);
+
+  // Initialize default program (persisted)
+  useEffect(() => {
+    if (!currentProgramId && programs.length > 0) {
+      const saved = typeof window !== "undefined" ? window.localStorage.getItem("chatProgramId") : null;
+      const fallback = programs[0]?.id;
+      const chosen = programs.find((p) => p.id === saved)?.id || fallback || null;
+      if (chosen) {
+        setCurrentProgramId(chosen);
+        if (typeof window !== "undefined") window.localStorage.setItem("chatProgramId", chosen);
+      }
+    }
+  }, [programs, currentProgramId]);
 
   const loginToMabot = async (): Promise<boolean> => {
     try {
@@ -200,6 +226,29 @@ export default function Chat() {
         `Use ONLY the provided calendar, schedules, and goals data. If missing, ask for details or suggest adding them in Plan.\n` +
         `Answer concisely and in the user's detected language.\n` +
         `Then suggest a relevant next action (e.g., schedule a session, review material).\n` +
+        `Question:`
+      );
+    }
+
+    if (session.contextType === "general") {
+      return (
+        `ROLE: You are an AI study assistant.\n` +
+        `Student: ${name}.\n` +
+        `CONTEXT: General chat without attached materials. Prefer concise, practical guidance.\n` +
+        `LANGUAGE INSTRUCTION: Detect the language and respond in the SAME language.\n` +
+        `If user needs deeper help, suggest selecting a context (Agenda, Subject, Program) or uploading materials via Library.\n` +
+        `Question:`
+      );
+    }
+
+    if (session.contextType === "program") {
+      const ctx = session.programName || "the selected program";
+      return (
+        `ROLE: You are an AI study assistant focused on the user's program.\n` +
+        `Student: ${name}.\n` +
+        `Primary context: Program — ${ctx}.\n` +
+        `LANGUAGE INSTRUCTION: Detect the language and respond in the SAME language.\n` +
+        `Use ONLY the provided program subjects, materials and notes when available. If insufficient, ask to refine or upload.\n` +
         `Question:`
       );
     }
@@ -334,6 +383,83 @@ export default function Chat() {
     }
 
     return lines.join("\n");
+  };
+
+  const prepareProgramContextText = async (
+    session: ChatSession
+  ): Promise<{ text: string; files: any[] }> => {
+    if (!user || !session.programId) return { text: "", files: [] };
+
+    // Fetch subjects in the program
+    const { data: subs, error: subsErr } = await supabase
+      .from("subjects")
+      .select("id,name")
+      .eq("user_id", user.id)
+      .eq("program_id", session.programId);
+
+    if (subsErr) {
+      console.error("Error fetching program subjects:", subsErr);
+      return { text: "", files: [] };
+    }
+
+    const subjectIds = (subs || []).map((s) => s.id);
+    const subjectNames = (subs || []).map((s) => s.name);
+
+    if (subjectIds.length === 0) {
+      return {
+        text: `Program ${session.programName || "selected"} has no subjects yet.`,
+        files: [],
+      };
+    }
+
+    // Fetch recent materials across the program's subjects
+    const { data: mats, error: matsErr } = await supabase
+      .from("study_materials")
+      .select("id,title,type,content,file_path,file_size,mime_type,created_at,subject_id")
+      .eq("user_id", user.id)
+      .in("subject_id", subjectIds)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (matsErr) {
+      console.error("Error fetching program materials:", matsErr);
+      return { text: "", files: [] };
+    }
+
+    const files: any[] = [];
+    const lines: string[] = [];
+    lines.push(`Program subjects: ${subjectNames.join(", ")}`);
+    lines.push(`Attached study materials (${mats?.length || 0}):`);
+
+    for (const m of mats || []) {
+      let urlNote = "";
+      if (m.file_path) {
+        try {
+          const { data: urlData, error: urlErr } = await supabase.storage
+            .from("study-materials")
+            .createSignedUrl(m.file_path, 60 * 60);
+          if (!urlErr && urlData?.signedUrl) {
+            urlNote = ` [url: ${urlData.signedUrl}]`;
+            if (m.type === "pdf" || m.mime_type === "application/pdf") {
+              files.push({
+                url: urlData.signedUrl,
+                title: m.title,
+                mime_type: m.mime_type || "application/pdf",
+                type: m.type,
+              });
+            }
+          }
+        } catch (e) {
+          console.warn("Signed URL error (program):", e);
+        }
+      }
+      const snippet = m.content
+        ? ` snippet: ${m.content.slice(0, 400)}${m.content.length > 400 ? "…" : ""}`
+        : "";
+      lines.push(`- ${m.title} (${m.type})${urlNote}${snippet}`);
+    }
+
+    return { text: lines.join("\n"), files };
   };
 
   const sendToMabot = async (session: ChatSession, userText: string, contextText?: string, contextFiles?: any[]) => {
@@ -657,7 +783,7 @@ export default function Chat() {
         contextLength: contextText?.length || 0,
         contextPreview: contextText?.substring(0, 200) || "No context"
       });
-    } else {
+    } else if (currentChat.contextType === "subject") {
       const context = await prepareSubjectContextText(currentChat);
       contextText = context.text;
       contextFiles = context.files;
@@ -667,6 +793,16 @@ export default function Chat() {
         contextLength: contextText?.length || 0,
         contextFilesCount: contextFiles?.length || 0,
         contextPreview: contextText?.substring(0, 200) || "No context"
+      });
+    } else if (currentChat.contextType === "program") {
+      const context = await prepareProgramContextText(currentChat);
+      contextText = context.text;
+      contextFiles = context.files;
+      setIsProcessingFiles(contextFiles && contextFiles.length > 0);
+      console.log("🏫 PROGRAM CONTEXT PREPARED:", {
+        contextLength: contextText?.length || 0,
+        contextFilesCount: contextFiles?.length || 0,
+        contextPreview: contextText?.substring(0, 200) || "No context",
       });
     }
 
@@ -737,57 +873,116 @@ export default function Chat() {
     setIsProcessingFiles(false);
   };
 
-  const startAgendaChat = () => {
-    const session: ChatSession = {
-      id: `${Date.now()}`,
-      title: "Agenda",
-      contextType: "agenda",
+  // Context switchers (single chat UX)
+  const setContextGeneral = () => {
+    if (!currentChat) return;
+    const updated: ChatSession = {
+      ...currentChat,
+      title: "Chat General",
+      contextType: "general",
+      subjectId: undefined,
+      subjectName: undefined,
+      programId: undefined,
+      programName: undefined,
+      topic: undefined,
+      contextUploaded: false,
+      lastActivity: new Date(),
       messages: [
+        ...currentChat.messages,
         {
-          id: "1",
+          id: Date.now().toString(),
           type: "bot",
-          message: `Listo. Soy tu agenda académica. Pregúntame sobre eventos, horarios o metas.\n\n📅 Tus eventos del calendario, horarios y metas semanales se proporcionarán automáticamente como contexto.`,
+          message: "🟣 Contexto cambiado a Chat General.",
           time: nowTime(),
         },
       ],
-      createdAt: new Date(),
-      lastActivity: new Date(),
-      contextUploaded: false,
     };
-    setChatSessions((prev) => [...prev, session]);
-    setCurrentChatId(session.id);
-    setIsStartOpen(false);
+    setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
   };
 
-  const startSubjectChat = (subject: SubjectRow, topic?: string) => {
-    const session: ChatSession = {
-      id: `${Date.now()}`,
+  const setContextAgenda = () => {
+    if (!currentChat) return;
+    const updated: ChatSession = {
+      ...currentChat,
+      title: "Agenda",
+      contextType: "agenda",
+      subjectId: undefined,
+      subjectName: undefined,
+      programId: undefined,
+      programName: undefined,
+      topic: undefined,
+      contextUploaded: false,
+      lastActivity: new Date(),
+      messages: [
+        ...currentChat.messages,
+        {
+          id: Date.now().toString(),
+          type: "bot",
+          message: "📅 Contexto cambiado a Agenda.",
+          time: nowTime(),
+        },
+      ],
+    };
+    setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
+  };
+
+  const setContextSubject = (subject: SubjectRow) => {
+    if (!currentChat) return;
+    const updated: ChatSession = {
+      ...currentChat,
       title: subject.name,
       contextType: "subject",
       subjectId: subject.id,
       subjectName: subject.name,
-      topic: topic?.trim() || undefined,
+      programId: undefined,
+      programName: undefined,
+      topic: undefined,
+      contextUploaded: false,
+      lastActivity: new Date(),
       messages: [
+        ...currentChat.messages,
         {
-          id: "1",
+          id: Date.now().toString(),
           type: "bot",
-          message: `Nuevo chat para ${subject.name}${topic ? ` (tema: ${topic})` : ""}. ¿Qué te gustaría explorar?\n\n📚 Tus materiales de estudio y archivos se adjuntarán automáticamente para proporcionar contexto al asistente de IA.`,
+          message: `📚 Contexto cambiado a Asignatura: ${subject.name}.`,
           time: nowTime(),
         },
       ],
-      createdAt: new Date(),
-      lastActivity: new Date(),
-      contextUploaded: false,
     };
-    setChatSessions((prev) => [...prev, session]);
-    setCurrentChatId(session.id);
-    setIsStartOpen(false);
+    setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
   };
 
-  const deleteChat = (chatId: string) => {
-    setChatSessions((prev) => prev.filter((c) => c.id !== chatId));
-    if (chatId === currentChatId) {
-      setCurrentChatId("");
+  const setContextProgram = (programId: string, programName: string) => {
+    if (!currentChat) return;
+    const updated: ChatSession = {
+      ...currentChat,
+      title: programName,
+      contextType: "program",
+      programId,
+      programName,
+      subjectId: undefined,
+      subjectName: undefined,
+      topic: undefined,
+      contextUploaded: false,
+      lastActivity: new Date(),
+      messages: [
+        ...currentChat.messages,
+        {
+          id: Date.now().toString(),
+          type: "bot",
+          message: `🎓 Contexto cambiado a Carrera: ${programName}.`,
+          time: nowTime(),
+        },
+      ],
+    };
+    setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
+  };
+
+  const handleSelectProgram = (programId: string, programName: string) => {
+    setCurrentProgramId(programId);
+    if (typeof window !== "undefined") window.localStorage.setItem("chatProgramId", programId);
+    if (currentChat?.contextType === "program") {
+      setContextProgram(programId, programName);
     }
   };
 
@@ -862,38 +1057,77 @@ export default function Chat() {
       const showMabotBanner = !mabotConfigured;
 
   return (
-    <div className="flex flex-col h-screen pb-20 md:pb-0">
+    <div className="flex flex-col pb-20 md:pb-0 md:h-[calc(100svh-56px)] md:overflow-hidden">
       <div className="flex items-center justify-between pt-8 pb-4 px-6">
-        <div className="w-10" />
-        <div className="text-center">
+        <div className="text-left">
           <h1 className="text-2xl font-light text-foreground/90 mb-1">Chat</h1>
-          <p className="text-muted-foreground text-sm">Inicia una nueva conversación o continúa una existente</p>
+          <p className="text-muted-foreground text-sm">Acción inmediata → Contexto opcional</p>
         </div>
         <div className="flex items-center gap-2">
           {currentChat && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-xl">Sesión</Button>
+                <Button variant="outline" size="sm" className="rounded-xl">
+                  {`Contexto: ${
+                    currentChat.contextType === "agenda"
+                      ? "Agenda"
+                      : currentChat.contextType === "subject"
+                      ? currentChat.subjectName || "Asignatura"
+                      : currentChat.contextType === "program"
+                      ? currentChat.programName || "Carrera"
+                      : "Chat General"
+                  }`}
+                </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem className="cursor-pointer" onClick={() => deleteChat(currentChat.id)}>
-                  <Trash2 size={14} className="mr-2 text-destructive" />
-                  Eliminar chat
+              <DropdownMenuContent align="end" className="min-w-56">
+                <DropdownMenuLabel>Seleccionar contexto</DropdownMenuLabel>
+                <DropdownMenuItem className="cursor-pointer" onClick={setContextGeneral}>
+                  🟣 Chat General
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer" onClick={setContextAgenda}>
+                  📅 Agenda
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer" onClick={() => setIsStartOpen(true)}>
-                  <Plus size={14} className="mr-2" />
-                  Nuevo chat
-                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <span className="inline-flex items-center gap-2"><BookOpen size={14} /> Asignaturas</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="max-h-80 overflow-auto">
+                    {subjectsLoading && (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">Cargando…</div>
+                    )}
+                    {!subjectsLoading && (!currentProgram || subjects.filter((s) => (s as any).program_id === currentProgram.id).length === 0) && (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">{currentProgram ? "Sin asignaturas en esta carrera" : "Primero selecciona una carrera"}</div>
+                    )}
+                    {!subjectsLoading && currentProgram && subjects
+                      .filter((s) => (s as any).program_id === currentProgram.id)
+                      .map((s) => (
+                        <DropdownMenuItem key={s.id} className="cursor-pointer" onClick={() => setContextSubject(s)}>
+                          {s.name}
+                        </DropdownMenuItem>
+                      ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <span className="inline-flex items-center gap-2">🎓 Carreras</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="max-h-80 overflow-auto">
+                    {(programs || []).length === 0 && (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">No hay carreras</div>
+                    )}
+                    {(programs || []).map((p) => (
+                      <DropdownMenuItem key={p.id} className="cursor-pointer" onClick={() => setContextProgram(p.id, p.name)}>
+                        {p.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 {currentChat.contextType === "subject" && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      className="cursor-pointer" 
-                      onClick={() => handleRefreshContext(currentChat)}
-                    >
-                      <BookOpen size={14} className="mr-2" />
-                      Actualizar contexto
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => handleRefreshContext(currentChat)}>
+                      <BookOpen size={14} className="mr-2" /> Actualizar contexto
                     </DropdownMenuItem>
                   </>
                 )}
@@ -901,6 +1135,29 @@ export default function Chat() {
             </DropdownMenu>
           )}
         </div>
+      </div>
+
+      {/* Selector de carrera fijo al lado del contexto para acceso rápido */}
+      <div className="px-6 -mt-2 mb-2 flex items-center gap-2">
+        {programs.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="rounded-xl">
+                {`Carrera: ${currentProgram?.name || "—"}`}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-56">
+              <DropdownMenuLabel>Cambiar carrera</DropdownMenuLabel>
+              {programs.map((p) => (
+                <DropdownMenuItem key={p.id} className="cursor-pointer" onClick={() => handleSelectProgram(p.id, p.name)}>
+                  <GraduationCap size={14} className="mr-2" />
+                  <span className="flex-1">{p.name}</span>
+                  {currentProgramId === p.id && <span className="text-xs text-primary">✓</span>}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {showMabotBanner && (
@@ -912,88 +1169,7 @@ export default function Chat() {
         </div>
       )}
 
-      {!currentChat && (
-        <div className="flex-1 flex items-center justify-center px-6">
-          <Dialog open={isStartOpen} onOpenChange={setIsStartOpen}>
-            <DialogTrigger asChild>
-              <Button
-                className="w-40 h-40 rounded-3xl flex flex-col items-center justify-center text-foreground bg-muted hover:bg-muted/80 border border-border/30 shadow-sm"
-                aria-label="Iniciar un nuevo chat"
-              >
-                <Plus size={40} className="mb-2" />
-                Nuevo chat
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-xl">
-              <DialogHeader>
-                <DialogTitle>Vincular conversación</DialogTitle>
-                <DialogDescription>
-                  Elige hablar con tu agenda o una asignatura. Opcionalmente puedes agregar un tema para enfocarte.
-                </DialogDescription>
-              </DialogHeader>
-
-              <Card className="p-4 rounded-2xl border border-border/30 mb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Calendar className="text-primary" size={18} />
-                    </div>
-                    <div>
-                      <p className="font-medium">Agenda</p>
-                      <p className="text-sm text-muted-foreground">Calendario académico y horarios</p>
-                    </div>
-                  </div>
-                  <Button onClick={startAgendaChat} className="rounded-xl">Chat con Agenda</Button>
-                </div>
-              </Card>
-
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-foreground/80">Asignaturas</p>
-                <div className="rounded-xl border border-border/30">
-                  <Command className="rounded-xl">
-                    <CommandInput placeholder="Buscar asignatura..." />
-                    <CommandList className="max-h-64 overflow-auto">
-                      <CommandEmpty>No se encontraron asignaturas.</CommandEmpty>
-                      <CommandGroup heading="Disponibles">
-                        {subjectsLoading ? (
-                          <div className="p-3 text-sm text-muted-foreground">Cargando...</div>
-                        ) : (
-                          subjects.map((s) => (
-                            <CommandItem key={s.id} onSelect={() => setSelectedSubject(s)} className="cursor-pointer">
-                              <BookOpen className="mr-2 h-4 w-4 text-primary" />
-                              <span>{s.name}</span>
-                            </CommandItem>
-                          ))
-                        )}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </div>
-
-                {selectedSubject && (
-                  <div className="mt-2 space-y-2">
-                    <Input
-                      placeholder="Tema opcional (ej., Derivadas, Unidad 3)"
-                      value={topicInput}
-                      onChange={(e) => setTopicInput(e.target.value)}
-                      className="rounded-xl"
-                      aria-label="Tema opcional"
-                    />
-                    <div className="flex gap-2">
-                      <Button className="rounded-xl" onClick={() => startSubjectChat(selectedSubject, topicInput)}>
-                        Iniciar con tema
-                      </Button>
-                      <Button variant="outline" className="rounded-xl" onClick={() => startSubjectChat(selectedSubject)}>
-                        Chat con asignatura
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      )}
+      {/* Siempre mostramos el chat activo (única sesión) */}
 
       {currentChat && (
         <div className="flex-1 px-6 space-y-4 overflow-y-auto">
@@ -1047,7 +1223,7 @@ export default function Chat() {
       )}
 
       {currentChat && (
-        <div className="px-6 pb-4">
+        <div className="px-6 pb-5 pt-2 border-t bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           {/* Context status indicator */}
           {currentChat.contextType === "subject" && (
             <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
@@ -1064,9 +1240,13 @@ export default function Chat() {
           <div className="flex gap-2">
             <Input
               placeholder={
-                currentChat.contextType === "agenda" ? "Pregunta a tu agenda..." : `Pregunta sobre ${currentChat.title}...`
+                currentChat.contextType === "agenda"
+                  ? "Pregunta a tu agenda..."
+                  : currentChat.contextType === "general"
+                  ? "Escribe tu mensaje..."
+                  : `Pregunta sobre ${currentChat.title}...`
               }
-              className="flex-1 rounded-2xl border-border/30 bg-card/50 backdrop-blur-sm"
+              className="flex-1 rounded-2xl border-primary/30 focus-visible:ring-2 focus-visible:ring-primary/50 bg-white text-foreground placeholder:text-muted-foreground/70 shadow-sm"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={(e) => {
