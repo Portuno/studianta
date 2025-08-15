@@ -33,6 +33,7 @@ import { SubjectView } from "@/components/SubjectView";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useWeeklyGoals } from "@/hooks/useSupabase";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const getFileIcon = (type: string) => {
   switch (type) {
@@ -221,10 +222,10 @@ export default function Library() {
   // SCENARIO 1: Empty State (No Programs Added)
   if (programs.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-lavender-50 pb-20">
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-lavender-50 pb-20 md:pb-6">
         {/* Header */}
-        <div className="pt-12 pb-6 px-6">
-          <h1 className="text-2xl font-light text-gray-800 text-center">Biblioteca</h1>
+        <div className="pt-12 md:pt-6 pb-6 px-6">
+          <h1 className="text-2xl font-light text-gray-800 md:text-left text-center">Biblioteca</h1>
         </div>
 
         {/* Central Area - Empty State */}
@@ -263,10 +264,10 @@ export default function Library() {
 
   // SCENARIO 2: Populated State (With Programs Added)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-lavender-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-lavender-50 pb-20 md:pb-6">
       {/* Header - Dynamic Program Name */}
-      <div className="pt-12 pb-6 px-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="pt-12 md:pt-6 pb-6 px-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-light text-gray-800">{selectedProgram ? selectedProgram.name : 'Biblioteca'}</h1>
@@ -288,12 +289,25 @@ export default function Library() {
             )}
           </div>
           
-          <button
-            onClick={() => setShowSearch(!showSearch)}
-            className="p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white transition-all duration-200"
-          >
-            <Search size={20} className="text-pink-400" />
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="hidden md:block min-w-[320px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-300" size={18} />
+                <Input 
+                  placeholder="Buscar en tus materiales..." 
+                  className="pl-10 rounded-xl border-pink-200 bg-white/80 backdrop-blur-sm focus:border-pink-300 focus:ring-pink-200"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className="p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white transition-all duration-200 md:hidden"
+            >
+              <Search size={20} className="text-pink-400" />
+            </button>
+          </div>
         </div>
 
         {/* Program Selector Dropdown */}
@@ -403,15 +417,16 @@ export default function Library() {
                 </Button>
               </Card>
             ) : (
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {subjects.map((subject) => (
-                  <SubjectCard
-                    key={subject.id}
-                    subject={subject}
-                    onEdit={handleEditSubject}
-                    onDelete={handleDeleteSubject}
-                    onClick={() => setSelectedSubject(subject)}
-                  />
+                  <div key={subject.id} className="min-w-0">
+                    <SubjectCard
+                      subject={subject}
+                      onEdit={handleEditSubject}
+                      onDelete={handleDeleteSubject}
+                      onClick={() => setSelectedSubject(subject)}
+                    />
+                  </div>
                 ))}
               </div>
             )}
@@ -471,7 +486,7 @@ export default function Library() {
 
       {/* Floating Action Button - Only show when not in subject view */}
       {!selectedSubject && (
-        <div className="fixed bottom-24 right-6">
+        <div className="fixed bottom-24 right-6 md:hidden">
           {/* Main Floating Button */}
           <button
             onClick={handleAddSubject}

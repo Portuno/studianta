@@ -836,7 +836,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
       )}
 
       {/* Floating Action Button - Add File/Folder */}
-      <div className="fixed bottom-24 right-6 z-50">
+      <div className="fixed bottom-24 right-6 z-50 md:hidden">
         <div className="relative add-menu-container">
           {/* Botón rosa principal */}
           <button

@@ -267,7 +267,7 @@ const Agenda = () => {
   }, [events]);
 
   return (
-    <div className="pb-24">
+    <div className="pb-24 md:pb-6">
       {/* 1. Sección Superior: Tu Foco Hoy */}
       <section className={`sticky top-0 z-10 ${gradientBg} border-b border-pink-100/60`}>
         <div className="px-4 pt-5 pb-4">
@@ -472,7 +472,7 @@ const Agenda = () => {
       {/* Botón flotante para agregar evento manual */}
       <button
         onClick={() => setShowAddModal(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors"
+        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors md:hidden"
         title="Agregar evento manual"
       >
         +

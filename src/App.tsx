@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { MobileNavigation } from "@/components/MobileNavigation";
+import AppShell from "@/components/AppShell";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Login from "./pages/Login";
 import Agenda from "./pages/Agenda";
 import Library from "./pages/Library";
@@ -43,6 +45,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 // Componente principal de la aplicación
 const AppContent = () => {
   const { user, loading } = useAuth();
+  const isMobile = useIsMobile();
 
   // Mostrar loading mientras se verifica la autenticación
   if (loading) {
@@ -67,6 +70,24 @@ const AppContent = () => {
   }
 
   // Si hay usuario, mostrar las rutas protegidas
+  if (!isMobile) {
+    return (
+      <AppShell>
+        <Routes>
+          <Route path="/" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
+          <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
+          <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+          <Route path="/herramientas" element={<ProtectedRoute><Herramientas /></ProtectedRoute>} />
+          <Route path="/herramientas/resumenes" element={<ProtectedRoute><Resumenes /></ProtectedRoute>} />
+          <Route path="/herramientas/pdf" element={<ProtectedRoute><PDF /></ProtectedRoute>} />
+          <Route path="/herramientas/diario" element={<ProtectedRoute><Diario /></ProtectedRoute>} />
+          <Route path="/herramientas/calculadora" element={<ProtectedRoute><Calculadora /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AppShell>
+    );
+  }
+
   return (
     <div className="mobile-container">
       <Routes>

@@ -862,7 +862,7 @@ export default function Chat() {
       const showMabotBanner = !mabotConfigured;
 
   return (
-    <div className="flex flex-col h-screen pb-20">
+    <div className="flex flex-col h-screen pb-20 md:pb-0">
       <div className="flex items-center justify-between pt-8 pb-4 px-6">
         <div className="w-10" />
         <div className="text-center">

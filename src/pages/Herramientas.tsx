@@ -39,10 +39,10 @@ const tools = [
 
 const Herramientas = () => {
   return (
-    <div className="px-4 py-5 pb-24">
+    <div className="px-4 py-5 pb-24 md:pb-6">
       <h1 className="text-xl font-semibold text-gray-900 mb-4">Herramientas</h1>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         {tools.map((t) => (
           <Link key={t.key} to={t.to} className="block">
             <Card className={`rounded-2xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow`}>
