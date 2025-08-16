@@ -16,7 +16,7 @@ import {
   SidebarSeparator,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Calendar, BookOpen, MessageCircle, Wrench } from "lucide-react";
+import { Calendar, BookOpen, MessageCircle, Wrench, User2 } from "lucide-react";
 import { ReactNode, useMemo } from "react";
 
 type AppShellProps = {
@@ -28,6 +28,7 @@ const navItems = [
   { to: "/", icon: Calendar, label: "Agenda" },
   { to: "/library", icon: BookOpen, label: "Biblioteca" },
   { to: "/chat", icon: MessageCircle, label: "AI Chat" },
+  { to: "/perfil", icon: User2, label: "Mi Perfil" },
 ];
 
 export const AppShell = ({ children }: AppShellProps) => {

@@ -19,6 +19,7 @@ import Calculadora from "./pages/herramientas/Calculadora";
 import Examenes from "./pages/herramientas/Examenes";
 import Flashcards from "./pages/herramientas/Flashcards";
 import NotFound from "./pages/NotFound";
+import Perfil from "./pages/Perfil";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const AppContent = () => {
           <Route path="/" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
           <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
           <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+          <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
           <Route path="/herramientas" element={<ProtectedRoute><Herramientas /></ProtectedRoute>} />
           <Route path="/herramientas/resumenes" element={<ProtectedRoute><Resumenes /></ProtectedRoute>} />
           <Route path="/herramientas/pdf" element={<ProtectedRoute><PDF /></ProtectedRoute>} />
@@ -98,6 +100,7 @@ const AppContent = () => {
         <Route path="/" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
         <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+        <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
         <Route path="/herramientas" element={<ProtectedRoute><Herramientas /></ProtectedRoute>} />
         <Route path="/herramientas/resumenes" element={<ProtectedRoute><Resumenes /></ProtectedRoute>} />
         <Route path="/herramientas/pdf" element={<ProtectedRoute><PDF /></ProtectedRoute>} />
