@@ -16,6 +16,8 @@ import Resumenes from "./pages/herramientas/Resumenes";
 import PDF from "./pages/herramientas/PDF";
 import Diario from "./pages/herramientas/Diario";
 import Calculadora from "./pages/herramientas/Calculadora";
+import Examenes from "./pages/herramientas/Examenes";
+import Flashcards from "./pages/herramientas/Flashcards";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -82,6 +84,8 @@ const AppContent = () => {
           <Route path="/herramientas/pdf" element={<ProtectedRoute><PDF /></ProtectedRoute>} />
           <Route path="/herramientas/diario" element={<ProtectedRoute><Diario /></ProtectedRoute>} />
           <Route path="/herramientas/calculadora" element={<ProtectedRoute><Calculadora /></ProtectedRoute>} />
+          <Route path="/herramientas/examenes" element={<ProtectedRoute><Examenes /></ProtectedRoute>} />
+          <Route path="/herramientas/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppShell>
@@ -99,6 +103,8 @@ const AppContent = () => {
         <Route path="/herramientas/pdf" element={<ProtectedRoute><PDF /></ProtectedRoute>} />
         <Route path="/herramientas/diario" element={<ProtectedRoute><Diario /></ProtectedRoute>} />
         <Route path="/herramientas/calculadora" element={<ProtectedRoute><Calculadora /></ProtectedRoute>} />
+        <Route path="/herramientas/examenes" element={<ProtectedRoute><Examenes /></ProtectedRoute>} />
+        <Route path="/herramientas/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <MobileNavigation />

@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { FileText, Sparkles, BookOpenCheck, Calculator, FileUp } from "lucide-react";
+import { FileText, Sparkles, BookOpenCheck, Calculator, FileUp, FileQuestion, Layers3 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const tools = [
@@ -34,6 +34,22 @@ const tools = [
     icon: Calculator,
     bg: "from-violet-50 to-fuchsia-50 text-violet-800",
     iconBg: "bg-violet-100 text-violet-700",
+  },
+  {
+    key: "examenes",
+    to: "/herramientas/examenes",
+    title: "Generador de Exámenes",
+    icon: FileQuestion,
+    bg: "from-rose-50 to-pink-50 text-rose-800",
+    iconBg: "bg-rose-100 text-rose-700",
+  },
+  {
+    key: "flashcards",
+    to: "/herramientas/flashcards",
+    title: "Creador de Flashcards",
+    icon: Layers3,
+    bg: "from-indigo-50 to-sky-50 text-indigo-800",
+    iconBg: "bg-indigo-100 text-indigo-700",
   },
 ];
 
