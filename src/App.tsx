@@ -21,6 +21,9 @@ import Examenes from "./pages/herramientas/Examenes";
 import Flashcards from "./pages/herramientas/Flashcards";
 import NotFound from "./pages/NotFound";
 import Perfil from "./pages/Perfil";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import OnboardingModal from "@/components/OnboardingModal";
 
 const queryClient = new QueryClient();
 
@@ -50,9 +53,52 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AppContent = () => {
   const { user, loading } = useAuth();
   const isMobile = useIsMobile();
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [profileChecked, setProfileChecked] = useState(false);
+
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      if (!user) {
+        setOnboardingOpen(false);
+        setProfileChecked(true);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, is_onboarded')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error leyendo perfil de usuario:', error);
+        setOnboardingOpen(false);
+        setProfileChecked(true);
+        return;
+      }
+
+      setOnboardingOpen(!data?.is_onboarded);
+      setProfileChecked(true);
+    };
+
+    checkOnboarding();
+  }, [user]);
+
+  const handleCompleteOnboarding = async () => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('users')
+      .update({ is_onboarded: true })
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('No se pudo completar el onboarding:', error);
+      return;
+    }
+    setOnboardingOpen(false);
+  };
 
   // Mostrar loading mientras se verifica la autenticación
-  if (loading) {
+  if (loading || !profileChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -74,10 +120,11 @@ const AppContent = () => {
     );
   }
 
-  // Si hay usuario, mostrar las rutas protegidas
+  // Si hay usuario, mostrar las rutas protegidas y el modal de onboarding
   if (!isMobile) {
     return (
       <AppShell>
+        <OnboardingModal open={onboardingOpen} onComplete={handleCompleteOnboarding} />
         <Routes>
           <Route path="/" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
           <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
@@ -98,6 +145,7 @@ const AppContent = () => {
 
   return (
     <div className="mobile-container">
+      <OnboardingModal open={onboardingOpen} onComplete={handleCompleteOnboarding} />
       <Routes>
         <Route path="/" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
         <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />

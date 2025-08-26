@@ -19,6 +19,12 @@ export interface Database {
           email: string
           full_name: string | null
           avatar_url: string | null
+          is_onboarded: boolean
+          subscription_plan: 'free' | 'basic' | 'pro'
+          student_type: string | null
+          primary_language: string | null
+          birth_date: string | null
+          birth_time: string | null
           created_at: string
           updated_at: string
         }
@@ -27,6 +33,12 @@ export interface Database {
           email: string
           full_name?: string | null
           avatar_url?: string | null
+          is_onboarded?: boolean
+          subscription_plan?: 'free' | 'basic' | 'pro'
+          student_type?: string | null
+          primary_language?: string | null
+          birth_date?: string | null
+          birth_time?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -35,6 +47,12 @@ export interface Database {
           email?: string
           full_name?: string | null
           avatar_url?: string | null
+          is_onboarded?: boolean
+          subscription_plan?: 'free' | 'basic' | 'pro'
+          student_type?: string | null
+          primary_language?: string | null
+          birth_date?: string | null
+          birth_time?: string | null
           created_at?: string
           updated_at?: string
         }
