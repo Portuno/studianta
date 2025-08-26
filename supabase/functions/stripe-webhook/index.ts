@@ -1,7 +1,7 @@
 // @ts-nocheck
 // deno-lint-ignore-file no-explicit-any
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import Stripe from "npm:stripe@14.26.0";
+import Stripe from "npm:stripe@18.4.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const stripeSecret = Deno.env.get("STRIPE_SECRET_KEY");
