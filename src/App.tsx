@@ -8,6 +8,7 @@ import { MobileNavigation } from "@/components/MobileNavigation";
 import AppShell from "@/components/AppShell";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Login from "./pages/Login";
+import Index from "./pages/Index";
 import Agenda from "./pages/Agenda";
 import Library from "./pages/Library";
 import Chat from "./pages/Chat";
@@ -66,8 +67,9 @@ const AppContent = () => {
   if (!user) {
     return (
       <Routes>
+        <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
