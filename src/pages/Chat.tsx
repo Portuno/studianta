@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertTriangle, Bot, Calendar, Loader2, Send, User, BookOpen, GraduationCap } from "lucide-react";
+import { AlertTriangle, Bot, Calendar, Loader2, Send, User, BookOpen, GraduationCap, Paperclip, X, FileText } from "lucide-react";
 import { usePrograms } from "@/hooks/useSupabase";
 
 interface ChatMessage {
@@ -82,10 +83,65 @@ export default function Chat() {
   const [currentProgramId, setCurrentProgramId] = useState<string | null>(null);
   const currentProgram = useMemo(() => programs.find((p) => p.id === currentProgramId) || null, [programs, currentProgramId]);
 
+  // Chat attachments (PDF/TXT) and scrolling
+  const [attachedFiles, setAttachedFiles] = useState<Array<{ file: File; title: string; mime_type: string; url?: string }>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleChooseFiles = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const accepted = files.filter((f) => {
+      const ext = f.name.toLowerCase().split('.').pop() || '';
+      const type = (f.type || '').toLowerCase();
+      return type === 'application/pdf' || type === 'text/plain' || ext === 'pdf' || ext === 'txt';
+    });
+    const mapped = accepted.map((f) => ({ file: f, title: f.name, mime_type: f.type || (f.name.toLowerCase().endsWith('.txt') ? 'text/plain' : 'application/pdf') }));
+    setAttachedFiles((prev) => [...prev, ...mapped]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+
+  const uploadChatFile = async (file: File): Promise<{ url: string; mime_type: string; title: string } | null> => {
+    try {
+      const userId = user?.id || 'anon';
+      const safeName = file.name.replace(/[^\w.\-]/g, '_');
+      const path = `${userId}/chat/${Date.now()}_${safeName}`;
+      const contentType = file.type || (file.name.toLowerCase().endsWith('.txt') ? 'text/plain' : 'application/pdf');
+      const { error: upErr } = await supabase.storage.from('study-materials').upload(path, file, { contentType, upsert: false });
+      if (upErr) {
+        console.error('Upload error:', upErr);
+        return null;
+      }
+      const { data: signed, error: urlErr } = await supabase.storage.from('study-materials').createSignedUrl(path, 60 * 60);
+      if (urlErr || !signed?.signedUrl) {
+        console.error('Signed URL error:', urlErr);
+        return null;
+      }
+      return { url: signed.signedUrl, mime_type: contentType, title: file.name };
+    } catch (err) {
+      console.error('uploadChatFile failed:', err);
+      return null;
+    }
+  };
+
   // Mabot configuration now handled by Supabase Edge Function
   const mabotConfigured = true; // Always true since we're using Edge Function
 
   const currentChat = chatSessions.find((c) => c.id === currentChatId) || null;
+
+  // Smooth autoscroll on new messages or loading indicators
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [currentChat?.messages.length, isLoading]);
 
   // Ensure a default chat exists (Chat General)
   useEffect(() => {
@@ -806,6 +862,21 @@ export default function Chat() {
       });
     }
 
+    // Upload any files the user attached in this message (PDF/TXT)
+    try {
+      if (attachedFiles.length > 0) {
+        setIsProcessingFiles(true);
+        const uploaded: any[] = [];
+        for (const f of attachedFiles) {
+          const up = await uploadChatFile(f.file);
+          if (up) uploaded.push(up);
+        }
+        contextFiles = [...(contextFiles || []), ...uploaded];
+      }
+    } catch (err) {
+      console.error('Attachment upload failed:', err);
+    }
+
     const result = await sendToMabot(currentChat, textToSend, contextText, contextFiles);
     
     // 🔍 DEBUG: Resultado de sendToMabot
@@ -854,6 +925,8 @@ export default function Chat() {
             : chat
         )
       );
+      // Clear attachments after successful send
+      setAttachedFiles([]);
       setIsLoading(false);
       setIsProcessingFiles(false);
       return;
@@ -869,6 +942,8 @@ export default function Chat() {
     setChatSessions((prev) =>
       prev.map((chat) => (chat.id === currentChatId ? { ...chat, messages: [...chat.messages, errorMessage], lastActivity: new Date() } : chat))
     );
+    // Clear attachments on error as well
+    setAttachedFiles([]);
     setIsLoading(false);
     setIsProcessingFiles(false);
   };
@@ -1219,6 +1294,7 @@ export default function Chat() {
               </Card>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
       )}
 
@@ -1236,8 +1312,47 @@ export default function Chat() {
               </span>
             </div>
           )}
+
+          {/* Attached files chips */}
+          {attachedFiles.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {attachedFiles.map((f, idx) => (
+                <span key={`${f.title}-${idx}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs text-foreground">
+                  <FileText size={12} className="text-muted-foreground" />
+                  <span className="max-w-[180px] truncate" title={f.title}>{f.title}</span>
+                  <button
+                    type="button"
+                    aria-label={`Quitar ${f.title}`}
+                    className="rounded-full p-0.5 hover:bg-muted-foreground/10"
+                    onClick={() => handleRemoveAttachment(idx)}
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
           
           <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="rounded-2xl"
+              onClick={handleChooseFiles}
+              aria-label="Adjuntar archivos (PDF o TXT)"
+              disabled={isLoading}
+            >
+              <Paperclip size={18} />
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.txt,application/pdf,text/plain"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+            />
             <Input
               placeholder={
                 currentChat.contextType === "agenda"
