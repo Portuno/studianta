@@ -95,7 +95,7 @@ const OnboardingModal = ({ open, onComplete }: OnboardingModalProps) => {
   )
 
   return (
-    <Dialog open={open}>
+    <Dialog open={open} modal={!showProgramModal && !showSubjectModal}>
       <DialogContent
         aria-label="Onboarding"
         aria-describedby="onboarding-description"
