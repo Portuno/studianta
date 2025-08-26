@@ -4,6 +4,13 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "npm:stripe@18.4.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+// Configurar CORS para webhooks
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "*",
+};
+
 const stripeSecret = Deno.env.get("STRIPE_SECRET_KEY");
 const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -45,9 +52,17 @@ serve(async (req: Request) => {
   try {
     console.log(`📥 Webhook received: ${req.method} ${req.url}`);
     
+    // Manejar CORS preflight para webhooks
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
+    }
+    
     if (req.method !== 'POST') {
       console.log("❌ Method not allowed:", req.method);
-      return new Response('Method not allowed', { status: 405 });
+      return new Response('Method not allowed', { 
+        status: 405,
+        headers: corsHeaders 
+      });
     }
 
     const body = await req.text();
@@ -55,7 +70,10 @@ serve(async (req: Request) => {
     
     if (!sig) {
       console.error("❌ Missing Stripe signature");
-      return new Response('Missing signature', { status: 400 });
+      return new Response('Missing signature', { 
+        status: 400,
+        headers: corsHeaders 
+      });
     }
 
     let event: any;
@@ -64,7 +82,10 @@ serve(async (req: Request) => {
       console.log(`✅ Webhook signature verified for event: ${event.type}`);
     } catch (err) {
       console.error('❌ Webhook signature verification failed:', err);
-      return new Response('Bad signature', { status: 400 });
+      return new Response('Bad signature', { 
+        status: 400,
+        headers: corsHeaders 
+      });
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -190,7 +211,10 @@ serve(async (req: Request) => {
     }
 
     console.log("✅ Webhook processed successfully");
-    return new Response('ok', { status: 200 });
+    return new Response('ok', { 
+      status: 200,
+      headers: corsHeaders 
+    });
     
   } catch (err: any) {
     console.error('❌ Stripe webhook error:', err);
@@ -211,7 +235,10 @@ serve(async (req: Request) => {
       }), 
       { 
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
       }
     );
   }
