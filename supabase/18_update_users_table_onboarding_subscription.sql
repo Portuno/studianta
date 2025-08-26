@@ -7,7 +7,8 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'subscription_plan_enum') THEN
     CREATE TYPE public.subscription_plan_enum AS ENUM ('free', 'basic', 'pro');
   END IF;
-END$$;
+END
+$$ LANGUAGE plpgsql;
 
 -- 2) Add columns to public.users if they don't exist
 ALTER TABLE public.users
@@ -30,14 +31,15 @@ BEGIN
       AND n.nspname = 'public'
   ) THEN
     CREATE FUNCTION public.set_updated_at()
-    RETURNS trigger AS $$
+    RETURNS trigger AS $set_updated_at$
     BEGIN
       NEW.updated_at = NOW();
       RETURN NEW;
     END;
-    $$ LANGUAGE plpgsql;
+    $set_updated_at$ LANGUAGE plpgsql;
   END IF;
-END$$;
+END
+$$ LANGUAGE plpgsql;
 
 -- Create trigger if missing
 DO $$
@@ -51,7 +53,8 @@ BEGIN
     FOR EACH ROW
     EXECUTE FUNCTION public.set_updated_at();
   END IF;
-END$$;
+END
+$$ LANGUAGE plpgsql;
 
 -- 4) Optional: backfill null subscription_plan to 'free' and is_onboarded to false
 UPDATE public.users SET subscription_plan = 'free'::public.subscription_plan_enum WHERE subscription_plan IS NULL;
