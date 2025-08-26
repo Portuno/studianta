@@ -70,6 +70,11 @@ const OnboardingModal = ({ open, onComplete }: OnboardingModalProps) => {
     setStep(nextMap[step])
   }
 
+  const handleBack = () => {
+    const prevMap: Record<StepKey, StepKey> = {1:1,2:1,3:2,4:3,5:4,6:5,7:6,8:7,9:8,10:9,11:10,12:11}
+    setStep(prevMap[step])
+  }
+
   const handleProgramCreated = () => {
     setShowProgramModal(false)
     // Library page manages refresh; here just continue
@@ -101,6 +106,7 @@ const OnboardingModal = ({ open, onComplete }: OnboardingModalProps) => {
           p-6
           sm:left-1/2 sm:top-1/2 sm:translate-x-[-50%] sm:translate-y-[-50%]
           sm:h-auto sm:w-full sm:max-w-3xl sm:rounded-lg
+          z-50
         "
       >
         <DialogHeader>
@@ -218,43 +224,56 @@ const OnboardingModal = ({ open, onComplete }: OnboardingModalProps) => {
         </div>
 
         <DialogFooter className="sticky bottom-0 left-0 right-0 bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-0 pt-2">
-          {step < 12 && (
-            <ActionButton
-              label={step === 1 ? 'Empezar' : 'Siguiente'}
-              onClick={handleNext}
-              disabled={step === 8 && !createdProgramId}
-            />
-          )}
-          {step === 12 && (
-            <ActionButton label="Ir a mi Agenda" onClick={handleFinish} />
-          )}
+          <div className="flex gap-2 w-full">
+            {step > 1 && (
+              <Button type="button" variant="outline" className="w-1/3" onClick={handleBack}>
+                Atrás
+              </Button>
+            )}
+            {step < 12 && (
+              <Button type="button" onClick={handleNext} className={`${step > 1 ? 'w-2/3' : 'w-full'}`} disabled={step === 8 && !createdProgramId}>
+                {step === 1 ? 'Empezar' : 'Siguiente'}
+              </Button>
+            )}
+            {step === 12 && (
+              <Button type="button" onClick={handleFinish} className="w-full">
+                Ir a mi Agenda
+              </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
 
       {/* External modals triggered by steps 7 and 8 */}
       {showProgramModal && (
-        <AddProgramModal
-          isOpen={showProgramModal}
-          onClose={() => {
-            setShowProgramModal(false)
-            // keep step at 7 if closed without creating
-          }}
-          onProgramCreated={() => {
-            setCreatedProgramId('created')
-            handleProgramCreated()
-          }}
-        />
+        <div className="relative z-[60]">
+          <AddProgramModal
+            isOpen={showProgramModal}
+            onClose={() => {
+              setShowProgramModal(false)
+            }}
+            onProgramCreated={() => {
+              // legacy
+            }}
+            onProgramCreatedWithId={(id) => {
+              setCreatedProgramId(id)
+              handleProgramCreated()
+            }}
+          />
+        </div>
       )}
 
       {showSubjectModal && (
-        <AddSubjectModal
-          isOpen={showSubjectModal}
-          onClose={() => {
-            setShowSubjectModal(false)
-          }}
-          onSubjectCreated={handleSubjectCreated}
-          programId={createdProgramId}
-        />
+        <div className="relative z-[60]">
+          <AddSubjectModal
+            isOpen={showSubjectModal}
+            onClose={() => {
+              setShowSubjectModal(false)
+            }}
+            onSubjectCreated={handleSubjectCreated}
+            programId={createdProgramId}
+          />
+        </div>
       )}
     </Dialog>
   )

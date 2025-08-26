@@ -9,9 +9,10 @@ interface AddProgramModalProps {
   isOpen: boolean;
   onClose: () => void;
   onProgramCreated: () => void;
+  onProgramCreatedWithId?: (id: string) => void;
 }
 
-export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgramModalProps) => {
+export const AddProgramModal = ({ isOpen, onClose, onProgramCreated, onProgramCreatedWithId }: AddProgramModalProps) => {
   const { addProgram } = usePrograms();
   const [programName, setProgramName] = useState("");
   const [institution, setInstitution] = useState("");
@@ -94,6 +95,9 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
       
       // Close modal and refresh
       onProgramCreated();
+      if (data?.id) {
+        onProgramCreatedWithId?.(data.id);
+      }
       onClose();
       
     } catch (error) {
