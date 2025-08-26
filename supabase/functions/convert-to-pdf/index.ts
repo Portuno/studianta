@@ -3,6 +3,12 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+const corsHeaders: Record<string, string> = {
+  "Access-Control-Allow-Origin": Deno.env.get("CORS_ALLOW_ORIGIN") ?? "*",
+  "Access-Control-Allow-Methods": "POST,OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const cloudconvertApiKey = Deno.env.get("CLOUDCONVERT_API_KEY");
@@ -42,39 +48,43 @@ const guessInputFormat = (ext: string) => {
 
 serve(async (req: Request) => {
   try {
-    if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
+    }
+
+    if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: corsHeaders });
 
     const authHeader = req.headers.get("Authorization") || "";
     const jwt = authHeader.replace("Bearer ", "");
-    if (!jwt) return new Response(JSON.stringify({ error: "Missing auth" }), { status: 401 });
+    if (!jwt) return new Response(JSON.stringify({ error: "Missing auth" }), { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey, { global: { headers: { Authorization: `Bearer ${jwt}` } } });
     const { data: { user }, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    if (userErr || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     const body = await req.json().catch(() => ({}));
     const { source_bucket = "study-materials", source_path, dest_folder = "converted" } = body as { source_bucket?: string; source_path?: string; dest_folder?: string };
-    if (!source_path) return new Response(JSON.stringify({ error: "Missing source_path" }), { status: 400 });
+    if (!source_path) return new Response(JSON.stringify({ error: "Missing source_path" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     // Enforce that user only converts files under their folder
     if (!source_path.startsWith(`${user.id}/`)) {
-      return new Response(JSON.stringify({ error: "Forbidden path" }), { status: 403 });
+      return new Response(JSON.stringify({ error: "Forbidden path" }), { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } });
     }
 
     const ext = guessInputFormat(getExt(source_path));
-    if (!ext) return new Response(JSON.stringify({ error: "Unsupported file type" }), { status: 400 });
+    if (!ext) return new Response(JSON.stringify({ error: "Unsupported file type" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     if (ext === "pdf") {
       // Already PDF, just return a signed URL
       const { data: signed } = await supabase.storage.from(source_bucket).createSignedUrl(source_path, 60 * 10);
-      return new Response(JSON.stringify({ status: "already_pdf", source: { bucket: source_bucket, path: source_path, url: signed?.signedUrl } }), { status: 200, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ status: "already_pdf", source: { bucket: source_bucket, path: source_path, url: signed?.signedUrl } }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } });
     }
 
-    if (!cloudconvertApiKey) return new Response(JSON.stringify({ error: "Missing CLOUDCONVERT_API_KEY" }), { status: 500 });
+    if (!cloudconvertApiKey) return new Response(JSON.stringify({ error: "Missing CLOUDCONVERT_API_KEY" }), { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     // Create a signed URL for CloudConvert to fetch the source file
     const { data: signed } = await supabase.storage.from(source_bucket).createSignedUrl(source_path, 60 * 30);
-    if (!signed?.signedUrl) return new Response(JSON.stringify({ error: "Failed to sign source file" }), { status: 500 });
+    if (!signed?.signedUrl) return new Response(JSON.stringify({ error: "Failed to sign source file" }), { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     const jobPayload = {
       tasks: {
@@ -91,12 +101,12 @@ serve(async (req: Request) => {
     });
     if (!createJobRes.ok) {
       const text = await createJobRes.text();
-      return new Response(JSON.stringify({ error: "Failed to create job", details: text }), { status: 502 });
+      return new Response(JSON.stringify({ error: "Failed to create job", details: text }), { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } });
     }
 
     const created = await createJobRes.json();
     const jobId = created?.data?.id as string | undefined;
-    if (!jobId) return new Response(JSON.stringify({ error: "Invalid job response" }), { status: 502 });
+    if (!jobId) return new Response(JSON.stringify({ error: "Invalid job response" }), { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     // Poll job until finished (simple backoff)
     const pollJob = async () => {
@@ -116,11 +126,11 @@ serve(async (req: Request) => {
     const tasks = (finalJob?.data?.tasks ?? []) as any[];
     const exportTask = tasks.find((t) => t.operation === "export/url" && t.status === "finished");
     const fileUrl = exportTask?.result?.files?.[0]?.url as string | undefined;
-    if (!fileUrl) return new Response(JSON.stringify({ error: "No export URL" }), { status: 502 });
+    if (!fileUrl) return new Response(JSON.stringify({ error: "No export URL" }), { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     // Download the resulting PDF
     const fileRes = await fetch(fileUrl);
-    if (!fileRes.ok) return new Response(JSON.stringify({ error: "Failed to download result" }), { status: 502 });
+    if (!fileRes.ok) return new Response(JSON.stringify({ error: "Failed to download result" }), { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } });
     const arrayBuffer = await fileRes.arrayBuffer();
     const pdfBytes = new Uint8Array(arrayBuffer);
 
@@ -133,7 +143,7 @@ serve(async (req: Request) => {
       contentType: "application/pdf",
       upsert: true,
     });
-    if (upErr) return new Response(JSON.stringify({ error: "Upload failed", details: upErr.message }), { status: 502 });
+    if (upErr) return new Response(JSON.stringify({ error: "Upload failed", details: upErr.message }), { status: 502, headers: { "Content-Type": "application/json", ...corsHeaders } });
 
     const { data: destSigned } = await supabase.storage.from(source_bucket).createSignedUrl(destPath, 60 * 60);
 
@@ -141,9 +151,9 @@ serve(async (req: Request) => {
       status: "ok",
       source: { bucket: source_bucket, path: source_path },
       dest: { bucket: source_bucket, path: destPath, url: destSigned?.signedUrl }
-    }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }), { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } });
   } catch (err: any) {
     console.error("convert-to-pdf error", err);
-    return new Response(JSON.stringify({ error: err?.message || "Server error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: err?.message || "Server error" }), { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } });
   }
 }); 

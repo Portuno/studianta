@@ -21,6 +21,7 @@ import Examenes from "./pages/herramientas/Examenes";
 import Flashcards from "./pages/herramientas/Flashcards";
 import NotFound from "./pages/NotFound";
 import Perfil from "./pages/Perfil";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import OnboardingModal from "@/components/OnboardingModal";
@@ -137,6 +138,7 @@ const AppContent = () => {
           <Route path="/herramientas/calculadora" element={<ProtectedRoute><Calculadora /></ProtectedRoute>} />
           <Route path="/herramientas/examenes" element={<ProtectedRoute><Examenes /></ProtectedRoute>} />
           <Route path="/herramientas/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppShell>
@@ -158,6 +160,7 @@ const AppContent = () => {
         <Route path="/herramientas/calculadora" element={<ProtectedRoute><Calculadora /></ProtectedRoute>} />
         <Route path="/herramientas/examenes" element={<ProtectedRoute><Examenes /></ProtectedRoute>} />
         <Route path="/herramientas/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <MobileNavigation />
