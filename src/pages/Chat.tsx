@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -1192,8 +1194,10 @@ export default function Chat() {
                       <div className="px-2 py-1.5 text-xs text-muted-foreground">No hay carreras</div>
                     )}
                     {(programs || []).map((p) => (
-                      <DropdownMenuItem key={p.id} className="cursor-pointer" onClick={() => setContextProgram(p.id, p.name)}>
-                        {p.name}
+                      <DropdownMenuItem key={p.id} className="cursor-pointer" onClick={() => handleSelectProgram(p.id, p.name)}>
+                        <GraduationCap size={14} className="mr-2" />
+                        <span className="flex-1">{p.name}</span>
+                        {currentProgramId === p.id && <span className="text-xs text-primary">✓</span>}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>
@@ -1262,7 +1266,27 @@ export default function Chat() {
                     <User size={16} className="text-primary-foreground mt-0.5" />
                   )}
                   <div className="flex-1">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({node, ...props}) => (
+                          <a {...props} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2" />
+                        ),
+                        ul: ({node, ...props}) => (
+                          <ul {...props} className="list-disc ml-5 my-2" />
+                        ),
+                        ol: ({node, ...props}) => (
+                          <ol {...props} className="list-decimal ml-5 my-2" />
+                        ),
+                        li: ({node, ...props}) => <li {...props} className="my-0.5" />,
+                        code: ({node, inline, className, children, ...props}) => (
+                          <code className={`rounded px-1 py-0.5 bg-muted text-foreground/90 ${className || ''}`} {...props}>{children}</code>
+                        )
+                      }}
+                      className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+                    >
+                      {msg.message}
+                    </ReactMarkdown>
                     <span
                       className={`text-xs mt-2 block ${msg.type === "user" ? "text-primary-foreground/70" : "text-muted-foreground"}`}
                     >
