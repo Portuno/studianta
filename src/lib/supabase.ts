@@ -27,6 +27,7 @@ export interface Database {
           birth_time: string | null
           education_level: string | null
           country: string | null
+          birth_city: string | null
           created_at: string
           updated_at: string
         }
@@ -43,6 +44,7 @@ export interface Database {
           birth_time?: string | null
           education_level?: string | null
           country?: string | null
+          birth_city?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -59,6 +61,7 @@ export interface Database {
           birth_time?: string | null
           education_level?: string | null
           country?: string | null
+          birth_city?: string | null
           created_at?: string
           updated_at?: string
         }

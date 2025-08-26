@@ -27,6 +27,7 @@ const OnboardingModal = ({ open, onComplete }: OnboardingModalProps) => {
   const [primaryLanguage, setPrimaryLanguage] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [birthTime, setBirthTime] = useState('')
+  const [birthCity, setBirthCity] = useState('')
 
   useEffect(() => {
     if (!open) setStep(1)
@@ -49,6 +50,7 @@ const OnboardingModal = ({ open, onComplete }: OnboardingModalProps) => {
     await supabase.from('users').update({
       birth_date: birthDate || null,
       birth_time: birthTime || null,
+      birth_city: birthCity || null,
     }).eq('id', user.id)
   }
 
@@ -157,6 +159,8 @@ const OnboardingModal = ({ open, onComplete }: OnboardingModalProps) => {
                 <input aria-label="Fecha de nacimiento" type="date" className="border rounded-md p-2" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
                 <label className="text-sm">Hora de nacimiento (opcional)</label>
                 <input aria-label="Hora de nacimiento" type="time" className="border rounded-md p-2" value={birthTime} onChange={(e) => setBirthTime(e.target.value)} />
+                <label className="text-sm">Ciudad de nacimiento</label>
+                <input aria-label="Ciudad de nacimiento" className="border rounded-md p-2" placeholder="Ciudad, País" value={birthCity} onChange={(e) => setBirthCity(e.target.value)} />
               </div>
             </div>
           )}
