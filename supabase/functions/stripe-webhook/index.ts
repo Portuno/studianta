@@ -16,6 +16,13 @@ const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Log de variables de entorno (sin mostrar valores completos por seguridad)
+console.log("🔧 Environment variables check:");
+console.log("✅ STRIPE_SECRET_KEY:", stripeSecret ? `${stripeSecret.substring(0, 8)}...` : "❌ Missing");
+console.log("✅ STRIPE_WEBHOOK_SECRET:", webhookSecret ? `${webhookSecret.substring(0, 8)}...` : "❌ Missing");
+console.log("✅ SUPABASE_URL:", supabaseUrl ? "✅ Set" : "❌ Missing");
+console.log("✅ SUPABASE_SERVICE_ROLE_KEY:", supabaseServiceKey ? "✅ Set" : "❌ Missing");
+
 // Validar variables de entorno críticas
 if (!stripeSecret) {
   console.error("❌ Missing STRIPE_SECRET_KEY");
@@ -51,6 +58,7 @@ const mapPriceToTier = (priceId: string | null | undefined): 'basic' | 'pro' | n
 serve(async (req: Request) => {
   try {
     console.log(`📥 Webhook received: ${req.method} ${req.url}`);
+    console.log("🔍 Headers received:", Object.fromEntries(req.headers.entries()));
     
     // Manejar CORS preflight para webhooks
     if (req.method === "OPTIONS") {
@@ -65,23 +73,36 @@ serve(async (req: Request) => {
       });
     }
 
-    const body = await req.text();
-    const sig = req.headers.get('Stripe-Signature');
-    
-    if (!sig) {
-      console.error("❌ Missing Stripe signature");
-      return new Response('Missing signature', { 
+    // Verificar que sea una llamada de Stripe (tiene el header Stripe-Signature)
+    const stripeSignature = req.headers.get('Stripe-Signature');
+    if (!stripeSignature) {
+      console.error("❌ Missing Stripe signature - not a valid Stripe webhook");
+      return new Response('Missing Stripe signature', { 
         status: 400,
         headers: corsHeaders 
       });
     }
 
+    console.log("🔐 Stripe signature found:", stripeSignature.substring(0, 20) + "...");
+    console.log("🔑 Webhook secret being used:", webhookSecret.substring(0, 8) + "...");
+
+    const body = await req.text();
+    console.log("📝 Body length:", body.length);
+    console.log("📄 Body preview:", body.substring(0, 200) + "...");
+    
     let event: any;
     try {
-      event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+      // USAR constructEventAsync en lugar de constructEvent para Deno
+      event = await stripe.webhooks.constructEventAsync(body, stripeSignature, webhookSecret);
       console.log(`✅ Webhook signature verified for event: ${event.type}`);
     } catch (err) {
       console.error('❌ Webhook signature verification failed:', err);
+      console.error('🔍 Error details:', {
+        message: err.message,
+        bodyLength: body.length,
+        signatureLength: stripeSignature.length,
+        webhookSecretLength: webhookSecret.length
+      });
       return new Response('Bad signature', { 
         status: 400,
         headers: corsHeaders 
@@ -100,7 +121,7 @@ serve(async (req: Request) => {
       const userId = session.metadata?.userId || session.subscription_data?.metadata?.userId;
       const plan = session.metadata?.plan as 'basic' | 'pro' | undefined;
 
-      console.log("📋 Session data:", {
+      console.log(" Session data:", {
         subscriptionId,
         customerId,
         userId,
@@ -170,6 +191,7 @@ serve(async (req: Request) => {
           try {
             const priceId = sub.items?.data?.[0]?.price?.id as string | undefined;
             tier = mapPriceToTier(priceId);
+            console.log(`🔍 Mapped price ${priceId} to tier: ${tier}`);
           } catch (priceError) {
             console.warn("⚠️ Error mapping price to tier:", priceError);
           }
