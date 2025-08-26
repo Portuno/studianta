@@ -12,6 +12,7 @@ const PDF = () => {
   const [loading, setLoading] = useState(false);
   const [resultUrl, setResultUrl] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [downloadName, setDownloadName] = useState<string>("archivo.pdf");
 
   const handleConvert = async () => {
     if (!file || !user || !session?.access_token) return;
@@ -34,6 +35,7 @@ const PDF = () => {
 
       const url = (data as any)?.dest?.url as string | undefined;
       if (!url) throw new Error("No se pudo obtener el enlace del PDF generado");
+      setDownloadName(`${file.name}.pdf`);
       setResultUrl(url);
     } catch (err) {
       setErrorMsg((err as any)?.message || "Error al convertir el archivo a PDF");
@@ -61,7 +63,7 @@ const PDF = () => {
         </div>
         {errorMsg && <p className="text-sm text-red-600">{errorMsg}</p>}
         {resultUrl && (
-          <a href={resultUrl} download="archivo.pdf" className="text-sm text-blue-600 underline inline-flex items-center gap-1">
+          <a href={resultUrl} download={downloadName} className="text-sm text-blue-600 underline inline-flex items-center gap-1">
             <FileText className="h-4 w-4" /> Descargar PDF
           </a>
         )}

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
+import { Badge } from "@/components/ui/badge";
 
 const getInitials = (nameOrEmail: string | null | undefined) => {
 	if (!nameOrEmail) return "U";
@@ -171,6 +172,18 @@ const Perfil = () => {
 							<span className="text-xs text-muted-foreground">
 								{loadingBilling ? "Cargando..." : `Plan: ${billing?.tier ?? "free"} · Estado: ${billing?.status ?? "unknown"}`}
 							</span>
+						</div>
+						<div className="flex items-center gap-2 mt-2">
+							{billing?.tier && (
+								<Badge variant="secondary" aria-label={`Plan actual: ${billing.tier}`} tabIndex={0}>
+									Plan · {billing.tier}
+								</Badge>
+							)}
+							{billing?.status && (
+								<Badge variant={billing.status === "active" || billing.status === "trialing" ? "default" : "outline"} aria-label={`Estado: ${billing.status}`} tabIndex={0}>
+									Estado · {billing.status}
+								</Badge>
+							)}
 						</div>
 						{billing?.currentPeriodEnd && (
 							<p className="text-xs text-muted-foreground mt-1">Renueva el {new Date(billing.currentPeriodEnd).toLocaleDateString()}</p>

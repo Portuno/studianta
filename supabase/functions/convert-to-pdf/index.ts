@@ -124,8 +124,9 @@ serve(async (req: Request) => {
     const arrayBuffer = await fileRes.arrayBuffer();
     const pdfBytes = new Uint8Array(arrayBuffer);
 
-    const baseName = source_path.split("/").pop()!.replace(/\.[^.]+$/, "");
-    const destPath = `${user.id}/${dest_folder}/${baseName}.pdf`;
+    const originalName = source_path.split("/").pop()!;
+    const destFileName = `${originalName}.pdf`;
+    const destPath = `${user.id}/${dest_folder}/${destFileName}`;
 
     // Upload to Supabase Storage
     const { error: upErr } = await supabase.storage.from(source_bucket).upload(destPath, pdfBytes, {
