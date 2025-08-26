@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Calendar, CheckCircle2, Clock, BookOpenCheck, Target, Sparkles, Bell, School } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, BookOpenCheck, Target, Sparkles, Bell, School, ChevronLeft, ChevronRight, Play, Pause, RotateCcw, Plus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -32,7 +32,7 @@ type Subject = {
 
 const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
-const gradientBg = "bg-gradient-to-br from-pink-50 via-rose-50 to-amber-50";
+const gradientBg = "bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50";
 
 const startOfWeek = (d: Date) => {
   const date = new Date(d);
@@ -52,15 +52,20 @@ const formatYMD = (d: Date) => d.toISOString().split("T")[0];
 
 const formatDayMonth = (d: Date) => d.toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
 
+const formatTime = (time: string) => {
+  const [hours, minutes] = time.split(':');
+  return `${hours}:${minutes}`;
+};
+
 const iconByType: Record<string, JSX.Element> = {
-  exam: <Bell className="h-4 w-4" />, // Examen
-  practical_activity: <BookOpenCheck className="h-4 w-4" />, // Actividad práctica
-  project_submission: <Target className="h-4 w-4" />, // Entrega de proyecto
-  presentation: <School className="h-4 w-4" />, // Presentación
-  quiz: <CheckCircle2 className="h-4 w-4" />, // Quiz
-  assignment_due: <Clock className="h-4 w-4" />, // Tarea pendiente
-  lab_session: <BookOpenCheck className="h-4 w-4" />, // Sesión de laboratorio
-  other: <Sparkles className="h-4 w-4" />, // Otro
+  exam: <Bell className="h-4 w-4" />,
+  practical_activity: <BookOpenCheck className="h-4 w-4" />,
+  project_submission: <Target className="h-4 w-4" />,
+  presentation: <School className="h-4 w-4" />,
+  quiz: <CheckCircle2 className="h-4 w-4" />,
+  assignment_due: <Clock className="h-4 w-4" />,
+  lab_session: <BookOpenCheck className="h-4 w-4" />,
+  other: <Sparkles className="h-4 w-4" />,
 };
 
 const colorByType: Record<string, string> = {
@@ -99,9 +104,9 @@ const Agenda = () => {
   const [newEventType, setNewEventType] = useState<string>("other");
   const [newEventSubjectId, setNewEventSubjectId] = useState<string | "">("");
   const [newEventDate, setNewEventDate] = useState<string>("");
-  const [newEventDescription, setNewEventDescription] = useState<string>("");
+  const [newEventDescription, setNewEventDescription] = useState("");
 
-  // Temporizador de estudio (simple)
+  // Temporizador de estudio
   useEffect(() => {
     if (!timerRunning) return;
     const id = setInterval(() => setElapsedSec((s) => s + 1), 1000);
@@ -137,7 +142,6 @@ const Agenda = () => {
         const { data: subs } = await supabase
           .from("subjects")
           .select("id,name")
-          .eq("user_id", user!.id)
           .order("name");
         setSubjects(subs || []);
 
@@ -174,11 +178,11 @@ const Agenda = () => {
         },
         (payload) => {
           console.log('Real-time update received:', payload);
-                  // Recargar eventos cuando hay cambios
-        fetchData();
-        setLastUpdate(new Date());
-        setShowRealtimeUpdate(true);
-        setTimeout(() => setShowRealtimeUpdate(false), 3000); // Ocultar después de 3 segundos
+          // Recargar eventos cuando hay cambios
+          fetchData();
+          setLastUpdate(new Date());
+          setShowRealtimeUpdate(true);
+          setTimeout(() => setShowRealtimeUpdate(false), 3000);
         }
       )
       .subscribe();
@@ -210,7 +214,6 @@ const Agenda = () => {
       const { data: subs } = await supabase
         .from("subjects")
         .select("id,name")
-        .eq("user_id", user!.id)
         .order("name");
       setSubjects(subs || []);
 
@@ -233,10 +236,9 @@ const Agenda = () => {
   }, [selectedYMD]);
 
   const eventsForSelectedDay = useMemo(() => {
-    const calendarItems: Array<{ id: string; typeKey: string; title: string; time?: string; subjectName?: string }> = [];
-    // Bloques de estudio recomendados por IA (placeholder)
-    calendarItems.push({ id: `ai-${selectedYMD}`, typeKey: "estudio", title: "Bloque de estudio recomendado", time: "60 min", subjectName: "IA" });
-    // Clases (mapear desde schedules)
+    const calendarItems: Array<{ id: string; typeKey: string; title: string; time?: string; subjectName?: string; canStart?: boolean }> = [];
+    
+    // Clases programadas (mapear desde schedules)
     schedules
       .filter((s) => s.day_of_week === selectedDate.getDay())
       .forEach((s) => {
@@ -244,19 +246,28 @@ const Agenda = () => {
           id: `sch-${s.id}`,
           typeKey: "clase",
           title: s.description || "Clase",
-          time: `${s.start_time} - ${s.end_time}`,
+          time: `${formatTime(s.start_time)} - ${formatTime(s.end_time)}`,
           subjectName: (s.subject_id && subjectMap[s.subject_id]) || s.location || undefined,
+          canStart: true,
         });
       });
+    
     // Eventos con fecha
     events
       .filter((e) => e.event_date === selectedYMD)
       .forEach((e) => {
         const typeKey = (e.event_type || "otro").toLowerCase();
-        calendarItems.push({ id: `ev-${e.id}`, typeKey, title: e.name, subjectName: (e.subject_id && subjectMap[e.subject_id]) || undefined });
+        calendarItems.push({ 
+          id: `ev-${e.id}`, 
+          typeKey, 
+          title: e.name, 
+          subjectName: (e.subject_id && subjectMap[e.subject_id]) || undefined,
+          canStart: true,
+        });
       });
+    
     return calendarItems;
-  }, [events, schedules, selectedDate, selectedYMD]);
+  }, [events, schedules, selectedDate, selectedYMD, subjectMap]);
 
   const upcomingDeadlines = useMemo(() => {
     const todayYMD = formatYMD(new Date());
@@ -266,152 +277,290 @@ const Agenda = () => {
       .slice(0, 4);
   }, [events]);
 
+  const todaySessions = useMemo(() => {
+    const today = new Date();
+    const todayDay = today.getDay();
+    return schedules.filter(s => s.day_of_week === todayDay);
+  }, [schedules]);
+
+  const nextSession = useMemo(() => {
+    if (todaySessions.length === 0) return null;
+    const now = new Date();
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    
+    return todaySessions.find(s => s.start_time > currentTime) || todaySessions[0];
+  }, [todaySessions]);
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    setWeekStart(prev => {
+      const newStart = new Date(prev);
+      newStart.setDate(newStart.getDate() + (direction === 'next' ? 7 : -7));
+      return newStart;
+    });
+  };
+
+  const handleStartSession = (item: any) => {
+    setRecommendedTask(`Estudiar ahora: ${item.title}`);
+    setTimerRunning(true);
+    setElapsedSec(0);
+  };
+
   return (
     <div className="pb-24 md:pb-6">
-      {/* 1. Sección Superior: Tu Foco Hoy */}
-      <section className={`sticky top-0 z-10 ${gradientBg} border-b border-pink-100/60`}>
+      {/* 1. AGENDA SEMANAL - Nueva sección principal arriba */}
+      <section className={`sticky top-0 z-10 ${gradientBg} border-b border-blue-100/60`}>
         <div className="px-4 pt-5 pb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="h-4 w-4 text-pink-500" />
-            <h2 className="text-lg font-semibold text-gray-800">Tu foco hoy</h2>
-          </div>
-          <Card className="p-4 rounded-2xl border-0 shadow-sm bg-white/90">
-            <div className="flex flex-col gap-3">
-              <h3 className="text-base font-semibold text-gray-900">{recommendedTask}</h3>
-              <Button
-                onClick={() => setTimerRunning((r) => !r)}
-                className="w-full rounded-xl bg-pink-500 hover:bg-pink-600 text-white py-6 text-base font-semibold"
-              >
-                {timerRunning ? `En curso • ${elapsedStr}` : "Iniciar Sesión"}
-              </Button>
-              <div className="grid grid-cols-2 gap-3">
-                <Card className="p-3 rounded-xl border-0 bg-pink-50">
-                  <div className="flex items-center gap-2 text-pink-700">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-xs">Tiempo de Estudio</span>
-                  </div>
-                  <p className="text-xl font-bold text-gray-800 mt-1">{elapsedStr}</p>
-                </Card>
-                <Card className="p-3 rounded-xl border-0 bg-emerald-50">
-                  <div className="flex items-center gap-2 text-emerald-700">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span className="text-xs">Temas Completados</span>
-                  </div>
-                  <p className="text-xl font-bold text-gray-800 mt-1">{0}</p>
-                </Card>
-              </div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-blue-600" />
+              <h2 className="text-xl font-bold text-gray-800">Agenda Semanal</h2>
             </div>
-          </Card>
-        </div>
-      </section>
-
-      {/* 2. Sección Media: Tu Agenda Semanal */}
-      <section className="px-4 py-5">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-blue-600" />
-            <h2 className="text-lg font-semibold text-gray-800">Tu agenda semanal</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">
-              Última actualización: {lastUpdate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-            </span>
-            <Button
-              onClick={fetchData}
-              variant="outline"
-              size="sm"
-              className="text-xs px-3 py-1"
-              disabled={loading}
-            >
-              {loading ? "Actualizando..." : "Actualizar"}
-            </Button>
-          </div>
-        </div>
-
-        {/* Barra de días */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-          {weekDays.map((date, idx) => {
-            const isActive = idx === selectedDayIndex;
-            const isToday = formatYMD(date) === formatYMD(new Date());
-            return (
-              <button
-                key={idx}
-                onClick={() => setSelectedDayIndex(idx)}
-                className={`min-w-[64px] px-3 py-2 rounded-xl border text-center transition-all ${
-                  isActive ? "bg-blue-600 text-white border-blue-600" : "bg-white border-gray-200 text-gray-700"
-                }`}
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => navigateWeek('prev')}
+                variant="outline"
+                size="sm"
+                className="p-2"
               >
-                <div className="text-[10px] uppercase tracking-wide opacity-80">
-                  {dayNames[date.getDay()]}
-                </div>
-                <div className="text-sm font-semibold">
-                  {formatDayMonth(date)}
-                </div>
-                {isToday && !isActive && (
-                  <div className="mt-1 text-[10px] text-blue-600 font-medium">hoy</div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                onClick={() => navigateWeek('next')}
+                variant="outline"
+                size="sm"
+                className="p-2"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
-        {/* Eventos del día */}
-        <div className="mt-4 space-y-2">
-          {showRealtimeUpdate && (
-            <Card className="p-4 rounded-xl border-0 text-center text-emerald-500 bg-emerald-50 border-emerald-200">
-              ✅ Agenda actualizada en tiempo real
-            </Card>
-          )}
-          {loading && (
-            <Card className="p-4 rounded-xl border-0 text-center text-gray-500">Cargando agenda...</Card>
-          )}
-          {!loading && eventsForSelectedDay.length === 0 && (
-            <Card className="p-4 rounded-xl border-0 text-center text-gray-500">
-              No hay eventos para este día
-            </Card>
-          )}
-          {eventsForSelectedDay.map((item) => {
-            const typeKey = item.typeKey in colorByType ? item.typeKey : "otro";
-            return (
-              <Card key={item.id} className={`p-3 rounded-xl border ${colorByType[typeKey]} bg-white`}>
-                <div className="flex items-start gap-3">
-                  <div className={`mt-1 grid place-items-center rounded-md border ${colorByType[typeKey]} w-7 h-7 bg-white/70`}>
-                    {iconByType[typeKey]}
+          {/* Calendario semanal interactivo */}
+          <div className="grid grid-cols-7 gap-2 mb-4">
+            {weekDays.map((date, idx) => {
+              const isActive = idx === selectedDayIndex;
+              const isToday = formatYMD(date) === formatYMD(new Date());
+              const dayEvents = events.filter(e => e.event_date === formatYMD(date));
+              const daySchedules = schedules.filter(s => s.day_of_week === date.getDay());
+              const hasEvents = dayEvents.length > 0 || daySchedules.length > 0;
+              
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedDayIndex(idx)}
+                  className={`relative p-3 rounded-xl border transition-all ${
+                    isActive 
+                      ? "bg-blue-600 text-white border-blue-600 shadow-lg" 
+                      : "bg-white border-gray-200 text-gray-700 hover:border-blue-300"
+                  }`}
+                >
+                  <div className="text-[10px] uppercase tracking-wide opacity-80 mb-1">
+                    {dayNames[date.getDay()]}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800">{item.title}</p>
-                    <div className="text-xs text-gray-600 flex items-center gap-2">
-                      {item.time && <span>{item.time}</span>}
-                      {item.subtitle && (
-                        <span className="inline-flex items-center gap-1">
-                          <Target className="h-3 w-3" /> {item.subtitle}
-                        </span>
+                  <div className="text-sm font-bold mb-1">
+                    {date.getDate()}
+                  </div>
+                  {isToday && (
+                    <div className="text-[10px] font-medium text-blue-600 bg-blue-100 px-1 py-0.5 rounded">
+                      Hoy
+                    </div>
+                  )}
+                  {hasEvents && (
+                    <div className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Eventos del día seleccionado */}
+          <div className="space-y-2">
+            {eventsForSelectedDay.length === 0 ? (
+              <Card className="p-4 rounded-xl border-0 text-center text-gray-500 bg-white/80">
+                No hay sesiones programadas para este día
+              </Card>
+            ) : (
+              eventsForSelectedDay.map((item) => {
+                const typeKey = item.typeKey in colorByType ? item.typeKey : "otro";
+                return (
+                  <Card key={item.id} className="p-4 rounded-xl border-0 bg-white/90 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${colorByType[typeKey]} bg-white/70`}>
+                          {iconByType[typeKey]}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">{item.title}</p>
+                          <div className="text-xs text-gray-600 flex items-center gap-2">
+                            {item.time && <span>{item.time}</span>}
+                            {item.subjectName && (
+                              <span className="inline-flex items-center gap-1">
+                                <School className="h-3 w-3" /> {item.subjectName}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {item.canStart && (
+                        <Button
+                          onClick={() => handleStartSession(item)}
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs"
+                        >
+                          Iniciar Sesión
+                        </Button>
                       )}
                     </div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
+                  </Card>
+                );
+              })
+            )}
+          </div>
         </div>
       </section>
 
-      {/* 3. Sección Inferior: El Mapa del Curso */}
+      {/* 2. PANEL DE ENFOQUE - "Tu sesión de hoy" (centro) */}
+      <section className="px-4 py-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Target className="h-5 w-5 text-emerald-600" />
+          <h2 className="text-xl font-bold text-gray-800">Tu sesión de hoy</h2>
+        </div>
+        
+        <Card className="p-6 rounded-2xl border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-teal-50">
+          <div className="flex flex-col gap-4">
+            {nextSession ? (
+              <>
+                <div className="text-center">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">
+                    {nextSession.description || "Sesión de estudio"}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {nextSession.subject_id && subjectMap[nextSession.subject_id] 
+                      ? `Asignatura: ${subjectMap[nextSession.subject_id]}`
+                      : nextSession.location || "Sin ubicación específica"
+                    }
+                  </p>
+                  <p className="text-lg font-semibold text-emerald-600 mt-2">
+                    {formatTime(nextSession.start_time)} - {formatTime(nextSession.end_time)}
+                  </p>
+                </div>
+                
+                <div className="flex justify-center">
+                  <Button
+                    onClick={() => {
+                      setRecommendedTask(`Estudiar ahora: ${nextSession.description || "Sesión de estudio"}`);
+                      setTimerRunning(true);
+                      setElapsedSec(0);
+                    }}
+                    className="w-full max-w-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white py-4 text-lg font-semibold"
+                  >
+                    {timerRunning ? (
+                      <div className="flex items-center gap-2">
+                        <Pause className="h-5 w-5" />
+                        En curso • {elapsedStr}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Play className="h-5 w-5" />
+                        Iniciar Sesión
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center">
+                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                  {recommendedTask}
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  No hay sesiones programadas para hoy. ¡Es un buen momento para estudiar!
+                </p>
+                <Button
+                  onClick={() => setTimerRunning((r) => !r)}
+                  className="w-full max-w-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white py-4 text-lg font-semibold"
+                >
+                  {timerRunning ? (
+                    <div className="flex items-center gap-2">
+                      <Pause className="h-5 w-5" />
+                      En curso • {elapsedStr}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Play className="h-5 w-5" />
+                      Iniciar Sesión
+                    </div>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* Controles del temporizador */}
+            {timerRunning && (
+              <div className="flex items-center justify-center gap-2">
+                <Button
+                  onClick={() => setTimerRunning(false)}
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full px-4"
+                >
+                  <Pause className="h-4 w-4 mr-1" />
+                  Pausar
+                </Button>
+                <Button
+                  onClick={() => {
+                    setTimerRunning(false);
+                    setElapsedSec(0);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full px-4"
+                >
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Reiniciar
+                </Button>
+              </div>
+            )}
+
+            {/* Métricas de progreso */}
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <Card className="p-4 rounded-xl border-0 bg-emerald-100">
+                <div className="flex items-center gap-2 text-emerald-700 mb-2">
+                  <Clock className="h-4 w-4" />
+                  <span className="text-xs font-medium">Tiempo de Estudio</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-800">{elapsedStr}</p>
+              </Card>
+              <Card className="p-4 rounded-xl border-0 bg-blue-100">
+                <div className="flex items-center gap-2 text-blue-700 mb-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="text-xs font-medium">Temas Completados</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-800">{0}</p>
+              </Card>
+            </div>
+          </div>
+        </Card>
+      </section>
+
+      {/* 3. BLOQUES DE ESTUDIO RECOMENDADOS - Sugerencias para continuar (abajo) */}
       <section className="px-4 pb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <BookOpenCheck className="h-4 w-4 text-emerald-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Mapa del curso</h2>
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="h-5 w-5 text-purple-600" />
+          <h2 className="text-xl font-bold text-gray-800">Bloques de estudio recomendados</h2>
         </div>
 
         {/* Próximas metas */}
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Próximas metas</h3>
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Próximas metas</h3>
           {upcomingDeadlines.length === 0 ? (
-            <Card className="p-4 rounded-xl border-0 text-center text-gray-500">Sin próximas fechas</Card>
+            <Card className="p-4 rounded-xl border-0 text-center text-gray-500 bg-white/80">
+              Sin próximas fechas
+            </Card>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {upcomingDeadlines.slice(0, 3).map((e) => (
-                <Card key={e.id} className="p-3 rounded-xl border-0 bg-white/90">
+                <Card key={e.id} className="p-4 rounded-xl border-0 bg-white/90 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-800">{e.name}</p>
@@ -429,28 +578,30 @@ const Agenda = () => {
         </div>
 
         {/* Progreso general del curso */}
-        <div className="mb-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Progreso del Curso</h3>
-          <Card className="p-3 rounded-xl border-0 bg-white/90">
-            <div className="flex items-center justify-between mb-2">
+        <div className="mb-6">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Progreso del Curso</h3>
+          <Card className="p-4 rounded-xl border-0 bg-white/90 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-gray-700">Progreso general</span>
               <span className="text-sm font-semibold text-gray-900">25%</span>
             </div>
-            <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
-              <div className="h-full bg-emerald-500" style={{ width: '25%' }}></div>
+            <div className="w-full h-3 rounded-full bg-gray-200 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500" style={{ width: '25%' }}></div>
             </div>
           </Card>
         </div>
 
-        {/* Lista de temas (sustituido por asignaturas con progreso) */}
+        {/* Asignaturas con progreso */}
         <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Asignaturas</h3>
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Asignaturas</h3>
           {subjects.length === 0 ? (
-            <Card className="p-4 rounded-xl border-0 text-center text-gray-500">Aún no hay asignaturas</Card>
+            <Card className="p-4 rounded-xl border-0 text-center text-gray-500 bg-white/80">
+              Aún no hay asignaturas
+            </Card>
           ) : (
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-3">
               {subjects.map((s) => (
-                <Card key={s.id} className="p-3 rounded-xl border-0 bg-white/90">
+                <Card key={s.id} className="p-4 rounded-xl border-0 bg-white/90 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-800 truncate">{s.name}</p>
@@ -469,13 +620,14 @@ const Agenda = () => {
           )}
         </div>
       </section>
-      {/* Botón flotante para agregar evento manual */}
+
+      {/* Botón flotante para agregar evento */}
       <button
         onClick={() => setShowAddModal(true)}
         className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors md:hidden"
         title="Agregar evento manual"
       >
-        +
+        <Plus className="h-6 w-6 mx-auto" />
       </button>
 
       {/* Modal Agregar Evento */}
@@ -484,7 +636,9 @@ const Agenda = () => {
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <h3 className="text-lg font-semibold text-gray-900">Agregar Evento</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-2 rounded-full hover:bg-gray-100">✕</button>
+              <button onClick={() => setShowAddModal(false)} className="p-2 rounded-full hover:bg-gray-100">
+                <X className="h-5 w-5" />
+              </button>
             </div>
             <div className="p-5 space-y-4">
               <div>
@@ -525,7 +679,9 @@ const Agenda = () => {
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 p-5 border-t border-gray-100 bg-gray-50">
-              <Button variant="outline" onClick={() => setShowAddModal(false)} className="rounded-full px-6">Cancelar</Button>
+              <Button variant="outline" onClick={() => setShowAddModal(false)} className="rounded-full px-6">
+                Cancelar
+              </Button>
               <Button
                 onClick={async () => {
                   if (!user || !newEventName.trim() || !newEventDate) return;
