@@ -233,9 +233,12 @@ export default function Chat() {
     }
   }, [currentChatId]);
 
-  // Smooth autoscroll on new messages or loading indicators
+  // Smooth autoscroll; instant on first render to avoid visible jump
+  const didInitialScrollRef = useRef<boolean>(false);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const behavior = didInitialScrollRef.current ? 'smooth' : 'auto';
+    messagesEndRef.current?.scrollIntoView({ behavior: behavior as ScrollBehavior, block: 'end' });
+    if (!didInitialScrollRef.current) didInitialScrollRef.current = true;
   }, [currentChat?.messages.length, isLoading]);
 
   // Load sessions from DB and ensure a default exists
@@ -1396,7 +1399,7 @@ export default function Chat() {
       const showMabotBanner = !mabotConfigured;
 
   return (
-    <div className="flex flex-col pb-20 md:pb-0 md:h-[100svh] md:overflow-hidden">
+    <div className="flex flex-col h-[100svh] overflow-hidden">
       <div className="flex items-center justify-between pt-8 pb-4 px-6">
         <div className="text-left">
           <h1 className="text-2xl font-light text-foreground/90 mb-1">Chat</h1>
@@ -1537,7 +1540,7 @@ export default function Chat() {
       {/* Siempre mostramos el chat activo (única sesión) */}
 
       {currentChat && (
-        <div className="flex-1 px-6 space-y-4 overflow-y-auto">
+        <div className="flex-1 min-h-0 px-6 space-y-4 overflow-y-auto">
           {currentChat.messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}>
               <Card
