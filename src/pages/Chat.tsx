@@ -872,6 +872,10 @@ export default function Chat() {
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading || !currentChat) return;
+    if (!user?.id) {
+      console.error("Cannot send message without authenticated user");
+      return;
+    }
 
     // 🔍 DEBUG: Inicio del proceso de envío
     console.group("💬 CHAT MESSAGE FLOW - INICIO");
@@ -900,7 +904,7 @@ export default function Chat() {
     try {
       const row: Inserts<"chat_messages"> = {
         chat_id: currentChat.id,
-        user_id: user?.id || null,
+        user_id: user.id,
         content: inputMessage,
         role: "user",
       } as any;
@@ -1016,7 +1020,7 @@ export default function Chat() {
         }
         const row: Inserts<"chat_messages"> = {
           chat_id: currentChat.id,
-          user_id: null,
+          user_id: user?.id || undefined,
           content: botMessage.message,
           role: "assistant",
         } as any;
@@ -1075,7 +1079,7 @@ export default function Chat() {
     try {
       await supabase.from("chat_sessions").update({ title: "Chat General", context: "general" }).eq("id", currentChat.id);
       await supabase.from("chat_messages").insert([
-        { chat_id: currentChat.id, user_id: null, content: "💬 Contexto cambiado a General.", role: "assistant" } as Inserts<"chat_messages">,
+        { chat_id: currentChat.id, user_id: user?.id || undefined, content: "💬 Contexto cambiado a General.", role: "assistant" } as Inserts<"chat_messages">,
       ]);
     } catch (e) {
       console.error("Failed to persist general context change:", e);
@@ -1109,7 +1113,7 @@ export default function Chat() {
     try {
       await supabase.from("chat_sessions").update({ title: "Agenda", context: "agenda" }).eq("id", currentChat.id);
       await supabase.from("chat_messages").insert([
-        { chat_id: currentChat.id, user_id: null, content: "📅 Contexto cambiado a Agenda.", role: "assistant" } as Inserts<"chat_messages">,
+        { chat_id: currentChat.id, user_id: user?.id || undefined, content: "📅 Contexto cambiado a Agenda.", role: "assistant" } as Inserts<"chat_messages">,
       ]);
     } catch (e) {
       console.error("Failed to persist agenda context change:", e);
@@ -1146,7 +1150,7 @@ export default function Chat() {
       await supabase.from("chat_messages").insert([
         {
           chat_id: currentChat.id,
-          user_id: null,
+          user_id: user?.id || undefined,
           content: `📚 Contexto cambiado a Asignatura: ${subject.name}.`,
           role: "assistant",
         } as Inserts<"chat_messages">,
@@ -1186,7 +1190,7 @@ export default function Chat() {
       await supabase.from("chat_messages").insert([
         {
           chat_id: currentChat.id,
-          user_id: null,
+          user_id: user?.id || undefined,
           content: `🎓 Contexto cambiado a Carrera: ${programName}.`,
           role: "assistant",
         } as Inserts<"chat_messages">,
