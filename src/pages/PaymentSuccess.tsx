@@ -8,12 +8,14 @@ const PaymentSuccess = () => {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const status = searchParams.get("status");
+	const sessionId = searchParams.get("session_id");
+	const isSuccess = status === "success" || !!sessionId;
 
 	useEffect(() => {
-		if (status !== "success") {
+		if (!isSuccess) {
 			navigate("/", { replace: true });
 		}
-	}, [status, navigate]);
+	}, [isSuccess, navigate]);
 
 	const handleGoToDashboard = () => {
 		navigate("/dashboard", { replace: true });
@@ -29,7 +31,7 @@ const PaymentSuccess = () => {
 		window.open(whatsappUrl, "_blank", "noopener,noreferrer");
 	};
 
-	if (status !== "success") return null;
+	if (!isSuccess) return null;
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">

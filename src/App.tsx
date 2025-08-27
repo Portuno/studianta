@@ -116,6 +116,7 @@ const AppContent = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
