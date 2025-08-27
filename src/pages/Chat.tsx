@@ -1144,7 +1144,7 @@ export default function Chat() {
           {currentChat && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-xl">
+                <Button size="sm" className="rounded-xl bg-violet-300 text-white hover:bg-violet-400 border-0">
                   {`Contexto: ${
                     currentChat.contextType === "agenda"
                       ? "Agenda"
@@ -1221,7 +1221,7 @@ export default function Chat() {
         {programs.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="rounded-xl">
+              <Button size="sm" className="rounded-xl bg-violet-300 text-white hover:bg-violet-400 border-0">
                 {`Carrera: ${currentProgram?.name || "—"}`}
               </Button>
             </DropdownMenuTrigger>
@@ -1279,7 +1279,7 @@ export default function Chat() {
                           <ol {...props} className="list-decimal ml-5 my-2" />
                         ),
                         li: ({node, ...props}) => <li {...props} className="my-0.5" />,
-                        code: ({node, inline, className, children, ...props}) => (
+                        code: ({node, className, children, ...props}) => (
                           <code className={`rounded px-1 py-0.5 bg-muted text-foreground/90 ${className || ''}`} {...props}>{children}</code>
                         )
                       }}
@@ -1360,9 +1360,8 @@ export default function Chat() {
           <div className="flex gap-2">
             <Button
               type="button"
-              variant="outline"
               size="icon"
-              className="rounded-2xl"
+              className="rounded-2xl bg-pink-500 text-white hover:bg-pink-600 shadow-lg shadow-pink-200/40"
               onClick={handleChooseFiles}
               aria-label="Adjuntar archivos (PDF o TXT)"
               disabled={isLoading}
@@ -1399,7 +1398,7 @@ export default function Chat() {
             />
             <Button
               size="icon"
-              className="rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+              className="rounded-2xl bg-pink-500 hover:bg-pink-600 text-white shadow-lg shadow-pink-200/40"
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || isLoading}
               aria-label="Enviar mensaje"
