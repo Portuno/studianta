@@ -19,7 +19,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertTriangle, Bot, Calendar, Loader2, Send, User, BookOpen, GraduationCap, Paperclip, X, FileText } from "lucide-react";
+import { AlertTriangle, Bot, Calendar, Loader2, Send, User, BookOpen, GraduationCap, Paperclip, X, FileText, Plus, Trash2 } from "lucide-react";
 import { usePrograms } from "@/hooks/useSupabase";
 
 interface ChatMessage {
@@ -141,6 +141,90 @@ export default function Chat() {
   const mabotConfigured = true; // Always true since we're using Edge Function
 
   const currentChat = chatSessions.find((c) => c.id === currentChatId) || null;
+
+  // ---- Sessions management ----
+  const handleCreateNewChat = async () => {
+    if (!user?.id) return;
+    const baseTitle = "Nuevo chat";
+    const suffix = chatSessions.length + 1;
+    const title = `${baseTitle} ${suffix}`;
+    try {
+      const toInsert: Inserts<"chat_sessions"> = {
+        user_id: user.id,
+        title,
+        context: "general",
+      } as any;
+      const { data, error } = await supabase
+        .from("chat_sessions")
+        .insert([toInsert])
+        .select("id, title, context, mabot_chat_id, created_at, last_activity")
+        .single();
+      if (error) throw error;
+      const newSession: ChatSession = {
+        id: data.id,
+        title: data.title || title,
+        contextType: (data.context as any) || "general",
+        messages: [],
+        createdAt: new Date(data.created_at),
+        lastActivity: new Date(data.last_activity || data.created_at),
+        mabotChatId: data.mabot_chat_id || undefined,
+        contextUploaded: false,
+      };
+      setChatSessions((prev) => [newSession, ...prev]);
+      setCurrentChatId(data.id);
+      // Load messages (should be none initially)
+      const { data: msgs } = await supabase
+        .from("chat_messages")
+        .select("id, chat_id, user_id, content, role, created_at")
+        .eq("chat_id", data.id)
+        .order("created_at", { ascending: true });
+      const mappedMsgs: ChatMessage[] = (msgs || []).map((m: any) => ({
+        id: m.id,
+        type: m.role === "assistant" ? "bot" : "user",
+        message: m.content,
+        time: new Date(m.created_at).toLocaleTimeString("es-ES", { hour: "numeric", minute: "2-digit", hour12: false }),
+      }));
+      setChatSessions((prev) => prev.map((c) => (c.id === data.id ? { ...c, messages: mappedMsgs } : c)));
+    } catch (e) {
+      console.error("Failed to create new chat session:", e);
+    }
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    if (!sessionId || currentChatId === sessionId) return;
+    setCurrentChatId(sessionId);
+    // Messages load via effect, but we can prefetch for snappy UX
+    try {
+      const { data: msgs } = await supabase
+        .from("chat_messages")
+        .select("id, chat_id, user_id, content, role, created_at")
+        .eq("chat_id", sessionId)
+        .order("created_at", { ascending: true });
+      const mappedMsgs: ChatMessage[] = (msgs || []).map((m: any) => ({
+        id: m.id,
+        type: m.role === "assistant" ? "bot" : "user",
+        message: m.content,
+        time: new Date(m.created_at).toLocaleTimeString("es-ES", { hour: "numeric", minute: "2-digit", hour12: false }),
+      }));
+      setChatSessions((prev) => prev.map((c) => (c.id === sessionId ? { ...c, messages: mappedMsgs } : c)));
+    } catch (e) {
+      console.error("Failed to prefetch messages for session:", e);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!sessionId) return;
+    try {
+      await supabase.from("chat_sessions").delete().eq("id", sessionId);
+      setChatSessions((prev) => prev.filter((c) => c.id !== sessionId));
+      if (currentChatId === sessionId) {
+        const next = chatSessions.find((c) => c.id !== sessionId)?.id || "";
+        setCurrentChatId(next);
+      }
+    } catch (e) {
+      console.error("Failed to delete session:", e);
+    }
+  };
 
   // Remember active chat across navigations
   useEffect(() => {
@@ -1319,6 +1403,9 @@ export default function Chat() {
           <p className="text-muted-foreground text-sm">Acción inmediata → Contexto opcional</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="rounded-xl" onClick={handleCreateNewChat} aria-label="Nuevo chat">
+            <Plus size={14} className="mr-1" /> Nuevo chat
+          </Button>
           {currentChat && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1392,6 +1479,27 @@ export default function Chat() {
             </DropdownMenu>
           )}
         </div>
+      </div>
+
+      {/* Sessions list */}
+      <div className="px-6 -mt-2 mb-2 flex items-center gap-2 overflow-x-auto">
+        {chatSessions.map((s) => (
+          <div key={s.id} className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 border ${s.id === currentChatId ? 'bg-primary/10 border-primary/40' : 'bg-background border-border'} cursor-pointer`}
+               onClick={() => handleSelectSession(s.id)}
+               role="button" tabIndex={0}
+               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectSession(s.id); }}
+               aria-label={`Seleccionar chat ${s.title}`}>
+            <span className="text-sm whitespace-nowrap max-w-[200px] truncate">{s.title}</span>
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-muted"
+              aria-label={`Eliminar chat ${s.title}`}
+              onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }}
+            >
+              <Trash2 size={14} className="text-muted-foreground" />
+            </button>
+          </div>
+        ))}
       </div>
 
       {/* Selector de carrera fijo al lado del contexto para acceso rápido */}
