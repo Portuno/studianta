@@ -114,7 +114,7 @@ export default function Chat() {
   };
 
 
-  const uploadChatFile = async (file: File): Promise<{ url: string; mime_type: string; title: string } | null> => {
+  const uploadChatFile = async (file: File): Promise<{ url: string; mime_type: string; title: string; fileName: string; name: string; mimeType: string } | null> => {
     try {
       const userId = user?.id || 'anon';
       const safeName = file.name.replace(/[^\w.\-]/g, '_');
@@ -130,7 +130,7 @@ export default function Chat() {
         console.error('Signed URL error:', urlErr);
         return null;
       }
-      return { url: signed.signedUrl, mime_type: contentType, title: file.name };
+      return { url: signed.signedUrl, mime_type: contentType, title: file.name, fileName: file.name, name: file.name, mimeType: contentType };
     } catch (err) {
       console.error('uploadChatFile failed:', err);
       return null;
@@ -619,7 +619,7 @@ export default function Chat() {
     // Agregar listado de archivos adjuntos sin crear mensajes extra
     if (contextFiles && contextFiles.length > 0) {
       const fileList = contextFiles
-        .map((f: any, idx: number) => `- ${f.title || f.fileName || `file_${idx+1}`}`)
+        .map((f: any, idx: number) => `- ${f.title || f.fileName || f.name || `file_${idx+1}`}`)
         .join("\n");
       consolidatedContent += `\n📄 Archivos adjuntos:\n${fileList}`;
     }
@@ -659,7 +659,7 @@ export default function Chat() {
       // Use Supabase Edge Function for Mabot communication
       const controller = new AbortController();
       // Timeout más largo para PDFs ya que procesar URLs toma más tiempo
-      const timeoutSeconds = contextFiles && contextFiles.length > 0 ? 45000 : 30000;
+      const timeoutSeconds = contextFiles && contextFiles.length > 0 ? 60000 : 30000;
       const timeoutId = setTimeout(() => {
         console.log(`[Mabot] Timeout reached after ${timeoutSeconds/1000}s, aborting request`);
         controller.abort();
@@ -688,7 +688,9 @@ export default function Chat() {
           },
           userText,
           contextText,
-          contextFiles
+          contextFiles,
+          files: contextFiles,
+          attachments: contextFiles
         }),
         signal: controller.signal
       });
