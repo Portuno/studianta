@@ -128,6 +128,7 @@ const AppContent = () => {
         <OnboardingModal open={onboardingOpen} onComplete={handleCompleteOnboarding} />
         <Routes>
           <Route path="/" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
           <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
           <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
@@ -150,6 +151,7 @@ const AppContent = () => {
       <OnboardingModal open={onboardingOpen} onComplete={handleCompleteOnboarding} />
       <Routes>
         <Route path="/" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
         <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
