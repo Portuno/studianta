@@ -142,6 +142,13 @@ export default function Chat() {
 
   const currentChat = chatSessions.find((c) => c.id === currentChatId) || null;
 
+  // Remember active chat across navigations
+  useEffect(() => {
+    if (currentChatId && typeof window !== "undefined") {
+      window.localStorage.setItem("activeChatId", currentChatId);
+    }
+  }, [currentChatId]);
+
   // Smooth autoscroll on new messages or loading indicators
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -197,7 +204,9 @@ export default function Chat() {
           contextUploaded: false,
         }));
         setChatSessions(mapped);
-        setCurrentChatId((prev) => prev || mapped[0]?.id || "");
+        const saved = typeof window !== "undefined" ? window.localStorage.getItem("activeChatId") : null;
+        const exists = mapped.find((m) => m.id === saved)?.id;
+        setCurrentChatId((prev) => prev || exists || mapped[0]?.id || "");
       } catch (e) {
         console.error("Failed to load chat sessions:", e);
       } finally {
@@ -1039,7 +1048,7 @@ export default function Chat() {
   };
 
   // Context switchers (single chat UX)
-  const setContextGeneral = () => {
+  const setContextGeneral = async () => {
     if (!currentChat) return;
     const updated: ChatSession = {
       ...currentChat,
@@ -1057,15 +1066,23 @@ export default function Chat() {
         {
           id: Date.now().toString(),
           type: "bot",
-          message: "🟣 Contexto cambiado a Chat General.",
+          message: "💬 Contexto cambiado a General.",
           time: nowTime(),
         },
       ],
     };
     setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
+    try {
+      await supabase.from("chat_sessions").update({ title: "Chat General", context: "general" }).eq("id", currentChat.id);
+      await supabase.from("chat_messages").insert([
+        { chat_id: currentChat.id, user_id: null, content: "💬 Contexto cambiado a General.", role: "assistant" } as Inserts<"chat_messages">,
+      ]);
+    } catch (e) {
+      console.error("Failed to persist general context change:", e);
+    }
   };
 
-  const setContextAgenda = () => {
+  const setContextAgenda = async () => {
     if (!currentChat) return;
     const updated: ChatSession = {
       ...currentChat,
@@ -1089,9 +1106,17 @@ export default function Chat() {
       ],
     };
     setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
+    try {
+      await supabase.from("chat_sessions").update({ title: "Agenda", context: "agenda" }).eq("id", currentChat.id);
+      await supabase.from("chat_messages").insert([
+        { chat_id: currentChat.id, user_id: null, content: "📅 Contexto cambiado a Agenda.", role: "assistant" } as Inserts<"chat_messages">,
+      ]);
+    } catch (e) {
+      console.error("Failed to persist agenda context change:", e);
+    }
   };
 
-  const setContextSubject = (subject: SubjectRow) => {
+  const setContextSubject = async (subject: SubjectRow) => {
     if (!currentChat) return;
     const updated: ChatSession = {
       ...currentChat,
@@ -1115,9 +1140,23 @@ export default function Chat() {
       ],
     };
     setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
+
+    try {
+      await supabase.from("chat_sessions").update({ title: subject.name, context: "subject" }).eq("id", currentChat.id);
+      await supabase.from("chat_messages").insert([
+        {
+          chat_id: currentChat.id,
+          user_id: null,
+          content: `📚 Contexto cambiado a Asignatura: ${subject.name}.`,
+          role: "assistant",
+        } as Inserts<"chat_messages">,
+      ]);
+    } catch (e) {
+      console.error("Failed to persist subject context change:", e);
+    }
   };
 
-  const setContextProgram = (programId: string, programName: string) => {
+  const setContextProgram = async (programId: string, programName: string) => {
     if (!currentChat) return;
     const updated: ChatSession = {
       ...currentChat,
@@ -1141,6 +1180,20 @@ export default function Chat() {
       ],
     };
     setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
+
+    try {
+      await supabase.from("chat_sessions").update({ title: programName, context: "program" }).eq("id", currentChat.id);
+      await supabase.from("chat_messages").insert([
+        {
+          chat_id: currentChat.id,
+          user_id: null,
+          content: `🎓 Contexto cambiado a Carrera: ${programName}.`,
+          role: "assistant",
+        } as Inserts<"chat_messages">,
+      ]);
+    } catch (e) {
+      console.error("Failed to persist program context change:", e);
+    }
   };
 
   const handleSelectProgram = (programId: string, programName: string) => {
