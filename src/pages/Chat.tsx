@@ -1134,7 +1134,7 @@ export default function Chat() {
       const showMabotBanner = !mabotConfigured;
 
   return (
-    <div className="flex flex-col pb-20 md:pb-0 md:h-[calc(100svh-56px)] md:overflow-hidden">
+    <div className="flex flex-col pb-20 md:pb-0 md:h-[100svh] md:overflow-hidden">
       <div className="flex items-center justify-between pt-8 pb-4 px-6">
         <div className="text-left">
           <h1 className="text-2xl font-light text-foreground/90 mb-1">Chat</h1>
@@ -1323,7 +1323,7 @@ export default function Chat() {
       )}
 
       {currentChat && (
-        <div className="px-6 pb-5 pt-2 border-t bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="px-6 pb-5 pt-2 border-t border-violet-300/50 sticky bottom-0 mt-auto bg-violet-200/60 backdrop-blur supports-[backdrop-filter]:bg-violet-200/60">
           {/* Context status indicator */}
           {currentChat.contextType === "subject" && (
             <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
