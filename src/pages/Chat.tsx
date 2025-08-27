@@ -1399,7 +1399,7 @@ export default function Chat() {
       const showMabotBanner = !mabotConfigured;
 
   return (
-    <div className="flex flex-col h-[100svh] overflow-hidden">
+    <div className="flex flex-col h-[100vh] overflow-hidden">
       <div className="flex items-center justify-between pt-8 pb-4 px-6">
         <div className="text-left">
           <h1 className="text-2xl font-light text-foreground/90 mb-1">Chat</h1>
@@ -1538,7 +1538,6 @@ export default function Chat() {
       )}
 
       {/* Siempre mostramos el chat activo (única sesión) */}
-
       {currentChat && (
         <div className="flex-1 min-h-0 px-6 space-y-4 overflow-y-auto">
           {currentChat.messages.map((msg) => (
@@ -1612,7 +1611,7 @@ export default function Chat() {
       )}
 
       {currentChat && (
-        <div className="px-6 pb-5 pt-2 border-t border-violet-300/50 sticky bottom-0 mt-auto bg-violet-200/60 backdrop-blur supports-[backdrop-filter]:bg-violet-200/60">
+        <div className="px-6 pb-5 pt-2 border-t border-violet-300/50 bg-violet-200/60 backdrop-blur supports-[backdrop-filter]:bg-violet-200/60 flex-shrink-0">
           {/* Context status indicator */}
           {currentChat.contextType === "subject" && (
             <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
@@ -1668,12 +1667,13 @@ export default function Chat() {
             <Input
               placeholder={
                 currentChat.contextType === "agenda"
-                  ? "Pregunta a tu agenda..."
-                  : currentChat.contextType === "general"
-                  ? "Escribe tu mensaje..."
-                  : `Pregunta sobre ${currentChat.title}...`
+                  ? "Pregunta sobre tu agenda..."
+                  : currentChat.contextType === "subject"
+                  ? `Pregunta sobre ${currentChat.subjectName || "la asignatura"}...`
+                  : currentChat.contextType === "program"
+                  ? `Pregunta sobre ${currentChat.programName || "la carrera"}...`
+                  : "Pregunta sobre lo que quieras..."
               }
-              className="flex-1 rounded-2xl border-primary/30 focus-visible:ring-2 focus-visible:ring-primary/50 bg-white text-foreground placeholder:text-muted-foreground/70 shadow-sm"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={(e) => {
@@ -1682,15 +1682,16 @@ export default function Chat() {
                   handleSendMessage();
                 }
               }}
+              className="flex-1 rounded-2xl border-violet-300/50 focus:border-violet-400/50 focus:ring-violet-400/20"
               disabled={isLoading}
-              aria-label="Mensaje"
             />
             <Button
+              type="button"
               size="icon"
-              className="rounded-2xl bg-pink-500 hover:bg-pink-600 text-white shadow-lg shadow-pink-200/40"
+              className="rounded-2xl bg-violet-500 text-white hover:bg-violet-600 shadow-lg shadow-violet-200/40"
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading}
               aria-label="Enviar mensaje"
+              disabled={isLoading || !inputMessage.trim()}
             >
               <Send size={18} />
             </Button>
