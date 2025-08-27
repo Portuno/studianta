@@ -40,7 +40,7 @@ export const AppShell = ({ children }: AppShellProps) => {
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-1">
             <div className="size-7 rounded-md bg-primary/15 grid place-items-center text-primary">📒</div>
-            <span className="font-semibold">Cuaderno</span>
+            <span className="font-semibold">Studianta</span>
           </div>
         </SidebarHeader>
         <SidebarContent>
