@@ -342,6 +342,64 @@ export interface Database {
           updated_at?: string
         }
       }
+      chat_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          context: string | null
+          mabot_chat_id: string | null
+          created_at: string
+          last_activity: string | null
+          is_active: boolean | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title?: string
+          context?: string | null
+          mabot_chat_id?: string | null
+          created_at?: string
+          last_activity?: string | null
+          is_active?: boolean | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          context?: string | null
+          mabot_chat_id?: string | null
+          created_at?: string
+          last_activity?: string | null
+          is_active?: boolean | null
+        }
+      }
+      chat_messages: {
+        Row: {
+          id: string
+          chat_id: string
+          user_id: string | null
+          content: string
+          role: 'user' | 'assistant'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          chat_id: string
+          user_id?: string | null
+          content: string
+          role: 'user' | 'assistant'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          chat_id?: string
+          user_id?: string | null
+          content?: string
+          role?: 'user' | 'assistant'
+          created_at?: string
+        }
+      }
     }
   }
 }

@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import type { Inserts, Tables } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,7 @@ export default function Chat() {
 
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string>("");
+  const [loadingSessions, setLoadingSessions] = useState<boolean>(false);
 
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -145,30 +147,89 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [currentChat?.messages.length, isLoading]);
 
-  // Ensure a default chat exists (Chat General)
+  // Load sessions from DB and ensure a default exists
   useEffect(() => {
-    if (!currentChatId) {
-      const session: ChatSession = {
-        id: `${Date.now()}`,
-        title: "Chat General",
-        contextType: "general",
-        messages: [
-          {
-            id: "1",
-            type: "bot",
-            message:
-              "¡Hola! Soy tu asistente de estudio. Pregúntame lo que quieras. Puedes elegir un contexto desde arriba (Agenda, Asignaturas o Carreras) para respuestas más específicas.",
-            time: nowTime(),
-          },
-        ],
-        createdAt: new Date(),
-        lastActivity: new Date(),
-        contextUploaded: false,
-      };
-      setChatSessions([session]);
-      setCurrentChatId(session.id);
-    }
-  }, [currentChatId]);
+    const loadSessionsFromDb = async () => {
+      if (!user) return;
+      setLoadingSessions(true);
+      try {
+        const { data: sessions, error } = await supabase
+          .from("chat_sessions")
+          .select("id, title, context, mabot_chat_id, created_at, last_activity")
+          .order("last_activity", { ascending: false });
+        if (error) throw error;
+
+        if (!sessions || sessions.length === 0) {
+          const toInsert: Inserts<"chat_sessions"> = {
+            user_id: user.id,
+            title: "Chat General",
+            context: "general",
+          } as any;
+          const { data: created, error: insErr } = await supabase
+            .from("chat_sessions")
+            .insert([toInsert])
+            .select("id, title, context, mabot_chat_id, created_at, last_activity")
+            .single();
+          if (insErr) throw insErr;
+          const mapped: ChatSession = {
+            id: created.id,
+            title: created.title || "Chat General",
+            contextType: (created.context as any) || "general",
+            messages: [],
+            createdAt: new Date(created.created_at),
+            lastActivity: new Date(created.last_activity || created.created_at),
+            mabotChatId: created.mabot_chat_id || undefined,
+            contextUploaded: false,
+          };
+          setChatSessions([mapped]);
+          setCurrentChatId(created.id);
+          return;
+        }
+
+        const mapped: ChatSession[] = sessions.map((s: any) => ({
+          id: s.id,
+          title: s.title || "Chat",
+          contextType: (s.context as any) || "general",
+          messages: [],
+          createdAt: new Date(s.created_at),
+          lastActivity: new Date(s.last_activity || s.created_at),
+          mabotChatId: s.mabot_chat_id || undefined,
+          contextUploaded: false,
+        }));
+        setChatSessions(mapped);
+        setCurrentChatId((prev) => prev || mapped[0]?.id || "");
+      } catch (e) {
+        console.error("Failed to load chat sessions:", e);
+      } finally {
+        setLoadingSessions(false);
+      }
+    };
+    loadSessionsFromDb();
+  }, [user]);
+
+  // Load messages for current session
+  useEffect(() => {
+    const loadMessages = async (sessionId: string) => {
+      if (!user || !sessionId) return;
+      const { data: msgs, error } = await supabase
+        .from("chat_messages")
+        .select("id, chat_id, user_id, content, role, created_at")
+        .eq("chat_id", sessionId)
+        .order("created_at", { ascending: true });
+      if (error) {
+        console.error("Failed to load messages:", error);
+        return;
+      }
+      const mapped: ChatMessage[] = (msgs || []).map((m: any) => ({
+        id: m.id,
+        type: m.role === "assistant" ? "bot" : "user",
+        message: m.content,
+        time: new Date(m.created_at).toLocaleTimeString("es-ES", { hour: "numeric", minute: "2-digit", hour12: false }),
+      }));
+      setChatSessions((prev) => prev.map((c) => (c.id === sessionId ? { ...c, messages: mapped } : c)));
+    };
+    if (currentChatId) loadMessages(currentChatId);
+  }, [currentChatId, user]);
 
   useEffect(() => {
     const load = async () => {
@@ -823,9 +884,21 @@ export default function Chat() {
       time: nowTime(),
     };
 
-    setChatSessions((prev) =>
-      prev.map((chat) => (chat.id === currentChatId ? { ...chat, messages: [...chat.messages, userMessage], lastActivity: new Date() } : chat))
-    );
+    // Optimistic UI append
+    setChatSessions((prev) => prev.map((chat) => (chat.id === currentChatId ? { ...chat, messages: [...chat.messages, userMessage], lastActivity: new Date() } : chat)));
+
+    // Persist user message
+    try {
+      const row: Inserts<"chat_messages"> = {
+        chat_id: currentChat.id,
+        user_id: user?.id || null,
+        content: inputMessage,
+        role: "user",
+      } as any;
+      await supabase.from("chat_messages").insert([row]);
+    } catch (e) {
+      console.error("Failed to persist user message:", e);
+    }
 
     const textToSend = inputMessage;
     setInputMessage("");
@@ -927,6 +1000,21 @@ export default function Chat() {
             : chat
         )
       );
+      // Persist assistant message and update session if needed
+      try {
+        if (resolvedChatId && resolvedChatId !== currentChat.mabotChatId) {
+          await supabase.from("chat_sessions").update({ mabot_chat_id: resolvedChatId }).eq("id", currentChat.id);
+        }
+        const row: Inserts<"chat_messages"> = {
+          chat_id: currentChat.id,
+          user_id: null,
+          content: botMessage.message,
+          role: "assistant",
+        } as any;
+        await supabase.from("chat_messages").insert([row]);
+      } catch (e) {
+        console.error("Failed to persist assistant message or update session:", e);
+      }
       // Clear attachments after successful send
       setAttachedFiles([]);
       setIsLoading(false);
