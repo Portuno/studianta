@@ -190,6 +190,19 @@ export default function Chat() {
           };
           setChatSessions([mapped]);
           setCurrentChatId(created.id);
+          // Fetch messages for the created session
+          const { data: msgs } = await supabase
+            .from("chat_messages")
+            .select("id, chat_id, user_id, content, role, created_at")
+            .eq("chat_id", created.id)
+            .order("created_at", { ascending: true });
+          const mappedMsgs: ChatMessage[] = (msgs || []).map((m: any) => ({
+            id: m.id,
+            type: m.role === "assistant" ? "bot" : "user",
+            message: m.content,
+            time: new Date(m.created_at).toLocaleTimeString("es-ES", { hour: "numeric", minute: "2-digit", hour12: false }),
+          }));
+          setChatSessions((prev) => prev.map((c) => (c.id === created.id ? { ...c, messages: mappedMsgs } : c)));
           return;
         }
 
@@ -206,7 +219,25 @@ export default function Chat() {
         setChatSessions(mapped);
         const saved = typeof window !== "undefined" ? window.localStorage.getItem("activeChatId") : null;
         const exists = mapped.find((m) => m.id === saved)?.id;
-        setCurrentChatId((prev) => prev || exists || mapped[0]?.id || "");
+        const activeId = exists || mapped[0]?.id || "";
+        setCurrentChatId((prev) => prev || activeId);
+
+        if (activeId) {
+          const { data: msgs, error: msgsErr } = await supabase
+            .from("chat_messages")
+            .select("id, chat_id, user_id, content, role, created_at")
+            .eq("chat_id", activeId)
+            .order("created_at", { ascending: true });
+          if (!msgsErr) {
+            const mappedMsgs: ChatMessage[] = (msgs || []).map((m: any) => ({
+              id: m.id,
+              type: m.role === "assistant" ? "bot" : "user",
+              message: m.content,
+              time: new Date(m.created_at).toLocaleTimeString("es-ES", { hour: "numeric", minute: "2-digit", hour12: false }),
+            }));
+            setChatSessions((prev) => prev.map((c) => (c.id === activeId ? { ...c, messages: mappedMsgs } : c)));
+          }
+        }
       } catch (e) {
         console.error("Failed to load chat sessions:", e);
       } finally {
