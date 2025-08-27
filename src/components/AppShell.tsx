@@ -71,12 +71,6 @@ export const AppShell = ({ children }: AppShellProps) => {
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
-        <div className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
-          <div className="hidden md:flex">
-            <SidebarTrigger />
-          </div>
-          <div className="font-medium text-sm text-muted-foreground">Tu espacio de estudio</div>
-        </div>
         <div className="mx-auto w-full max-w-7xl px-4 md:px-6 flex-1 min-h-0">
           {children}
         </div>
