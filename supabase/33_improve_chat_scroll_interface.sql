@@ -1,0 +1,43 @@
+-- 33_improve_chat_scroll_interface.sql
+-- Mejora de la interfaz de scroll en el chat
+-- 
+-- PROBLEMA IDENTIFICADO:
+-- El scroll en la página de chat no estaba correctamente contenido dentro del área
+-- del chatbot, causando que el scroll se extendiera fuera del contenedor del chat
+-- y afectara la experiencia de usuario.
+--
+-- SOLUCIÓN IMPLEMENTADA:
+-- Se reestructuró la interfaz del chat para que el scroll esté correctamente
+-- contenido dentro del área de mensajes del chat, manteniendo los elementos
+-- de control fijos en sus posiciones.
+--
+-- CAMBIOS REALIZADOS:
+-- 1. Contenedor principal:
+--    - Cambiado de h-[100vh] a h-screen para mejor control de altura
+--    - Agregado overflow-hidden para prevenir scroll externo
+--
+-- 2. Elementos fijos (flex-shrink-0):
+--    - Header del chat
+--    - Lista de sesiones
+--    - Selector de carrera
+--    - Banner de Mabot (si aplica)
+--    - Área de entrada de mensajes
+--
+-- 3. Área de mensajes scrollable:
+--    - Contenedor flex-1 min-h-0 para ocupar espacio disponible
+--    - Área interna con overflow-y-auto para scroll controlado
+--    - Padding adecuado para espaciado visual
+--
+-- 4. Estructura mejorada:
+--    - Separación clara entre elementos fijos y scrollables
+--    - Mejor control del espacio disponible
+--    - Scroll suave y contenido dentro del chat
+--
+-- ARCHIVOS MODIFICADOS:
+-- - src/pages/Chat.tsx: Reestructurada la interfaz de scroll del chat
+--
+-- NOTA: No se requieren cambios en la base de datos para esta mejora.
+-- Los cambios son únicamente en la interfaz de usuario.
+
+-- Verificar que la funcionalidad esté funcionando correctamente
+SELECT 'Interfaz de scroll del chat mejorada' as status;

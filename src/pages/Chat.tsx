@@ -1637,8 +1637,9 @@ export default function Chat() {
       const showMabotBanner = !mabotConfigured;
 
   return (
-    <div className="flex flex-col h-[100vh] overflow-hidden">
-      <div className="flex items-center justify-between pt-8 pb-4 px-6">
+    <div className="flex flex-col h-screen overflow-hidden">
+      {/* Header - Fixed height */}
+      <div className="flex items-center justify-between pt-8 pb-4 px-6 flex-shrink-0">
         <div className="text-left">
           <h1 className="text-2xl font-light text-foreground/90 mb-1">Chat</h1>
           <p className="text-muted-foreground text-sm">Acción inmediata → Contexto opcional</p>
@@ -1722,8 +1723,8 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Sessions list */}
-      <div className="px-6 -mt-2 mb-2 flex items-center gap-2 overflow-x-auto">
+      {/* Sessions list - Fixed height */}
+      <div className="px-6 -mt-2 mb-2 flex items-center gap-2 overflow-x-auto flex-shrink-0">
         {chatSessions.map((s) => (
           <div key={s.id} className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 border ${s.id === currentChatId ? 'bg-primary/10 border-primary/40' : 'bg-background border-border'} cursor-pointer`}
                onClick={() => handleSelectSession(s.id)}
@@ -1743,8 +1744,8 @@ export default function Chat() {
         ))}
       </div>
 
-      {/* Selector de carrera fijo al lado del contexto para acceso rápido */}
-      <div className="px-6 -mt-2 mb-2 flex items-center gap-2">
+      {/* Selector de carrera fijo al lado del contexto para acceso rápido - Fixed height */}
+      <div className="px-6 -mt-2 mb-2 flex items-center gap-2 flex-shrink-0">
         {programs.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1767,7 +1768,7 @@ export default function Chat() {
       </div>
 
       {showMabotBanner && (
-        <div className="mx-6 mb-2 rounded-xl border border-yellow-300/40 bg-yellow-500/5 px-3 py-2 text-yellow-700 flex items-center gap-2" role="alert" aria-live="polite">
+        <div className="mx-6 mb-2 rounded-xl border border-yellow-300/40 bg-yellow-500/5 px-3 py-2 text-yellow-700 flex items-center gap-2 flex-shrink-0" role="alert" aria-live="polite">
           <AlertTriangle size={16} />
           <p className="text-xs">
             Mabot ahora está configurado a través de Supabase Edge Functions. Contacta a tu administrador si necesitas acceso.
@@ -1775,79 +1776,85 @@ export default function Chat() {
         </div>
       )}
 
-      {/* Siempre mostramos el chat activo (única sesión) */}
+      {/* Chat Messages Area - Scrollable container */}
       {currentChat && (
-        <div className="flex-1 min-h-0 px-6 space-y-4 overflow-y-auto">
-          {currentChat.messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}>
-              <Card
-                className={`max-w-[80%] p-4 rounded-2xl ${
-                  msg.type === "user" ? "bg-primary text-primary-foreground ml-8" : "gradient-card border-border/30 mr-8"
-                }`}
-              >
-                <div className="flex items-start gap-2 mb-2">
-                  {msg.type === "bot" ? (
-                    <Bot size={16} className="text-primary mt-0.5" />
-                  ) : (
-                    <User size={16} className="text-primary-foreground mt-0.5" />
-                  )}
-                  <div className="flex-1">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        a: ({node, ...props}) => (
-                          <a {...props} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2" />
-                        ),
-                        ul: ({node, ...props}) => (
-                          <ul {...props} className="list-disc ml-5 my-2" />
-                        ),
-                        ol: ({node, ...props}) => (
-                          <ol {...props} className="list-decimal ml-5 my-2" />
-                        ),
-                        li: ({node, ...props}) => <li {...props} className="my-0.5" />,
-                        code: ({node, className, children, ...props}) => (
-                          <code className={`rounded px-1 py-0.5 bg-muted text-foreground/90 ${className || ''}`} {...props}>{children}</code>
-                        )
-                      }}
-                      className="text-sm leading-relaxed whitespace-pre-wrap break-words"
-                    >
-                      {msg.message}
-                    </ReactMarkdown>
-                    <span
-                      className={`text-xs mt-2 block ${msg.type === "user" ? "text-primary-foreground/70" : "text-muted-foreground"}`}
-                    >
-                      {msg.time}
-                    </span>
-                  </div>
+        <div className="flex-1 min-h-0 flex flex-col">
+          {/* Messages container with proper scrolling */}
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="space-y-4">
+              {currentChat.messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}>
+                  <Card
+                    className={`max-w-[80%] p-4 rounded-2xl ${
+                      msg.type === "user" ? "bg-primary text-primary-foreground ml-8" : "gradient-card border-border/30 mr-8"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2 mb-2">
+                      {msg.type === "bot" ? (
+                        <Bot size={16} className="text-primary mt-0.5" />
+                      ) : (
+                        <User size={16} className="text-primary-foreground mt-0.5" />
+                      )}
+                      <div className="flex-1">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            a: ({node, ...props}) => (
+                              <a {...props} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2" />
+                            ),
+                            ul: ({node, ...props}) => (
+                              <ul {...props} className="list-disc ml-5 my-2" />
+                            ),
+                            ol: ({node, ...props}) => (
+                              <ol {...props} className="list-decimal ml-5 my-2" />
+                            ),
+                            li: ({node, ...props}) => <li {...props} className="my-0.5" />,
+                            code: ({node, className, children, ...props}) => (
+                              <code className={`rounded px-1 py-0.5 bg-muted text-foreground/90 ${className || ''}`} {...props}>{children}</code>
+                            )
+                          }}
+                          className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+                        >
+                          {msg.message}
+                        </ReactMarkdown>
+                        <span
+                          className={`text-xs mt-2 block ${msg.type === "user" ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                        >
+                          {msg.time}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
                 </div>
-              </Card>
-            </div>
-          ))}
+              ))}
 
-          {isLoading && (
-            <div className="flex justify-start">
-              <Card className="gradient-card border-border/30 p-4 rounded-2xl mr-8">
-                <div className="flex items-center gap-2">
-                  <Bot size={16} className="text-primary" />
-                  <div className="flex items-center gap-1">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {currentChat?.contextType === "subject" && !currentChat?.contextUploaded 
-                        ? "Procesando materiales y archivos..." 
-                        : isProcessingFiles
-                         ? "Procesando archivos PDF (esto puede tomar un momento)..." 
-                         : "Pensando..."
-                       }
-                    </span>
-                  </div>
+              {isLoading && (
+                <div className="flex justify-start">
+                  <Card className="gradient-card border-border/30 p-4 rounded-2xl mr-8">
+                    <div className="flex items-center gap-2">
+                      <Bot size={16} className="text-primary" />
+                      <div className="flex items-center gap-1">
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {currentChat?.contextType === "subject" && !currentChat?.contextUploaded 
+                            ? "Procesando materiales y archivos..." 
+                            : isProcessingFiles
+                             ? "Procesando archivos PDF (esto puede tomar un momento)..." 
+                             : "Pensando..."
+                           }
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
                 </div>
-              </Card>
+              )}
+              <div ref={messagesEndRef} />
             </div>
-          )}
-          <div ref={messagesEndRef} />
+          </div>
         </div>
       )}
 
+      {/* Input Area - Fixed at bottom */}
       {currentChat && (
         <div className="px-6 pb-5 pt-2 border-t border-violet-300/50 bg-violet-200/60 backdrop-blur supports-[backdrop-filter]:bg-violet-200/60 flex-shrink-0">
           {/* Context status indicator */}
