@@ -1277,6 +1277,19 @@ export default function Chat() {
         contextFilesCount: contextFiles?.length || 0,
         contextPreview: contextText?.substring(0, 200) || "No context",
       });
+    } else if (currentChat.contextType === "folder") {
+      // Handle folder context - use the same logic as subject but with folder filtering
+      const context = await prepareSubjectContextText(currentChat);
+      contextText = context.text;
+      contextFiles = context.files;
+      setIsProcessingFiles(contextFiles && contextFiles.length > 0);
+      console.log("📁 FOLDER CONTEXT PREPARED:", {
+        contextLength: contextText?.length || 0,
+        contextFilesCount: contextFiles?.length || 0,
+        contextPreview: contextText?.substring(0, 200) || "No context",
+        folderId: currentChat.folderId,
+        folderName: currentChat.folderName
+      });
     }
 
     // Upload any files the user attached in this message (PDF/TXT)
