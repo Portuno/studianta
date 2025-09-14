@@ -32,12 +32,32 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const stripAuthParamsFromUrl = () => {
+      if (typeof window === 'undefined') return;
+      const hasHash = window.location.hash && /access_token|refresh_token|provider_token/i.test(window.location.hash);
+      const url = new URL(window.location.href);
+      const hasCode = url.searchParams.has('code') || url.searchParams.has('state');
+
+      if (hasHash) {
+        window.history.replaceState({}, document.title, `${url.origin}${url.pathname}${url.search}`);
+      }
+
+      if (hasCode) {
+        url.searchParams.delete('code');
+        url.searchParams.delete('state');
+        const newSearch = url.searchParams.toString();
+        const cleanUrl = `${url.origin}${url.pathname}${newSearch ? `?${newSearch}` : ''}`;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+
     // Obtener sesión inicial
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+      stripAuthParamsFromUrl()
     }
 
     getSession()
@@ -48,6 +68,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          stripAuthParamsFromUrl()
+        }
       }
     )
 
