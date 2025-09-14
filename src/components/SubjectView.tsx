@@ -45,6 +45,10 @@ interface SubjectSchedule {
 interface Folder {
   id: string;
   name: string;
+  subject_id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
   files: any[];
 }
 
@@ -158,8 +162,16 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
       if (schedulesError) throw schedulesError;
       setSchedules(schedulesData || []);
 
-      // Initialize folders as empty - they will be created by the user
-      setFolders([]);
+      // Fetch folders
+      const { data: foldersData, error: foldersError } = await supabase
+        .from('folders')
+        .select('*')
+        .eq('subject_id', subject.id)
+        .eq('user_id', user.id)
+        .order('created_at');
+
+      if (foldersError) throw foldersError;
+      setFolders(foldersData || []);
 
     } catch (error) {
       console.error('Error fetching subject data:', error);
@@ -244,23 +256,73 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
     }
   };
 
-  const handleCreateFolder = (folderName: string) => {
-    const newFolder: Folder = {
-      id: `folder-${Date.now()}`,
-      name: folderName,
-      files: []
-    };
-    setFolders([...folders, newFolder]);
+  const handleCreateFolder = async (folderName: string) => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('folders')
+        .insert({
+          user_id: user.id,
+          subject_id: subject.id,
+          name: folderName
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Add files array to match the interface
+      const newFolder: Folder = {
+        ...data,
+        files: []
+      };
+      
+      setFolders([...folders, newFolder]);
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      alert('Error al crear la carpeta. Por favor, inténtalo de nuevo.');
+    }
   };
 
-  const handleEditFolder = (folderId: string, newName: string) => {
-    setFolders(folders.map(folder => 
-      folder.id === folderId ? { ...folder, name: newName } : folder
-    ));
+  const handleEditFolder = async (folderId: string, newName: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('folders')
+        .update({ name: newName })
+        .eq('id', folderId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      setFolders(folders.map(folder => 
+        folder.id === folderId ? { ...folder, name: newName } : folder
+      ));
+    } catch (error) {
+      console.error('Error updating folder:', error);
+      alert('Error al actualizar la carpeta. Por favor, inténtalo de nuevo.');
+    }
   };
 
-  const handleDeleteFolder = (folderId: string) => {
-    setFolders(folders.filter(folder => folder.id !== folderId));
+  const handleDeleteFolder = async (folderId: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('folders')
+        .delete()
+        .eq('id', folderId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      setFolders(folders.filter(folder => folder.id !== folderId));
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      alert('Error al eliminar la carpeta. Por favor, inténtalo de nuevo.');
+    }
   };
 
   const handleAddFileToFolder = (folderId: string) => {
