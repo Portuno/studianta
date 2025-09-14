@@ -24,6 +24,7 @@ interface SubjectViewProps {
   materials: any[];
   onAddFile: (opts?: { subjectId?: string; folderName?: string }) => void;
   onChatWithFolder?: (folderId: string, folderName: string, subjectId: string) => void;
+  onFileDeleted?: () => void;
 }
 
 interface SubjectEvent {
@@ -76,7 +77,7 @@ const EVENT_TYPE_OPTIONS = [
 
 const getEventTypeLabel = (t: string) => EVENT_TYPE_OPTIONS.find(o => o.value === t)?.label || 'Otro';
 
-export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder }: SubjectViewProps) => {
+export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder, onFileDeleted }: SubjectViewProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'files' | 'calendar'>('files');
   const [fileName, setFileName] = useState("");
@@ -398,9 +399,10 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder }:
 
         if (error) throw error;
         
-        // Refresh materials by calling the parent component's refresh function
-        // We'll need to add this prop to the interface
-        window.location.reload(); // Temporary solution - should be replaced with proper state management
+        // Call the parent component's refresh function to update materials
+        if (onFileDeleted) {
+          onFileDeleted();
+        }
       } catch (error) {
         console.error('Error deleting file:', error);
         alert('Error al eliminar el archivo. Por favor, inténtalo de nuevo.');

@@ -448,6 +448,12 @@ export default function Library() {
               materials={materials.filter(m => m.subject_id === selectedSubject.id)}
               onAddFile={handleAddFile}
               onChatWithFolder={handleChatWithFolder}
+              onFileDeleted={() => {
+                // Refresh materials for the current subject
+                if (selectedSubject?.id) {
+                  fetchMaterials(selectedSubject.id);
+                }
+              }}
             />
           </div>
         )}
