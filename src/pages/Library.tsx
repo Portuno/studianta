@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   Search, 
   Folder, 
@@ -55,6 +56,7 @@ const formatFileSize = (bytes: number): string => {
 
 export default function Library() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { programs, loading: programsLoading, error: programsError } = usePrograms();
   const { subjects, loading: subjectsLoading, error: subjectsError, fetchSubjects } = useSubjects();
   const { materials, loading: materialsLoading, error: materialsError, fetchMaterials } = useStudyMaterials();
@@ -155,6 +157,11 @@ export default function Library() {
   const handleAddFile = (opts?: { subjectId?: string; folderName?: string }) => {
     setUploadContext(opts || null);
     setShowUpload(true);
+  };
+
+  const handleChatWithFolder = (folderId: string, folderName: string, subjectId: string) => {
+    // Navegar al chat con parámetros de la carpeta
+    navigate(`/chat?folderId=${folderId}&folderName=${encodeURIComponent(folderName)}&subjectId=${subjectId}`);
   };
 
   const handleAddProgram = () => {
@@ -440,6 +447,7 @@ export default function Library() {
               subject={selectedSubject}
               materials={materials.filter(m => m.subject_id === selectedSubject.id)}
               onAddFile={handleAddFile}
+              onChatWithFolder={handleChatWithFolder}
             />
           </div>
         )}

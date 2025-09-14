@@ -23,6 +23,7 @@ interface SubjectViewProps {
   };
   materials: any[];
   onAddFile: (opts?: { subjectId?: string; folderName?: string }) => void;
+  onChatWithFolder?: (folderId: string, folderName: string, subjectId: string) => void;
 }
 
 interface SubjectEvent {
@@ -75,7 +76,7 @@ const EVENT_TYPE_OPTIONS = [
 
 const getEventTypeLabel = (t: string) => EVENT_TYPE_OPTIONS.find(o => o.value === t)?.label || 'Otro';
 
-export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps) => {
+export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder }: SubjectViewProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'files' | 'calendar'>('files');
   const [fileName, setFileName] = useState("");
@@ -368,6 +369,12 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
     }
   };
 
+  const handleChatWithFolder = (folderId: string, folderName: string, subjectId: string) => {
+    if (onChatWithFolder) {
+      onChatWithFolder(folderId, folderName, subjectId);
+    }
+  };
+
   const handleAddEvent = () => {
     // abrir modal, sin insertar
     setNewEventName("");
@@ -597,6 +604,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
                     onEditFolder={handleEditFolder}
                     onDeleteFolder={handleDeleteFolder}
                     onFileClick={handleFileClick}
+                    onChatWithFolder={handleChatWithFolder}
                   />
                 ))}
               </div>

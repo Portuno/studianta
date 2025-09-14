@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,12 +33,14 @@ interface ChatMessage {
 interface ChatSession {
   id: string;
   title: string;
-  contextType: "general" | "agenda" | "subject" | "program";
+  contextType: "general" | "agenda" | "subject" | "program" | "folder";
   subjectId?: string;
   subjectName?: string;
   topic?: string;
   programId?: string;
   programName?: string;
+  folderId?: string;
+  folderName?: string;
   messages: ChatMessage[];
   createdAt: Date;
   lastActivity: Date;
@@ -71,10 +74,16 @@ const nowTime = () =>
 
 export default function Chat() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
 
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string>("");
   const [loadingSessions, setLoadingSessions] = useState<boolean>(false);
+
+  // Obtener parámetros de URL para carpeta específica
+  const folderId = searchParams.get('folderId');
+  const folderName = searchParams.get('folderName');
+  const subjectId = searchParams.get('subjectId');
 
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -240,6 +249,40 @@ export default function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: behavior as ScrollBehavior, block: 'end' });
     if (!didInitialScrollRef.current) didInitialScrollRef.current = true;
   }, [currentChat?.messages.length, isLoading]);
+
+  // Handle folder-specific chat navigation
+  useEffect(() => {
+    if (folderId && folderName && subjectId && user) {
+      // Crear o encontrar sesión de chat para esta carpeta
+      const folderSessionTitle = `Chat con carpeta: ${folderName}`;
+      
+      // Buscar si ya existe una sesión para esta carpeta
+      const existingSession = chatSessions.find(session => 
+        session.folderId === folderId && 
+        session.subjectId === subjectId
+      );
+      
+      if (existingSession) {
+        setCurrentChatId(existingSession.id);
+      } else {
+        // Crear nueva sesión para la carpeta
+        const newSession: ChatSession = {
+          id: `folder-${folderId}-${Date.now()}`,
+          title: folderSessionTitle,
+          contextType: "folder",
+          subjectId: subjectId,
+          folderId: folderId,
+          folderName: folderName,
+          messages: [],
+          createdAt: new Date(),
+          lastActivity: new Date(),
+        };
+        
+        setChatSessions(prev => [newSession, ...prev]);
+        setCurrentChatId(newSession.id);
+      }
+    }
+  }, [folderId, folderName, subjectId, user, chatSessions]);
 
   // Load sessions from DB and ensure a default exists
   useEffect(() => {
@@ -515,11 +558,19 @@ export default function Chat() {
   const prepareSubjectContextText = async (session: ChatSession): Promise<{ text: string; files: any[] }> => {
     if (!session.subjectId || !user) return { text: "", files: [] };
 
-    const { data: materials, error } = await supabase
+    // Construir query base
+    let query = supabase
       .from("study_materials")
-      .select("id, title, type, content, file_path, file_size, mime_type, created_at")
+      .select("id, title, type, content, file_path, file_size, mime_type, created_at, folder_id")
       .eq("user_id", user.id)
-      .eq("subject_id", session.subjectId)
+      .eq("subject_id", session.subjectId);
+
+    // Si hay una carpeta específica, filtrar por ella
+    if (session.folderId) {
+      query = query.eq("folder_id", session.folderId);
+    }
+
+    const { data: materials, error } = await query
       .order("created_at", { ascending: false })
       .limit(25);
 
@@ -529,7 +580,8 @@ export default function Chat() {
     }
 
     if (!materials || materials.length === 0) {
-      return { text: "No materials found for this subject yet.", files: [] };
+      const folderContext = session.folderId ? ` in folder "${session.folderName}"` : "";
+      return { text: `No materials found for this subject${folderContext} yet.`, files: [] };
     }
 
     const topic = (session.topic || "").toLowerCase().trim();
@@ -541,7 +593,14 @@ export default function Chat() {
 
     const lines: string[] = [];
     const files: any[] = [];
-    lines.push(`Attached study materials (${filtered.length}/${materials.length}):`);
+    
+    // Agregar contexto de carpeta si aplica
+    if (session.folderId && session.folderName) {
+      lines.push(`📁 Chatting with folder: "${session.folderName}"`);
+      lines.push(`📚 Materials in this folder (${filtered.length}/${materials.length}):`);
+    } else {
+      lines.push(`📚 Attached study materials (${filtered.length}/${materials.length}):`);
+    }
 
     for (const m of filtered) {
       let urlNote = "";
