@@ -685,23 +685,43 @@ export default function Chat() {
   };
 
   const prepareSubjectContextText = async (session: ChatSession): Promise<{ text: string; files: any[] }> => {
-    if (!session.subjectId || !user) return { text: "", files: [] };
+    // Use session.subjectId if available, otherwise fallback to URL params
+    const effectiveSubjectId = session.subjectId || subjectId;
+    const effectiveFolderId = session.folderId || folderId;
+    
+    console.log("🔍 PREPARE SUBJECT CONTEXT DEBUG:", {
+      sessionSubjectId: session.subjectId,
+      urlSubjectId: subjectId,
+      effectiveSubjectId,
+      sessionFolderId: session.folderId,
+      urlFolderId: folderId,
+      effectiveFolderId,
+      sessionContextType: session.contextType
+    });
+    
+    if (!effectiveSubjectId || !user) return { text: "", files: [] };
 
     // Construir query base
     let query = supabase
       .from("study_materials")
       .select("id, title, type, content, file_path, file_size, mime_type, created_at, folder_id")
       .eq("user_id", user.id)
-      .eq("subject_id", session.subjectId);
+      .eq("subject_id", effectiveSubjectId);
 
     // Si hay una carpeta específica, filtrar por ella
-    if (session.folderId) {
-      query = query.eq("folder_id", session.folderId);
+    if (effectiveFolderId) {
+      query = query.eq("folder_id", effectiveFolderId);
     }
 
     const { data: materials, error } = await query
       .order("created_at", { ascending: false })
       .limit(25);
+
+    console.log("📚 MATERIALS QUERY RESULT:", {
+      materialsCount: materials?.length || 0,
+      materials: materials?.map(m => ({ id: m.id, title: m.title, folder_id: m.folder_id })) || [],
+      error: error?.message || null
+    });
 
     if (error) {
       console.error("Error fetching materials for context:", error);
@@ -709,7 +729,8 @@ export default function Chat() {
     }
 
     if (!materials || materials.length === 0) {
-      const folderContext = session.folderId ? ` in folder "${session.folderName}"` : "";
+      const effectiveFolderName = session.folderName || folderName;
+      const folderContext = effectiveFolderId ? ` in folder "${effectiveFolderName}"` : "";
       return { text: `No materials found for this subject${folderContext} yet.`, files: [] };
     }
 
