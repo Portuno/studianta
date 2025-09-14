@@ -124,6 +124,32 @@ export interface Database {
           updated_at?: string
         }
       }
+      folders: {
+        Row: {
+          id: string
+          user_id: string
+          subject_id: string
+          name: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          subject_id: string
+          name: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          subject_id?: string
+          name?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
       subject_events: {
         Row: {
           id: string
@@ -202,6 +228,7 @@ export interface Database {
           id: string
           user_id: string
           subject_id: string
+          folder_id?: string | null
           title: string
           type: 'notes' | 'document' | 'audio' | 'video' | 'pdf' | 'image'
           content?: string | null
@@ -221,11 +248,16 @@ export interface Database {
             id: string
             name: string
           } | null
+          folders?: {
+            id: string
+            name: string
+          } | null
         }
         Insert: {
           id?: string
           user_id: string
           subject_id: string
+          folder_id?: string | null
           title: string
           type: 'notes' | 'document' | 'audio' | 'video' | 'pdf' | 'image'
           content?: string | null
@@ -240,6 +272,7 @@ export interface Database {
           id?: string
           user_id?: string
           subject_id?: string
+          folder_id?: string | null
           title?: string
           type?: 'notes' | 'document' | 'audio' | 'video' | 'pdf' | 'image'
           content?: string | null

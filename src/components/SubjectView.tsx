@@ -162,16 +162,37 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
       if (schedulesError) throw schedulesError;
       setSchedules(schedulesData || []);
 
-      // Fetch folders
+      // Fetch folders with their associated files
       const { data: foldersData, error: foldersError } = await supabase
         .from('folders')
-        .select('*')
+        .select(`
+          *,
+          study_materials:folder_id (
+            id,
+            title,
+            type,
+            file_path,
+            file_size,
+            mime_type,
+            created_at
+          )
+        `)
         .eq('subject_id', subject.id)
         .eq('user_id', user.id)
         .order('created_at');
 
-      if (foldersError) throw foldersError;
-      setFolders(foldersData || []);
+      if (foldersError) {
+        console.error('Error fetching folders:', foldersError);
+        // If folders table doesn't exist yet, set empty array
+        setFolders([]);
+      } else {
+        // Transform the data to match our Folder interface
+        const transformedFolders = (foldersData || []).map(folder => ({
+          ...folder,
+          files: folder.study_materials || []
+        }));
+        setFolders(transformedFolders);
+      }
 
     } catch (error) {
       console.error('Error fetching subject data:', error);
@@ -577,15 +598,15 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
             )}
           </div>
 
-          {/* Loose Files Section */}
-          {materials.filter(m => !folders.some(f => f.files.includes(m))).length > 0 && (
+          {/* Loose Files Section - Only show materials that are NOT in any folder */}
+          {materials.filter(m => !folders.some(f => f.files.some(file => file.id === m.id))).length > 0 && (
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <span className="text-lg">📄</span>
                 Otros Archivos
               </h3>
               <div className="space-y-2">
-                {materials.filter(m => !folders.some(f => f.files.includes(m))).map((material) => (
+                {materials.filter(m => !folders.some(f => f.files.some(file => file.id === m.id))).map((material) => (
                   <Card 
                     key={material.id} 
                     className="p-4 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm cursor-pointer hover:shadow-md transition-shadow"

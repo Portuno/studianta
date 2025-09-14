@@ -132,6 +132,24 @@ export const FileUploadModal = ({ isOpen, onClose, onUploadComplete, preselected
     setIsUploading(true);
 
     try {
+      // If topicName is provided, find the corresponding folder_id
+      let folderId = null;
+      if (topicName && topicName.trim()) {
+        const { data: folderData, error: folderError } = await supabase
+          .from('folders')
+          .select('id')
+          .eq('subject_id', selectedSubject)
+          .eq('user_id', user?.id)
+          .eq('name', topicName.trim())
+          .single();
+
+        if (folderError && folderError.code !== 'PGRST116') { // PGRST116 = no rows found
+          console.error('Error finding folder:', folderError);
+        } else if (folderData) {
+          folderId = folderData.id;
+        }
+      }
+
       for (let i = 0; i < files.length; i++) {
         const fileWithPreview = files[i];
         setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'uploading', progress: 0 } : f));
@@ -149,6 +167,7 @@ export const FileUploadModal = ({ isOpen, onClose, onUploadComplete, preselected
             .insert({
               user_id: user?.id as string,
               subject_id: selectedSubject,
+              folder_id: folderId,
               title: fileWithPreview.file.name,
               type: fileWithPreview.type,
               file_path: filePath,
