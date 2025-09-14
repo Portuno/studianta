@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, Upload, FileText, Plus, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,9 +10,10 @@ interface AddProgramModalProps {
   isOpen: boolean;
   onClose: () => void;
   onProgramCreated: () => void;
+  onProgramCreatedWithId?: (id: string) => void;
 }
 
-export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgramModalProps) => {
+export const AddProgramModal = ({ isOpen, onClose, onProgramCreated, onProgramCreatedWithId }: AddProgramModalProps) => {
   const { addProgram } = usePrograms();
   const [programName, setProgramName] = useState("");
   const [institution, setInstitution] = useState("");
@@ -84,16 +86,15 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
         return;
       }
 
-      // TODO: Handle syllabus upload if file is present
-      // This would be implemented when we add file processing for AI analysis
-      
       // Reset form
       setProgramName("");
       setInstitution("");
       setSyllabusFile(null);
       
-      // Close modal and refresh
       onProgramCreated();
+      if (data?.id) {
+        onProgramCreatedWithId?.(data.id);
+      }
       onClose();
       
     } catch (error) {
@@ -105,14 +106,7 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
 
   const getRandomPastelColor = () => {
     const colors = [
-      '#fce7f3', // pink-100
-      '#f3e8ff', // purple-100
-      '#ecfdf5', // green-100
-      '#fef3c7', // yellow-100
-      '#fce4ec', // pink-200
-      '#e9d5ff', // purple-200
-      '#d1fae5', // green-200
-      '#fde68a', // yellow-200
+      '#fce7f3', '#f3e8ff', '#ecfdf5', '#fef3c7', '#fce4ec', '#e9d5ff', '#d1fae5', '#fde68a'
     ];
     return colors[Math.floor(Math.random() * colors.length)];
   };
@@ -124,8 +118,8 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
       <Card className="w-full max-w-md rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
         {/* Header */}
         <div className="flex items-center justify-between p-6 pb-4">
@@ -266,6 +260,7 @@ export const AddProgramModal = ({ isOpen, onClose, onProgramCreated }: AddProgra
           </div>
         </form>
       </Card>
-    </div>
+    </div>,
+    document.body
   );
 }; 

@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import type { Inserts, Tables } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +19,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertTriangle, Bot, Calendar, Loader2, Send, User, BookOpen, GraduationCap } from "lucide-react";
+import { AlertTriangle, Bot, Calendar, Loader2, Send, User, BookOpen, GraduationCap, Paperclip, X, FileText, Plus, Trash2 } from "lucide-react";
 import { usePrograms } from "@/hooks/useSupabase";
 
 interface ChatMessage {
@@ -70,6 +74,7 @@ export default function Chat() {
 
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string>("");
+  const [loadingSessions, setLoadingSessions] = useState<boolean>(false);
 
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -82,35 +87,276 @@ export default function Chat() {
   const [currentProgramId, setCurrentProgramId] = useState<string | null>(null);
   const currentProgram = useMemo(() => programs.find((p) => p.id === currentProgramId) || null, [programs, currentProgramId]);
 
+  // Chat attachments (PDF/TXT) and scrolling
+  const [attachedFiles, setAttachedFiles] = useState<Array<{ file: File; title: string; mime_type: string; url?: string }>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleChooseFiles = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const accepted = files.filter((f) => {
+      const ext = f.name.toLowerCase().split('.').pop() || '';
+      const type = (f.type || '').toLowerCase();
+      return type === 'application/pdf' || type === 'text/plain' || ext === 'pdf' || ext === 'txt';
+    });
+    const mapped = accepted.map((f) => ({ file: f, title: f.name, mime_type: f.type || (f.name.toLowerCase().endsWith('.txt') ? 'text/plain' : 'application/pdf') }));
+    setAttachedFiles((prev) => [...prev, ...mapped]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+
+  const uploadChatFile = async (file: File): Promise<{ url: string; mime_type: string; title: string; fileName: string; name: string; mimeType: string } | null> => {
+    try {
+      const userId = user?.id || 'anon';
+      const safeName = file.name.replace(/[^\w.\-]/g, '_');
+      const path = `${userId}/chat/${Date.now()}_${safeName}`;
+      const contentType = file.type || (file.name.toLowerCase().endsWith('.txt') ? 'text/plain' : 'application/pdf');
+      const { error: upErr } = await supabase.storage.from('study-materials').upload(path, file, { contentType, upsert: false });
+      if (upErr) {
+        console.error('Upload error:', upErr);
+        return null;
+      }
+      const { data: signed, error: urlErr } = await supabase.storage.from('study-materials').createSignedUrl(path, 60 * 60);
+      if (urlErr || !signed?.signedUrl) {
+        console.error('Signed URL error:', urlErr);
+        return null;
+      }
+      return { url: signed.signedUrl, mime_type: contentType, title: file.name, fileName: file.name, name: file.name, mimeType: contentType };
+    } catch (err) {
+      console.error('uploadChatFile failed:', err);
+      return null;
+    }
+  };
+
   // Mabot configuration now handled by Supabase Edge Function
   const mabotConfigured = true; // Always true since we're using Edge Function
 
   const currentChat = chatSessions.find((c) => c.id === currentChatId) || null;
 
-  // Ensure a default chat exists (Chat General)
-  useEffect(() => {
-    if (!currentChatId) {
-      const session: ChatSession = {
-        id: `${Date.now()}`,
-        title: "Chat General",
-        contextType: "general",
-        messages: [
-          {
-            id: "1",
-            type: "bot",
-            message:
-              "¡Hola! Soy tu asistente de estudio. Pregúntame lo que quieras. Puedes elegir un contexto desde arriba (Agenda, Asignaturas o Carreras) para respuestas más específicas.",
-            time: nowTime(),
-          },
-        ],
-        createdAt: new Date(),
-        lastActivity: new Date(),
+  // ---- Sessions management ----
+  const handleCreateNewChat = async () => {
+    if (!user?.id) return;
+    const baseTitle = "Nuevo chat";
+    const suffix = chatSessions.length + 1;
+    const title = `${baseTitle} ${suffix}`;
+    try {
+      const toInsert: Inserts<"chat_sessions"> = {
+        user_id: user.id,
+        title,
+        context: "general",
+      } as any;
+      const { data, error } = await supabase
+        .from("chat_sessions")
+        .insert([toInsert])
+        .select("id, title, context, mabot_chat_id, created_at, last_activity")
+        .single();
+      if (error) throw error;
+      const newSession: ChatSession = {
+        id: data.id,
+        title: data.title || title,
+        contextType: (data.context as any) || "general",
+        messages: [],
+        createdAt: new Date(data.created_at),
+        lastActivity: new Date(data.last_activity || data.created_at),
+        mabotChatId: data.mabot_chat_id || undefined,
         contextUploaded: false,
       };
-      setChatSessions([session]);
-      setCurrentChatId(session.id);
+      setChatSessions((prev) => [newSession, ...prev]);
+      setCurrentChatId(data.id);
+      // Load messages (should be none initially)
+      const { data: msgs } = await supabase
+        .from("chat_messages")
+        .select("id, chat_id, user_id, content, role, created_at")
+        .eq("chat_id", data.id)
+        .order("created_at", { ascending: true });
+      const mappedMsgs: ChatMessage[] = (msgs || []).map((m: any) => ({
+        id: m.id,
+        type: m.role === "assistant" ? "bot" : "user",
+        message: m.content,
+        time: new Date(m.created_at).toLocaleTimeString("es-ES", { hour: "numeric", minute: "2-digit", hour12: false }),
+      }));
+      setChatSessions((prev) => prev.map((c) => (c.id === data.id ? { ...c, messages: mappedMsgs } : c)));
+    } catch (e) {
+      console.error("Failed to create new chat session:", e);
+    }
+  };
+
+  const handleSelectSession = async (sessionId: string) => {
+    if (!sessionId || currentChatId === sessionId) return;
+    setCurrentChatId(sessionId);
+    // Messages load via effect, but we can prefetch for snappy UX
+    try {
+      const { data: msgs } = await supabase
+        .from("chat_messages")
+        .select("id, chat_id, user_id, content, role, created_at")
+        .eq("chat_id", sessionId)
+        .order("created_at", { ascending: true });
+      const mappedMsgs: ChatMessage[] = (msgs || []).map((m: any) => ({
+        id: m.id,
+        type: m.role === "assistant" ? "bot" : "user",
+        message: m.content,
+        time: new Date(m.created_at).toLocaleTimeString("es-ES", { hour: "numeric", minute: "2-digit", hour12: false }),
+      }));
+      setChatSessions((prev) => prev.map((c) => (c.id === sessionId ? { ...c, messages: mappedMsgs } : c)));
+    } catch (e) {
+      console.error("Failed to prefetch messages for session:", e);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!sessionId) return;
+    try {
+      await supabase.from("chat_sessions").delete().eq("id", sessionId);
+      setChatSessions((prev) => prev.filter((c) => c.id !== sessionId));
+      if (currentChatId === sessionId) {
+        const next = chatSessions.find((c) => c.id !== sessionId)?.id || "";
+        setCurrentChatId(next);
+      }
+    } catch (e) {
+      console.error("Failed to delete session:", e);
+    }
+  };
+
+  // Remember active chat across navigations
+  useEffect(() => {
+    if (currentChatId && typeof window !== "undefined") {
+      window.localStorage.setItem("activeChatId", currentChatId);
     }
   }, [currentChatId]);
+
+  // Smooth autoscroll; instant on first render to avoid visible jump
+  const didInitialScrollRef = useRef<boolean>(false);
+  useEffect(() => {
+    const behavior = didInitialScrollRef.current ? 'smooth' : 'auto';
+    messagesEndRef.current?.scrollIntoView({ behavior: behavior as ScrollBehavior, block: 'end' });
+    if (!didInitialScrollRef.current) didInitialScrollRef.current = true;
+  }, [currentChat?.messages.length, isLoading]);
+
+  // Load sessions from DB and ensure a default exists
+  useEffect(() => {
+    const loadSessionsFromDb = async () => {
+      if (!user) return;
+      setLoadingSessions(true);
+      try {
+        const { data: sessions, error } = await supabase
+          .from("chat_sessions")
+          .select("id, title, context, mabot_chat_id, created_at, last_activity")
+          .order("last_activity", { ascending: false });
+        if (error) throw error;
+
+        if (!sessions || sessions.length === 0) {
+          const toInsert: Inserts<"chat_sessions"> = {
+            user_id: user.id,
+            title: "Chat General",
+            context: "general",
+          } as any;
+          const { data: created, error: insErr } = await supabase
+            .from("chat_sessions")
+            .insert([toInsert])
+            .select("id, title, context, mabot_chat_id, created_at, last_activity")
+            .single();
+          if (insErr) throw insErr;
+          const mapped: ChatSession = {
+            id: created.id,
+            title: created.title || "Chat General",
+            contextType: (created.context as any) || "general",
+            messages: [],
+            createdAt: new Date(created.created_at),
+            lastActivity: new Date(created.last_activity || created.created_at),
+            mabotChatId: created.mabot_chat_id || undefined,
+            contextUploaded: false,
+          };
+          setChatSessions([mapped]);
+          setCurrentChatId(created.id);
+          // Fetch messages for the created session
+          const { data: msgs } = await supabase
+            .from("chat_messages")
+            .select("id, chat_id, user_id, content, role, created_at")
+            .eq("chat_id", created.id)
+            .order("created_at", { ascending: true });
+          const mappedMsgs: ChatMessage[] = (msgs || []).map((m: any) => ({
+            id: m.id,
+            type: m.role === "assistant" ? "bot" : "user",
+            message: m.content,
+            time: new Date(m.created_at).toLocaleTimeString("es-ES", { hour: "numeric", minute: "2-digit", hour12: false }),
+          }));
+          setChatSessions((prev) => prev.map((c) => (c.id === created.id ? { ...c, messages: mappedMsgs } : c)));
+          return;
+        }
+
+        const mapped: ChatSession[] = sessions.map((s: any) => ({
+          id: s.id,
+          title: s.title || "Chat",
+          contextType: (s.context as any) || "general",
+          messages: [],
+          createdAt: new Date(s.created_at),
+          lastActivity: new Date(s.last_activity || s.created_at),
+          mabotChatId: s.mabot_chat_id || undefined,
+          contextUploaded: false,
+        }));
+        setChatSessions(mapped);
+        const saved = typeof window !== "undefined" ? window.localStorage.getItem("activeChatId") : null;
+        const exists = mapped.find((m) => m.id === saved)?.id;
+        const activeId = exists || mapped[0]?.id || "";
+        setCurrentChatId((prev) => prev || activeId);
+
+        if (activeId) {
+          const { data: msgs, error: msgsErr } = await supabase
+            .from("chat_messages")
+            .select("id, chat_id, user_id, content, role, created_at")
+            .eq("chat_id", activeId)
+            .order("created_at", { ascending: true });
+          if (!msgsErr) {
+            const mappedMsgs: ChatMessage[] = (msgs || []).map((m: any) => ({
+              id: m.id,
+              type: m.role === "assistant" ? "bot" : "user",
+              message: m.content,
+              time: new Date(m.created_at).toLocaleTimeString("es-ES", { hour: "numeric", minute: "2-digit", hour12: false }),
+            }));
+            setChatSessions((prev) => prev.map((c) => (c.id === activeId ? { ...c, messages: mappedMsgs } : c)));
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load chat sessions:", e);
+      } finally {
+        setLoadingSessions(false);
+      }
+    };
+    loadSessionsFromDb();
+  }, [user]);
+
+  // Load messages for current session
+  useEffect(() => {
+    const loadMessages = async (sessionId: string) => {
+      if (!user || !sessionId) return;
+      const { data: msgs, error } = await supabase
+        .from("chat_messages")
+        .select("id, chat_id, user_id, content, role, created_at")
+        .eq("chat_id", sessionId)
+        .order("created_at", { ascending: true });
+      if (error) {
+        console.error("Failed to load messages:", error);
+        return;
+      }
+      const mapped: ChatMessage[] = (msgs || []).map((m: any) => ({
+        id: m.id,
+        type: m.role === "assistant" ? "bot" : "user",
+        message: m.content,
+        time: new Date(m.created_at).toLocaleTimeString("es-ES", { hour: "numeric", minute: "2-digit", hour12: false }),
+      }));
+      setChatSessions((prev) => prev.map((c) => (c.id === sessionId ? { ...c, messages: mapped } : c)));
+    };
+    if (currentChatId) loadMessages(currentChatId);
+  }, [currentChatId, user]);
 
   useEffect(() => {
     const load = async () => {
@@ -491,7 +737,7 @@ export default function Chat() {
     // Agregar listado de archivos adjuntos sin crear mensajes extra
     if (contextFiles && contextFiles.length > 0) {
       const fileList = contextFiles
-        .map((f: any, idx: number) => `- ${f.title || f.fileName || `file_${idx+1}`}`)
+        .map((f: any, idx: number) => `- ${f.title || f.fileName || f.name || `file_${idx+1}`}`)
         .join("\n");
       consolidatedContent += `\n📄 Archivos adjuntos:\n${fileList}`;
     }
@@ -531,7 +777,7 @@ export default function Chat() {
       // Use Supabase Edge Function for Mabot communication
       const controller = new AbortController();
       // Timeout más largo para PDFs ya que procesar URLs toma más tiempo
-      const timeoutSeconds = contextFiles && contextFiles.length > 0 ? 45000 : 30000;
+      const timeoutSeconds = contextFiles && contextFiles.length > 0 ? 60000 : 30000;
       const timeoutId = setTimeout(() => {
         console.log(`[Mabot] Timeout reached after ${timeoutSeconds/1000}s, aborting request`);
         controller.abort();
@@ -560,7 +806,9 @@ export default function Chat() {
           },
           userText,
           contextText,
-          contextFiles
+          contextFiles,
+          files: contextFiles,
+          attachments: contextFiles
         }),
         signal: controller.signal
       });
@@ -744,6 +992,10 @@ export default function Chat() {
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading || !currentChat) return;
+    if (!user?.id) {
+      console.error("Cannot send message without authenticated user");
+      return;
+    }
 
     // 🔍 DEBUG: Inicio del proceso de envío
     console.group("💬 CHAT MESSAGE FLOW - INICIO");
@@ -765,9 +1017,21 @@ export default function Chat() {
       time: nowTime(),
     };
 
-    setChatSessions((prev) =>
-      prev.map((chat) => (chat.id === currentChatId ? { ...chat, messages: [...chat.messages, userMessage], lastActivity: new Date() } : chat))
-    );
+    // Optimistic UI append
+    setChatSessions((prev) => prev.map((chat) => (chat.id === currentChatId ? { ...chat, messages: [...chat.messages, userMessage], lastActivity: new Date() } : chat)));
+
+    // Persist user message
+    try {
+      const row: Inserts<"chat_messages"> = {
+        chat_id: currentChat.id,
+        user_id: user.id,
+        content: inputMessage,
+        role: "user",
+      } as any;
+      await supabase.from("chat_messages").insert([row]);
+    } catch (e) {
+      console.error("Failed to persist user message:", e);
+    }
 
     const textToSend = inputMessage;
     setInputMessage("");
@@ -804,6 +1068,21 @@ export default function Chat() {
         contextFilesCount: contextFiles?.length || 0,
         contextPreview: contextText?.substring(0, 200) || "No context",
       });
+    }
+
+    // Upload any files the user attached in this message (PDF/TXT)
+    try {
+      if (attachedFiles.length > 0) {
+        setIsProcessingFiles(true);
+        const uploaded: any[] = [];
+        for (const f of attachedFiles) {
+          const up = await uploadChatFile(f.file);
+          if (up) uploaded.push(up);
+        }
+        contextFiles = [...(contextFiles || []), ...uploaded];
+      }
+    } catch (err) {
+      console.error('Attachment upload failed:', err);
     }
 
     const result = await sendToMabot(currentChat, textToSend, contextText, contextFiles);
@@ -854,6 +1133,23 @@ export default function Chat() {
             : chat
         )
       );
+      // Persist assistant message and update session if needed
+      try {
+        if (resolvedChatId && resolvedChatId !== currentChat.mabotChatId) {
+          await supabase.from("chat_sessions").update({ mabot_chat_id: resolvedChatId }).eq("id", currentChat.id);
+        }
+        const row: Inserts<"chat_messages"> = {
+          chat_id: currentChat.id,
+          user_id: user?.id || undefined,
+          content: botMessage.message,
+          role: "assistant",
+        } as any;
+        await supabase.from("chat_messages").insert([row]);
+      } catch (e) {
+        console.error("Failed to persist assistant message or update session:", e);
+      }
+      // Clear attachments after successful send
+      setAttachedFiles([]);
       setIsLoading(false);
       setIsProcessingFiles(false);
       return;
@@ -869,12 +1165,14 @@ export default function Chat() {
     setChatSessions((prev) =>
       prev.map((chat) => (chat.id === currentChatId ? { ...chat, messages: [...chat.messages, errorMessage], lastActivity: new Date() } : chat))
     );
+    // Clear attachments on error as well
+    setAttachedFiles([]);
     setIsLoading(false);
     setIsProcessingFiles(false);
   };
 
   // Context switchers (single chat UX)
-  const setContextGeneral = () => {
+  const setContextGeneral = async () => {
     if (!currentChat) return;
     const updated: ChatSession = {
       ...currentChat,
@@ -892,15 +1190,23 @@ export default function Chat() {
         {
           id: Date.now().toString(),
           type: "bot",
-          message: "🟣 Contexto cambiado a Chat General.",
+          message: "💬 Contexto cambiado a General.",
           time: nowTime(),
         },
       ],
     };
     setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
+    try {
+      await supabase.from("chat_sessions").update({ title: "Chat General", context: "general" }).eq("id", currentChat.id);
+      await supabase.from("chat_messages").insert([
+        { chat_id: currentChat.id, user_id: user?.id || undefined, content: "💬 Contexto cambiado a General.", role: "assistant" } as Inserts<"chat_messages">,
+      ]);
+    } catch (e) {
+      console.error("Failed to persist general context change:", e);
+    }
   };
 
-  const setContextAgenda = () => {
+  const setContextAgenda = async () => {
     if (!currentChat) return;
     const updated: ChatSession = {
       ...currentChat,
@@ -924,9 +1230,17 @@ export default function Chat() {
       ],
     };
     setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
+    try {
+      await supabase.from("chat_sessions").update({ title: "Agenda", context: "agenda" }).eq("id", currentChat.id);
+      await supabase.from("chat_messages").insert([
+        { chat_id: currentChat.id, user_id: user?.id || undefined, content: "📅 Contexto cambiado a Agenda.", role: "assistant" } as Inserts<"chat_messages">,
+      ]);
+    } catch (e) {
+      console.error("Failed to persist agenda context change:", e);
+    }
   };
 
-  const setContextSubject = (subject: SubjectRow) => {
+  const setContextSubject = async (subject: SubjectRow) => {
     if (!currentChat) return;
     const updated: ChatSession = {
       ...currentChat,
@@ -950,9 +1264,23 @@ export default function Chat() {
       ],
     };
     setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
+
+    try {
+      await supabase.from("chat_sessions").update({ title: subject.name, context: "subject" }).eq("id", currentChat.id);
+      await supabase.from("chat_messages").insert([
+        {
+          chat_id: currentChat.id,
+          user_id: user?.id || undefined,
+          content: `📚 Contexto cambiado a Asignatura: ${subject.name}.`,
+          role: "assistant",
+        } as Inserts<"chat_messages">,
+      ]);
+    } catch (e) {
+      console.error("Failed to persist subject context change:", e);
+    }
   };
 
-  const setContextProgram = (programId: string, programName: string) => {
+  const setContextProgram = async (programId: string, programName: string) => {
     if (!currentChat) return;
     const updated: ChatSession = {
       ...currentChat,
@@ -976,6 +1304,20 @@ export default function Chat() {
       ],
     };
     setChatSessions((prev) => prev.map((c) => (c.id === currentChat.id ? updated : c)));
+
+    try {
+      await supabase.from("chat_sessions").update({ title: programName, context: "program" }).eq("id", currentChat.id);
+      await supabase.from("chat_messages").insert([
+        {
+          chat_id: currentChat.id,
+          user_id: user?.id || undefined,
+          content: `🎓 Contexto cambiado a Carrera: ${programName}.`,
+          role: "assistant",
+        } as Inserts<"chat_messages">,
+      ]);
+    } catch (e) {
+      console.error("Failed to persist program context change:", e);
+    }
   };
 
   const handleSelectProgram = (programId: string, programName: string) => {
@@ -1057,17 +1399,20 @@ export default function Chat() {
       const showMabotBanner = !mabotConfigured;
 
   return (
-    <div className="flex flex-col pb-20 md:pb-0 md:h-[calc(100svh-56px)] md:overflow-hidden">
+    <div className="flex flex-col h-[100vh] overflow-hidden">
       <div className="flex items-center justify-between pt-8 pb-4 px-6">
         <div className="text-left">
           <h1 className="text-2xl font-light text-foreground/90 mb-1">Chat</h1>
           <p className="text-muted-foreground text-sm">Acción inmediata → Contexto opcional</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" className="rounded-xl" onClick={handleCreateNewChat} aria-label="Nuevo chat">
+            <Plus size={14} className="mr-1" /> Nuevo chat
+          </Button>
           {currentChat && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="rounded-xl">
+                <Button size="sm" className="rounded-xl bg-violet-300 text-white hover:bg-violet-400 border-0">
                   {`Contexto: ${
                     currentChat.contextType === "agenda"
                       ? "Agenda"
@@ -1117,8 +1462,10 @@ export default function Chat() {
                       <div className="px-2 py-1.5 text-xs text-muted-foreground">No hay carreras</div>
                     )}
                     {(programs || []).map((p) => (
-                      <DropdownMenuItem key={p.id} className="cursor-pointer" onClick={() => setContextProgram(p.id, p.name)}>
-                        {p.name}
+                      <DropdownMenuItem key={p.id} className="cursor-pointer" onClick={() => handleSelectProgram(p.id, p.name)}>
+                        <GraduationCap size={14} className="mr-2" />
+                        <span className="flex-1">{p.name}</span>
+                        {currentProgramId === p.id && <span className="text-xs text-primary">✓</span>}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>
@@ -1137,12 +1484,33 @@ export default function Chat() {
         </div>
       </div>
 
+      {/* Sessions list */}
+      <div className="px-6 -mt-2 mb-2 flex items-center gap-2 overflow-x-auto">
+        {chatSessions.map((s) => (
+          <div key={s.id} className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 border ${s.id === currentChatId ? 'bg-primary/10 border-primary/40' : 'bg-background border-border'} cursor-pointer`}
+               onClick={() => handleSelectSession(s.id)}
+               role="button" tabIndex={0}
+               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectSession(s.id); }}
+               aria-label={`Seleccionar chat ${s.title}`}>
+            <span className="text-sm whitespace-nowrap max-w-[200px] truncate">{s.title}</span>
+            <button
+              type="button"
+              className="p-1 rounded hover:bg-muted"
+              aria-label={`Eliminar chat ${s.title}`}
+              onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }}
+            >
+              <Trash2 size={14} className="text-muted-foreground" />
+            </button>
+          </div>
+        ))}
+      </div>
+
       {/* Selector de carrera fijo al lado del contexto para acceso rápido */}
       <div className="px-6 -mt-2 mb-2 flex items-center gap-2">
         {programs.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="rounded-xl">
+              <Button size="sm" className="rounded-xl bg-violet-300 text-white hover:bg-violet-400 border-0">
                 {`Carrera: ${currentProgram?.name || "—"}`}
               </Button>
             </DropdownMenuTrigger>
@@ -1170,9 +1538,8 @@ export default function Chat() {
       )}
 
       {/* Siempre mostramos el chat activo (única sesión) */}
-
       {currentChat && (
-        <div className="flex-1 px-6 space-y-4 overflow-y-auto">
+        <div className="flex-1 min-h-0 px-6 space-y-4 overflow-y-auto">
           {currentChat.messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}>
               <Card
@@ -1187,7 +1554,27 @@ export default function Chat() {
                     <User size={16} className="text-primary-foreground mt-0.5" />
                   )}
                   <div className="flex-1">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.message}</p>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({node, ...props}) => (
+                          <a {...props} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2" />
+                        ),
+                        ul: ({node, ...props}) => (
+                          <ul {...props} className="list-disc ml-5 my-2" />
+                        ),
+                        ol: ({node, ...props}) => (
+                          <ol {...props} className="list-decimal ml-5 my-2" />
+                        ),
+                        li: ({node, ...props}) => <li {...props} className="my-0.5" />,
+                        code: ({node, className, children, ...props}) => (
+                          <code className={`rounded px-1 py-0.5 bg-muted text-foreground/90 ${className || ''}`} {...props}>{children}</code>
+                        )
+                      }}
+                      className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+                    >
+                      {msg.message}
+                    </ReactMarkdown>
                     <span
                       className={`text-xs mt-2 block ${msg.type === "user" ? "text-primary-foreground/70" : "text-muted-foreground"}`}
                     >
@@ -1219,11 +1606,12 @@ export default function Chat() {
               </Card>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
       )}
 
       {currentChat && (
-        <div className="px-6 pb-5 pt-2 border-t bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="px-6 pb-5 pt-2 border-t border-violet-300/50 bg-violet-200/60 backdrop-blur supports-[backdrop-filter]:bg-violet-200/60 flex-shrink-0">
           {/* Context status indicator */}
           {currentChat.contextType === "subject" && (
             <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
@@ -1236,17 +1624,56 @@ export default function Chat() {
               </span>
             </div>
           )}
+
+          {/* Attached files chips */}
+          {attachedFiles.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {attachedFiles.map((f, idx) => (
+                <span key={`${f.title}-${idx}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs text-foreground">
+                  <FileText size={12} className="text-muted-foreground" />
+                  <span className="max-w-[180px] truncate" title={f.title}>{f.title}</span>
+                  <button
+                    type="button"
+                    aria-label={`Quitar ${f.title}`}
+                    className="rounded-full p-0.5 hover:bg-muted-foreground/10"
+                    onClick={() => handleRemoveAttachment(idx)}
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
           
           <div className="flex gap-2">
+            <Button
+              type="button"
+              size="icon"
+              className="rounded-2xl bg-pink-500 text-white hover:bg-pink-600 shadow-lg shadow-pink-200/40"
+              onClick={handleChooseFiles}
+              aria-label="Adjuntar archivos (PDF o TXT)"
+              disabled={isLoading}
+            >
+              <Paperclip size={18} />
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.txt,application/pdf,text/plain"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+            />
             <Input
               placeholder={
                 currentChat.contextType === "agenda"
-                  ? "Pregunta a tu agenda..."
-                  : currentChat.contextType === "general"
-                  ? "Escribe tu mensaje..."
-                  : `Pregunta sobre ${currentChat.title}...`
+                  ? "Pregunta sobre tu agenda..."
+                  : currentChat.contextType === "subject"
+                  ? `Pregunta sobre ${currentChat.subjectName || "la asignatura"}...`
+                  : currentChat.contextType === "program"
+                  ? `Pregunta sobre ${currentChat.programName || "la carrera"}...`
+                  : "Pregunta sobre lo que quieras..."
               }
-              className="flex-1 rounded-2xl border-primary/30 focus-visible:ring-2 focus-visible:ring-primary/50 bg-white text-foreground placeholder:text-muted-foreground/70 shadow-sm"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={(e) => {
@@ -1255,15 +1682,16 @@ export default function Chat() {
                   handleSendMessage();
                 }
               }}
+              className="flex-1 rounded-2xl border-violet-300/50 focus:border-violet-400/50 focus:ring-violet-400/20"
               disabled={isLoading}
-              aria-label="Mensaje"
             />
             <Button
+              type="button"
               size="icon"
-              className="rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+              className="rounded-2xl bg-violet-500 text-white hover:bg-violet-600 shadow-lg shadow-violet-200/40"
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isLoading}
               aria-label="Enviar mensaje"
+              disabled={isLoading || !inputMessage.trim()}
             >
               <Send size={18} />
             </Button>

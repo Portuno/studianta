@@ -163,35 +163,40 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
       setSchedules(schedulesData || []);
 
       // Fetch folders with their associated files
-      const { data: foldersData, error: foldersError } = await supabase
-        .from('folders')
-        .select(`
-          *,
-          study_materials:folder_id (
-            id,
-            title,
-            type,
-            file_path,
-            file_size,
-            mime_type,
-            created_at
-          )
-        `)
-        .eq('subject_id', subject.id)
-        .eq('user_id', user.id)
-        .order('created_at');
+      try {
+        // First, get folders without the join
+        const { data: foldersData, error: foldersError } = await supabase
+          .from('folders')
+          .select('*')
+          .eq('subject_id', subject.id)
+          .eq('user_id', user.id)
+          .order('created_at');
 
-      if (foldersError) {
-        console.error('Error fetching folders:', foldersError);
-        // If folders table doesn't exist yet, set empty array
+        if (foldersError) {
+          console.error('Error fetching folders:', foldersError);
+          setFolders([]);
+        } else {
+          // Now get files for each folder separately
+          const foldersWithFiles = await Promise.all(
+            (foldersData || []).map(async (folder) => {
+              const { data: filesData } = await supabase
+                .from('study_materials')
+                .select('id, title, type, file_path, file_size, mime_type, created_at')
+                .eq('folder_id', folder.id)
+                .eq('user_id', user.id);
+
+              return {
+                ...folder,
+                files: filesData || []
+              };
+            })
+          );
+
+          setFolders(foldersWithFiles);
+        }
+      } catch (error) {
+        console.error('Fatal error fetching folders:', error);
         setFolders([]);
-      } else {
-        // Transform the data to match our Folder interface
-        const transformedFolders = (foldersData || []).map(folder => ({
-          ...folder,
-          files: folder.study_materials || []
-        }));
-        setFolders(transformedFolders);
       }
 
     } catch (error) {
@@ -302,7 +307,7 @@ export const SubjectView = ({ subject, materials, onAddFile }: SubjectViewProps)
       setFolders([...folders, newFolder]);
     } catch (error) {
       console.error('Error creating folder:', error);
-      alert('Error al crear la carpeta. Por favor, inténtalo de nuevo.');
+      alert(`Error al crear la carpeta: ${error.message || 'Error desconocido'}`);
     }
   };
 

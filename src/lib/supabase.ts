@@ -19,6 +19,15 @@ export interface Database {
           email: string
           full_name: string | null
           avatar_url: string | null
+          is_onboarded: boolean
+          subscription_plan: 'free' | 'basic' | 'pro'
+          student_type: string | null
+          primary_language: string | null
+          birth_date: string | null
+          birth_time: string | null
+          education_level: string | null
+          country: string | null
+          birth_city: string | null
           created_at: string
           updated_at: string
         }
@@ -27,6 +36,15 @@ export interface Database {
           email: string
           full_name?: string | null
           avatar_url?: string | null
+          is_onboarded?: boolean
+          subscription_plan?: 'free' | 'basic' | 'pro'
+          student_type?: string | null
+          primary_language?: string | null
+          birth_date?: string | null
+          birth_time?: string | null
+          education_level?: string | null
+          country?: string | null
+          birth_city?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -35,6 +53,15 @@ export interface Database {
           email?: string
           full_name?: string | null
           avatar_url?: string | null
+          is_onboarded?: boolean
+          subscription_plan?: 'free' | 'basic' | 'pro'
+          student_type?: string | null
+          primary_language?: string | null
+          birth_date?: string | null
+          birth_time?: string | null
+          education_level?: string | null
+          country?: string | null
+          birth_city?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -346,6 +373,64 @@ export interface Database {
           week_end?: string
           created_at?: string
           updated_at?: string
+        }
+      }
+      chat_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          context: string | null
+          mabot_chat_id: string | null
+          created_at: string
+          last_activity: string | null
+          is_active: boolean | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title?: string
+          context?: string | null
+          mabot_chat_id?: string | null
+          created_at?: string
+          last_activity?: string | null
+          is_active?: boolean | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          context?: string | null
+          mabot_chat_id?: string | null
+          created_at?: string
+          last_activity?: string | null
+          is_active?: boolean | null
+        }
+      }
+      chat_messages: {
+        Row: {
+          id: string
+          chat_id: string
+          user_id: string | null
+          content: string
+          role: 'user' | 'assistant'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          chat_id: string
+          user_id?: string | null
+          content: string
+          role: 'user' | 'assistant'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          chat_id?: string
+          user_id?: string | null
+          content?: string
+          role?: 'user' | 'assistant'
+          created_at?: string
         }
       }
     }
