@@ -673,12 +673,37 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder, o
           </div>
 
           {/* Loose Files Section - Only show materials that are NOT in any folder */}
-          {materials.filter(m => !folders.some(f => f.files.some(file => file.id === m.id))).length > 0 && (
-            <div className="space-y-3">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                 <span className="text-lg">📄</span>
                 Otros Archivos
               </h3>
+              <Button
+                onClick={() => onAddFile({ subjectId: subject.id })}
+                className="bg-pink-500 hover:bg-pink-600 text-white rounded-lg px-4 py-2"
+              >
+                <Plus size={16} className="mr-2" />
+                Agregar Archivo
+              </Button>
+            </div>
+            
+            {materials.filter(m => !folders.some(f => f.files.some(file => file.id === m.id))).length === 0 ? (
+              <Card className="p-6 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm text-center">
+                <div className="w-16 h-16 rounded-full bg-pink-100 flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">📄</span>
+                </div>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">No hay archivos sueltos</h3>
+                <p className="text-gray-500 mb-4">Agrega archivos que no pertenezcan a ninguna carpeta específica</p>
+                <Button
+                  onClick={() => onAddFile({ subjectId: subject.id })}
+                  className="bg-pink-500 hover:bg-pink-600 text-white rounded-lg px-6 py-2"
+                >
+                  <Plus size={16} className="mr-2" />
+                  Agregar Primer Archivo
+                </Button>
+              </Card>
+            ) : (
               <div className="space-y-2">
                 {materials.filter(m => !folders.some(f => f.files.some(file => file.id === m.id))).map((material) => (
                   <Card 
@@ -714,8 +739,8 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder, o
                   </Card>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 
