@@ -699,18 +699,30 @@ export default function Chat() {
       sessionContextType: session.contextType
     });
     
-    if (!effectiveSubjectId || !user) return { text: "", files: [] };
+    if (!user) return { text: "", files: [] };
+
+    // Para contexto de carpeta, necesitamos al menos el folderId
+    if (session.contextType === "folder" && !effectiveFolderId) {
+      return { text: "No folder specified for folder context.", files: [] };
+    }
+
+    // Para otros contextos, necesitamos el subjectId
+    if (session.contextType !== "folder" && !effectiveSubjectId) {
+      return { text: "", files: [] };
+    }
 
     // Construir query base
     let query = supabase
       .from("study_materials")
-      .select("id, title, type, content, file_path, file_size, mime_type, created_at, folder_id")
-      .eq("user_id", user.id)
-      .eq("subject_id", effectiveSubjectId);
+      .select("id, title, type, content, file_path, file_size, mime_type, created_at, folder_id, subject_id")
+      .eq("user_id", user.id);
 
     // Si hay una carpeta específica, filtrar por ella
     if (effectiveFolderId) {
       query = query.eq("folder_id", effectiveFolderId);
+    } else if (effectiveSubjectId) {
+      // Solo filtrar por subject si no hay folder específico
+      query = query.eq("subject_id", effectiveSubjectId);
     }
 
     const { data: materials, error } = await query
@@ -730,8 +742,12 @@ export default function Chat() {
 
     if (!materials || materials.length === 0) {
       const effectiveFolderName = session.folderName || folderName;
-      const folderContext = effectiveFolderId ? ` in folder "${effectiveFolderName}"` : "";
-      return { text: `No materials found for this subject${folderContext} yet.`, files: [] };
+      if (session.contextType === "folder") {
+        return { text: `No materials found in folder "${effectiveFolderName}" yet.`, files: [] };
+      } else {
+        const folderContext = effectiveFolderId ? ` in folder "${effectiveFolderName}"` : "";
+        return { text: `No materials found for this subject${folderContext} yet.`, files: [] };
+      }
     }
 
     const topic = (session.topic || "").toLowerCase().trim();
