@@ -97,6 +97,12 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder }:
   const [schedules, setSchedules] = useState<SubjectSchedule[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Context menu for file deletion
+  const [showFileContextMenu, setShowFileContextMenu] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string>("");
 
   // Fetch events, schedules, and folders for this subject
   useEffect(() => {
@@ -116,18 +122,20 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder }:
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      if (!target.closest('.add-menu-container')) {
+      if (!target.closest('.add-menu-container') && !target.closest('.file-context-menu')) {
         setShowAddMenu(false);
+        setShowFileContextMenu(false);
       }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setShowAddMenu(false);
+        setShowFileContextMenu(false);
       }
     };
 
-    if (showAddMenu) {
+    if (showAddMenu || showFileContextMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscape);
     }
@@ -136,7 +144,7 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder }:
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [showAddMenu]);
+  }, [showAddMenu, showFileContextMenu]);
 
   const fetchSubjectData = async () => {
     setLoading(true);
@@ -373,6 +381,57 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder }:
     if (onChatWithFolder) {
       onChatWithFolder(folderId, folderName, subjectId);
     }
+  };
+
+  const handleDeleteFile = async (materialId: string, fileName: string) => {
+    if (!user) return;
+    
+    const deleteMessage = `🗑️ ¿Eliminar archivo?\n\n"${fileName}"\n\nEsta acción no se puede deshacer.`;
+    
+    if (confirm(deleteMessage)) {
+      try {
+        const { error } = await supabase
+          .from('study_materials')
+          .delete()
+          .eq('id', materialId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+        
+        // Refresh materials by calling the parent component's refresh function
+        // We'll need to add this prop to the interface
+        window.location.reload(); // Temporary solution - should be replaced with proper state management
+      } catch (error) {
+        console.error('Error deleting file:', error);
+        alert('Error al eliminar el archivo. Por favor, inténtalo de nuevo.');
+      }
+    }
+  };
+
+  const handleFileContextMenu = (e: React.MouseEvent, materialId: string, fileName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setContextMenuPosition({
+      x: e.clientX,
+      y: e.clientY
+    });
+    setSelectedFileId(materialId);
+    setSelectedFileName(fileName);
+    setShowFileContextMenu(true);
+  };
+
+  const handleDeleteFromContextMenu = () => {
+    setShowFileContextMenu(false);
+    if (selectedFileId && selectedFileName) {
+      handleDeleteFile(selectedFileId, selectedFileName);
+    }
+  };
+
+  const handleCloseContextMenu = () => {
+    setShowFileContextMenu(false);
+    setSelectedFileId(null);
+    setSelectedFileName("");
   };
 
   const handleAddEvent = () => {
@@ -624,6 +683,7 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder }:
                     key={material.id} 
                     className="p-4 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => handleFileClick(material)}
+                    onContextMenu={(e) => handleFileContextMenu(e, material.id, material.title)}
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
@@ -974,6 +1034,34 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder }:
           )}
         </div>
       </div>
+
+      {/* Context Menu for File Deletion */}
+      {showFileContextMenu && (
+        <div
+          className="fixed z-50 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[120px] file-context-menu"
+          style={{
+            left: contextMenuPosition.x,
+            top: contextMenuPosition.y,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+            onClick={handleDeleteFromContextMenu}
+          >
+            <X size={14} />
+            Eliminar
+          </button>
+        </div>
+      )}
+
+      {/* Overlay to close context menu */}
+      {showFileContextMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={handleCloseContextMenu}
+        />
+      )}
     </div>
   );
 }; 
