@@ -140,6 +140,25 @@ serve(async (req) => {
       if (top === 'text' || top === 'application') return 'document';
       return 'document';
     };
+
+    // Helper to create proper Document content according to Mabot API schema
+    const createDocumentContent = (base64: string, filename: string, mimetype: string) => {
+      return {
+        type: 'document',
+        value: base64,
+        filename: filename,
+        mimetype: mimetype
+      };
+    };
+
+    // Helper to create proper Text content according to Mabot API schema
+    const createTextContent = (value: string, parse_mode: string = 'Markdown') => {
+      return {
+        type: 'text',
+        value: value,
+        parse_mode: parse_mode
+      };
+    };
     
     // Handle different payload formats
     let finalMessages = messages;
@@ -207,35 +226,55 @@ serve(async (req) => {
     // NEW: Even when messages are provided, also attach contextFiles (download -> base64 -> contents)
     if (finalMessages && contextFiles && Array.isArray(contextFiles) && contextFiles.length > 0) {
       console.log('Appending contextFiles to provided messages:', contextFiles.length);
+      
+      // Create a single message with all files instead of multiple messages
+      const fileContents: any[] = [];
+      const fileNames: string[] = [];
+      
       for (const file of contextFiles) {
         try {
           const sourceUrl: string = file.url;
           const declaredMime: string | undefined = file.mime_type || file.mimetype;
           const title: string | undefined = file.title || file.fileName;
+          
+          console.log(`Processing file: ${title || 'unnamed'} (${sourceUrl})`);
+          
           const fetched = await fetchAsBase64(sourceUrl);
           const effectiveMime = declaredMime || fetched.mimetype;
           const mabotType = mapMimeToMabotType(effectiveMime);
 
-          const baseFileContent: any = {
-            type: mabotType,
-            filename: title || fetched.filename,
-            mimetype: effectiveMime,
-            value: fetched.base64
-          };
+          console.log(`File processed: ${title} - Type: ${mabotType}, MIME: ${effectiveMime}, Size: ${fetched.base64.length} chars`);
 
-          const contents: any[] = [baseFileContent];
-          if (title && typeof title === 'string' && title.trim().length > 0) {
-            contents.push({ type: 'text', value: `Context File: ${title}`, parse_mode: 'Markdown' });
-          }
+          // Create document content according to Mabot API schema
+          const documentContent = createDocumentContent(
+            fetched.base64,
+            title || fetched.filename,
+            effectiveMime
+          );
 
-          finalMessages.push({ role: 'user', contents });
+          fileContents.push(documentContent);
+          fileNames.push(title || fetched.filename);
         } catch (err) {
           console.error('Failed to append context file', file?.title || file?.url, err);
-          finalMessages.push({
-            role: 'user',
-            contents: [{ type: 'text', value: `⚠️ Note: Could not attach file "${file?.title || file?.url}".`, parse_mode: 'Markdown' }]
-          });
+          fileNames.push(`❌ ${file?.title || file?.url} (error)`);
         }
+      }
+      
+      // Add all files as a single message with clear instructions
+      if (fileContents.length > 0) {
+        const fileList = fileNames.join(', ');
+        const fileMessage = {
+          role: 'user',
+          contents: [
+            createTextContent(
+              `📎 ARCHIVOS ADJUNTOS: ${fileList}\n\nPor favor, analiza el contenido de estos archivos y responde basándote en su contenido. Si son PDFs, extrae y analiza el texto. Si son documentos de texto, lee su contenido completo.`
+            ),
+            ...fileContents
+          ]
+        };
+        
+        finalMessages.push(fileMessage);
+        console.log(`Added file message with ${fileContents.length} files: ${fileNames.join(', ')}`);
       }
     }
 
@@ -247,15 +286,19 @@ serve(async (req) => {
       const normalized: any[] = [];
       for (const c of contents) {
         if (!c || typeof c !== 'object') continue;
-        // Normalize text
+        
+        // Normalize text content
         if (c.type === 'text') {
-          normalized.push({ type: 'text', value: String(c.value ?? ''), parse_mode: c.parse_mode || 'Markdown' });
+          normalized.push(createTextContent(
+            String(c.value ?? ''),
+            c.parse_mode || 'Markdown'
+          ));
           continue;
         }
-        // Legacy 'file'
+        
+        // Handle file content (legacy support)
         if (c.type === 'file') {
           const m = c.mimetype || c.mime_type || 'application/octet-stream';
-          const t = mapMimeToMabotType(m);
           let base64 = '';
           let fileName = c.filename;
           if (isHttpUrl(c.value)) {
@@ -266,18 +309,13 @@ serve(async (req) => {
             base64 = c.value; // assume already base64
           }
           if (!fileName) {
-            // Try to infer from value if it looks like a path, else fallback
             fileName = inferFilenameFromUrl(String(c.value || ''), 'file');
           }
-          normalized.push({
-            type: t,
-            filename: fileName,
-            mimetype: m,
-            value: base64
-          });
+          normalized.push(createDocumentContent(base64, fileName, m));
           continue;
         }
-        // Known types: image/audio/video/document
+        
+        // Handle known content types: image/audio/video/document
         if (c.type === 'image' || c.type === 'audio' || c.type === 'video' || c.type === 'document') {
           const m = c.mimetype || c.mime_type || 'application/octet-stream';
           let base64 = '';
@@ -292,14 +330,37 @@ serve(async (req) => {
           if (!fileName) {
             fileName = inferFilenameFromUrl(String(c.value || ''), 'file');
           }
-          normalized.push({
-            type: c.type,
-            filename: fileName,
-            mimetype: m,
-            value: base64
-          });
+          
+          // Create appropriate content type based on the type
+          if (c.type === 'image') {
+            normalized.push({
+              type: 'image',
+              value: base64,
+              filename: fileName,
+              mimetype: m
+            });
+          } else if (c.type === 'audio') {
+            normalized.push({
+              type: 'audio',
+              value: base64,
+              filename: fileName,
+              mimetype: m,
+              parse_to_text: true,
+              parsed_text: null
+            });
+          } else if (c.type === 'video') {
+            normalized.push({
+              type: 'video',
+              value: base64,
+              filename: fileName,
+              mimetype: m
+            });
+          } else {
+            normalized.push(createDocumentContent(base64, fileName, m));
+          }
           continue;
         }
+        
         // Fallback: coerce to document
         const m = c.mimetype || c.mime_type || 'application/octet-stream';
         let base64 = '';
@@ -314,13 +375,9 @@ serve(async (req) => {
         if (!fileName) {
           fileName = inferFilenameFromUrl(String(c.value || ''), 'file');
         }
-        normalized.push({
-          type: 'document',
-          filename: fileName,
-          mimetype: m,
-          value: base64
-        });
+        normalized.push(createDocumentContent(base64, fileName, m));
       }
+      
       // Enforce single text per message by merging extras into the first
       const textIndices = normalized.map((x, i) => (x.type === 'text' ? i : -1)).filter(i => i >= 0);
       if (textIndices.length > 1) {

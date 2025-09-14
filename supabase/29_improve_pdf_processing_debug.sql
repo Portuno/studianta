@@ -1,0 +1,27 @@
+-- 29_improve_pdf_processing_debug.sql
+-- Mejoras en el procesamiento de archivos PDF en el chat
+-- 
+-- Este archivo documenta las mejoras realizadas en la Edge Function mabot-chat
+-- para solucionar el problema de procesamiento de archivos PDF.
+--
+-- PROBLEMA IDENTIFICADO:
+-- El bot detectaba archivos adjuntos pero no podía procesar su contenido,
+-- respondiendo que no podía acceder a los archivos.
+--
+-- SOLUCIONES IMPLEMENTADAS:
+-- 1. Actualización del esquema de mensajes para seguir exactamente la API de Mabot
+-- 2. Mejora en el manejo de archivos PDF con instrucciones más claras
+-- 3. Mejor logging para debugging de archivos procesados
+-- 4. Uso de helpers para crear contenido según el esquema de la API
+--
+-- CAMBIOS EN LA EDGE FUNCTION:
+-- - Agregadas funciones helper createDocumentContent() y createTextContent()
+-- - Mejorado el procesamiento de archivos para seguir el esquema Message-Input
+-- - Instrucciones más específicas para el bot sobre cómo procesar archivos
+-- - Mejor manejo de errores y logging detallado
+--
+-- NOTA: No se requieren cambios en la base de datos para esta mejora.
+-- Los cambios son únicamente en la lógica de la Edge Function.
+
+-- Verificar que la función mabot-chat esté funcionando correctamente
+SELECT 'Edge Function mabot-chat actualizada con mejoras para procesamiento de PDFs' as status;

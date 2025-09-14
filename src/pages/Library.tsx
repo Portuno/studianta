@@ -424,17 +424,32 @@ export default function Library() {
                 </Button>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                {subjects.map((subject) => (
-                  <div key={subject.id} className="min-w-0">
-                    <SubjectCard
-                      subject={subject}
-                      onEdit={handleEditSubject}
-                      onDelete={handleDeleteSubject}
-                      onClick={() => setSelectedSubject(subject)}
-                    />
-                  </div>
-                ))}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-gray-600">
+                    {subjects.length} asignatura{subjects.length !== 1 ? 's' : ''}
+                  </h3>
+                  <Button 
+                    onClick={handleAddSubject}
+                    size="sm"
+                    className="bg-lavender-400 hover:bg-lavender-500 text-white rounded-full px-4 py-2"
+                  >
+                    <Plus size={16} className="mr-1" />
+                    Agregar
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                  {subjects.map((subject) => (
+                    <div key={subject.id} className="min-w-0">
+                      <SubjectCard
+                        subject={subject}
+                        onEdit={handleEditSubject}
+                        onDelete={handleDeleteSubject}
+                        onClick={() => setSelectedSubject(subject)}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
