@@ -80,6 +80,11 @@ export default function Chat() {
   const [currentChatId, setCurrentChatId] = useState<string>("");
   const [loadingSessions, setLoadingSessions] = useState<boolean>(false);
 
+  // Keep ref in sync with state
+  useEffect(() => {
+    chatSessionsRef.current = chatSessions;
+  }, [chatSessions]);
+
   // Obtener parámetros de URL para carpeta específica
   const folderId = searchParams.get('folderId');
   const folderName = searchParams.get('folderName');
@@ -88,6 +93,7 @@ export default function Chat() {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
+  const chatSessionsRef = useRef<ChatSession[]>([]);
 
   // Context data
   const [subjects, setSubjects] = useState<SubjectRow[]>([]);
@@ -166,13 +172,16 @@ export default function Chat() {
       const { data, error } = await supabase
         .from("chat_sessions")
         .insert([toInsert])
-        .select("id, title, context, mabot_chat_id, created_at, last_activity")
+        .select("id, title, context, mabot_chat_id, created_at, last_activity, subject_id, folder_id, folder_name")
         .single();
       if (error) throw error;
       const newSession: ChatSession = {
         id: data.id,
         title: data.title || title,
         contextType: (data.context as any) || "general",
+        subjectId: data.subject_id || undefined,
+        folderId: data.folder_id || undefined,
+        folderName: data.folder_name || undefined,
         messages: [],
         createdAt: new Date(data.created_at),
         lastActivity: new Date(data.last_activity || data.created_at),
@@ -258,7 +267,7 @@ export default function Chat() {
         const folderSessionTitle = `Chat con carpeta: ${folderName}`;
         
         // Buscar si ya existe una sesión para esta carpeta
-        const existingSession = chatSessions.find(session => 
+        const existingSession = chatSessionsRef.current.find(session => 
           session.folderId === folderId && 
           session.subjectId === subjectId
         );
@@ -274,12 +283,15 @@ export default function Chat() {
               user_id: user.id,
               title: folderSessionTitle,
               context: "folder",
+              subject_id: subjectId,
+              folder_id: folderId,
+              folder_name: folderName,
             } as any;
             
             const { data, error } = await supabase
               .from("chat_sessions")
               .insert([toInsert])
-              .select("id, title, context, mabot_chat_id, created_at, last_activity")
+              .select("id, title, context, mabot_chat_id, created_at, last_activity, subject_id, folder_id, folder_name")
               .single();
               
             if (error) throw error;
@@ -323,14 +335,14 @@ export default function Chat() {
     };
     
     createFolderSession();
-  }, [folderId, folderName, subjectId, user, chatSessions]);
+  }, [folderId, folderName, subjectId, user]);
 
   // Handle subject-specific chat navigation (without folder)
   useEffect(() => {
     const createSubjectSession = async () => {
       if (subjectId && !folderId && user) {
         // Buscar si ya existe una sesión para esta asignatura
-        const existingSession = chatSessions.find(session => 
+        const existingSession = chatSessionsRef.current.find(session => 
           session.subjectId === subjectId && 
           !session.folderId
         );
@@ -353,7 +365,7 @@ export default function Chat() {
             const { data, error } = await supabase
               .from("chat_sessions")
               .insert([toInsert])
-              .select("id, title, context, mabot_chat_id, created_at, last_activity")
+              .select("id, title, context, mabot_chat_id, created_at, last_activity, subject_id, folder_id, folder_name")
               .single();
               
             if (error) throw error;
@@ -393,7 +405,7 @@ export default function Chat() {
     };
     
     createSubjectSession();
-  }, [subjectId, folderId, user, chatSessions]);
+  }, [subjectId, folderId, user]);
 
   // Load sessions from DB and ensure a default exists
   useEffect(() => {
@@ -403,7 +415,7 @@ export default function Chat() {
       try {
         const { data: sessions, error } = await supabase
           .from("chat_sessions")
-          .select("id, title, context, mabot_chat_id, created_at, last_activity")
+          .select("id, title, context, mabot_chat_id, created_at, last_activity, subject_id, folder_id, folder_name")
           .order("last_activity", { ascending: false });
         if (error) throw error;
 
@@ -416,13 +428,16 @@ export default function Chat() {
           const { data: created, error: insErr } = await supabase
             .from("chat_sessions")
             .insert([toInsert])
-            .select("id, title, context, mabot_chat_id, created_at, last_activity")
+            .select("id, title, context, mabot_chat_id, created_at, last_activity, subject_id, folder_id, folder_name")
             .single();
           if (insErr) throw insErr;
           const mapped: ChatSession = {
             id: created.id,
             title: created.title || "Chat General",
             contextType: (created.context as any) || "general",
+            subjectId: created.subject_id || undefined,
+            folderId: created.folder_id || undefined,
+            folderName: created.folder_name || undefined,
             messages: [],
             createdAt: new Date(created.created_at),
             lastActivity: new Date(created.last_activity || created.created_at),
@@ -451,6 +466,9 @@ export default function Chat() {
           id: s.id,
           title: s.title || "Chat",
           contextType: (s.context as any) || "general",
+          subjectId: s.subject_id || undefined,
+          folderId: s.folder_id || undefined,
+          folderName: s.folder_name || undefined,
           messages: [],
           createdAt: new Date(s.created_at),
           lastActivity: new Date(s.last_activity || s.created_at),
