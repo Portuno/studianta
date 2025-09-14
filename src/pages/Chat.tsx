@@ -252,37 +252,148 @@ export default function Chat() {
 
   // Handle folder-specific chat navigation
   useEffect(() => {
-    if (folderId && folderName && subjectId && user) {
-      // Crear o encontrar sesión de chat para esta carpeta
-      const folderSessionTitle = `Chat con carpeta: ${folderName}`;
-      
-      // Buscar si ya existe una sesión para esta carpeta
-      const existingSession = chatSessions.find(session => 
-        session.folderId === folderId && 
-        session.subjectId === subjectId
-      );
-      
-      if (existingSession) {
-        setCurrentChatId(existingSession.id);
-      } else {
-        // Crear nueva sesión para la carpeta
-        const newSession: ChatSession = {
-          id: `folder-${folderId}-${Date.now()}`,
-          title: folderSessionTitle,
-          contextType: "folder",
-          subjectId: subjectId,
-          folderId: folderId,
-          folderName: folderName,
-          messages: [],
-          createdAt: new Date(),
-          lastActivity: new Date(),
-        };
+    const createFolderSession = async () => {
+      if (folderId && folderName && subjectId && user) {
+        // Crear o encontrar sesión de chat para esta carpeta
+        const folderSessionTitle = `Chat con carpeta: ${folderName}`;
         
-        setChatSessions(prev => [newSession, ...prev]);
-        setCurrentChatId(newSession.id);
+        // Buscar si ya existe una sesión para esta carpeta
+        const existingSession = chatSessions.find(session => 
+          session.folderId === folderId && 
+          session.subjectId === subjectId
+        );
+        
+        if (existingSession) {
+          setCurrentChatId(existingSession.id);
+        } else {
+          // Crear nueva sesión para la carpeta en la base de datos
+          try {
+            const sessionId = `folder-${folderId}-${Date.now()}`;
+            const toInsert: Inserts<"chat_sessions"> = {
+              id: sessionId,
+              user_id: user.id,
+              title: folderSessionTitle,
+              context: "folder",
+            } as any;
+            
+            const { data, error } = await supabase
+              .from("chat_sessions")
+              .insert([toInsert])
+              .select("id, title, context, mabot_chat_id, created_at, last_activity")
+              .single();
+              
+            if (error) throw error;
+            
+            const newSession: ChatSession = {
+              id: data.id,
+              title: data.title || folderSessionTitle,
+              contextType: "folder",
+              subjectId: subjectId,
+              folderId: folderId,
+              folderName: folderName,
+              messages: [],
+              createdAt: new Date(data.created_at),
+              lastActivity: new Date(data.last_activity || data.created_at),
+              mabotChatId: data.mabot_chat_id || undefined,
+              contextUploaded: false,
+            };
+            
+            setChatSessions(prev => [newSession, ...prev]);
+            setCurrentChatId(newSession.id);
+          } catch (e) {
+            console.error("Failed to create folder chat session:", e);
+            // Fallback to local session if DB fails
+            const newSession: ChatSession = {
+              id: `folder-${folderId}-${Date.now()}`,
+              title: folderSessionTitle,
+              contextType: "folder",
+              subjectId: subjectId,
+              folderId: folderId,
+              folderName: folderName,
+              messages: [],
+              createdAt: new Date(),
+              lastActivity: new Date(),
+            };
+            
+            setChatSessions(prev => [newSession, ...prev]);
+            setCurrentChatId(newSession.id);
+          }
+        }
       }
-    }
+    };
+    
+    createFolderSession();
   }, [folderId, folderName, subjectId, user, chatSessions]);
+
+  // Handle subject-specific chat navigation (without folder)
+  useEffect(() => {
+    const createSubjectSession = async () => {
+      if (subjectId && !folderId && user) {
+        // Buscar si ya existe una sesión para esta asignatura
+        const existingSession = chatSessions.find(session => 
+          session.subjectId === subjectId && 
+          !session.folderId
+        );
+        
+        if (existingSession) {
+          setCurrentChatId(existingSession.id);
+        } else {
+          // Crear nueva sesión para la asignatura en la base de datos
+          try {
+            const sessionId = `subject-${subjectId}-${Date.now()}`;
+            const subjectSessionTitle = `Chat con asignatura`;
+            
+            const toInsert: Inserts<"chat_sessions"> = {
+              id: sessionId,
+              user_id: user.id,
+              title: subjectSessionTitle,
+              context: "subject",
+            } as any;
+            
+            const { data, error } = await supabase
+              .from("chat_sessions")
+              .insert([toInsert])
+              .select("id, title, context, mabot_chat_id, created_at, last_activity")
+              .single();
+              
+            if (error) throw error;
+            
+            const newSession: ChatSession = {
+              id: data.id,
+              title: data.title || subjectSessionTitle,
+              contextType: "subject",
+              subjectId: subjectId,
+              messages: [],
+              createdAt: new Date(data.created_at),
+              lastActivity: new Date(data.last_activity || data.created_at),
+              mabotChatId: data.mabot_chat_id || undefined,
+              contextUploaded: false,
+            };
+            
+            setChatSessions(prev => [newSession, ...prev]);
+            setCurrentChatId(newSession.id);
+          } catch (e) {
+            console.error("Failed to create subject chat session:", e);
+            // Fallback to local session if DB fails
+            const newSession: ChatSession = {
+              id: `subject-${subjectId}-${Date.now()}`,
+              title: "Chat con asignatura",
+              contextType: "subject",
+              subjectId: subjectId,
+              messages: [],
+              createdAt: new Date(),
+              lastActivity: new Date(),
+            };
+            
+            setChatSessions(prev => [newSession, ...prev]);
+            setCurrentChatId(newSession.id);
+          }
+        }
+      }
+    };
+    
+    createSubjectSession();
+  }, [subjectId, folderId, user, chatSessions]);
 
   // Load sessions from DB and ensure a default exists
   useEffect(() => {
