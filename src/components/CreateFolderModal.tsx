@@ -23,6 +23,19 @@ export const CreateFolderModal = ({ isOpen, onClose, onCreateFolder }: CreateFol
     }
   }, [isOpen]);
 
+  // Save form data as user types (with debounce)
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const timeoutId = setTimeout(() => {
+      if (folderName.trim()) {
+        localStorage.setItem('createFolderModal_formData', folderName);
+      }
+    }, 500); // Save after 500ms of no typing
+
+    return () => clearTimeout(timeoutId);
+  }, [folderName, isOpen]);
+
   // Prevent modal from closing when switching tabs and persist form data
   useEffect(() => {
     if (!isOpen) return;
@@ -47,24 +60,14 @@ export const CreateFolderModal = ({ isOpen, onClose, onCreateFolder }: CreateFol
       }
     };
 
-    // Restore form data when tab becomes visible
-    const handlePageShow = () => {
-      const savedFormData = localStorage.getItem('createFolderModal_formData');
-      if (savedFormData && !folderName) {
-        setFolderName(savedFormData);
-      }
-    };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('pagehide', handlePageHide);
-    window.addEventListener('pageshow', handlePageShow);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pagehide', handlePageHide);
-      window.removeEventListener('pageshow', handlePageShow);
     };
   }, [isOpen, folderName, isSubmitting]);
 
