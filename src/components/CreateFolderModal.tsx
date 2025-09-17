@@ -13,7 +13,17 @@ export const CreateFolderModal = ({ isOpen, onClose, onCreateFolder }: CreateFol
   const [folderName, setFolderName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Prevent modal from closing when switching tabs
+  // Restore form data when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const savedFormData = localStorage.getItem('createFolderModal_formData');
+      if (savedFormData) {
+        setFolderName(savedFormData);
+      }
+    }
+  }, [isOpen]);
+
+  // Prevent modal from closing when switching tabs and persist form data
   useEffect(() => {
     if (!isOpen) return;
 
@@ -30,12 +40,31 @@ export const CreateFolderModal = ({ isOpen, onClose, onCreateFolder }: CreateFol
       // This prevents the modal from closing when switching tabs
     };
 
+    // Persist form data when tab becomes hidden
+    const handlePageHide = () => {
+      if (folderName.trim()) {
+        localStorage.setItem('createFolderModal_formData', folderName);
+      }
+    };
+
+    // Restore form data when tab becomes visible
+    const handlePageShow = () => {
+      const savedFormData = localStorage.getItem('createFolderModal_formData');
+      if (savedFormData && !folderName) {
+        setFolderName(savedFormData);
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('pageshow', handlePageShow);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('pageshow', handlePageShow);
     };
   }, [isOpen, folderName, isSubmitting]);
 
@@ -59,6 +88,8 @@ export const CreateFolderModal = ({ isOpen, onClose, onCreateFolder }: CreateFol
 
   const resetForm = () => {
     setFolderName("");
+    // Clear persisted form data
+    localStorage.removeItem('createFolderModal_formData');
   };
 
   const handleClose = () => {

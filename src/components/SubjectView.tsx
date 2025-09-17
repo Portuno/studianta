@@ -85,6 +85,23 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder, o
   const [isUploading, setIsUploading] = useState(false);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
+
+  // Persist modal state in localStorage to prevent loss when switching tabs
+  useEffect(() => {
+    const savedModalState = localStorage.getItem(`createFolderModal_${subject.id}`);
+    if (savedModalState === 'true') {
+      setShowCreateFolder(true);
+    }
+  }, [subject.id]);
+
+  // Save modal state to localStorage when it changes
+  useEffect(() => {
+    if (showCreateFolder) {
+      localStorage.setItem(`createFolderModal_${subject.id}`, 'true');
+    } else {
+      localStorage.removeItem(`createFolderModal_${subject.id}`);
+    }
+  }, [showCreateFolder, subject.id]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
@@ -315,6 +332,10 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder, o
       };
       
       setFolders([...folders, newFolder]);
+      
+      // Close modal and clear localStorage
+      setShowCreateFolder(false);
+      localStorage.removeItem(`createFolderModal_${subject.id}`);
     } catch (error) {
       console.error('Error creating folder:', error);
       alert(`Error al crear la carpeta: ${error.message || 'Error desconocido'}`);
@@ -956,7 +977,10 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder, o
       {/* Create Folder Modal */}
       <CreateFolderModal
         isOpen={showCreateFolder}
-        onClose={() => setShowCreateFolder(false)}
+        onClose={() => {
+          setShowCreateFolder(false);
+          localStorage.removeItem(`createFolderModal_${subject.id}`);
+        }}
         onCreateFolder={handleCreateFolder}
       />
 
