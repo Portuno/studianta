@@ -225,7 +225,14 @@ serve(async (req) => {
 
     // NEW: Even when messages are provided, also attach contextFiles (download -> base64 -> contents)
     if (finalMessages && contextFiles && Array.isArray(contextFiles) && contextFiles.length > 0) {
-      console.log('Appending contextFiles to provided messages:', contextFiles.length);
+      console.log('🔍 CONTEXT FILES PROCESSING - START');
+      console.log('📁 Total contextFiles to process:', contextFiles.length);
+      console.log('📋 ContextFiles details:', contextFiles.map(f => ({
+        title: f.title,
+        url: f.url,
+        mime_type: f.mime_type,
+        size: f.file_size
+      })));
       
       // Create a single message with all files instead of multiple messages
       const fileContents: any[] = [];
@@ -237,13 +244,19 @@ serve(async (req) => {
           const declaredMime: string | undefined = file.mime_type || file.mimetype;
           const title: string | undefined = file.title || file.fileName;
           
-          console.log(`Processing file: ${title || 'unnamed'} (${sourceUrl})`);
+          console.log(`🔄 Processing file: ${title || 'unnamed'}`);
+          console.log(`🔗 Source URL: ${sourceUrl}`);
+          console.log(`📄 Declared MIME: ${declaredMime}`);
           
           const fetched = await fetchAsBase64(sourceUrl);
           const effectiveMime = declaredMime || fetched.mimetype;
           const mabotType = mapMimeToMabotType(effectiveMime);
 
-          console.log(`File processed: ${title} - Type: ${mabotType}, MIME: ${effectiveMime}, Size: ${fetched.base64.length} chars`);
+          console.log(`✅ File processed successfully:`);
+          console.log(`   - Title: ${title || fetched.filename}`);
+          console.log(`   - Type: ${mabotType}`);
+          console.log(`   - MIME: ${effectiveMime}`);
+          console.log(`   - Base64 size: ${fetched.base64.length} chars`);
 
           // Create document content according to Mabot API schema
           const documentContent = createDocumentContent(
@@ -255,7 +268,8 @@ serve(async (req) => {
           fileContents.push(documentContent);
           fileNames.push(title || fetched.filename);
         } catch (err) {
-          console.error('Failed to append context file', file?.title || file?.url, err);
+          console.error('❌ Failed to process context file:', file?.title || file?.url);
+          console.error('❌ Error details:', err);
           fileNames.push(`❌ ${file?.title || file?.url} (error)`);
         }
       }
@@ -274,8 +288,13 @@ serve(async (req) => {
         };
         
         finalMessages.push(fileMessage);
-        console.log(`Added file message with ${fileContents.length} files: ${fileNames.join(', ')}`);
+        console.log(`✅ Added file message with ${fileContents.length} files: ${fileNames.join(', ')}`);
+        console.log(`📤 Final message structure:`, JSON.stringify(fileMessage, null, 2));
+      } else {
+        console.log('⚠️ No files were successfully processed');
       }
+      
+      console.log('🔍 CONTEXT FILES PROCESSING - END');
     }
 
     // Normalize any provided messages to Mabot schema

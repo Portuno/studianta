@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,32 @@ interface CreateFolderModalProps {
 export const CreateFolderModal = ({ isOpen, onClose, onCreateFolder }: CreateFolderModalProps) => {
   const [folderName, setFolderName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Prevent modal from closing when switching tabs
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (folderName.trim() && !isSubmitting) {
+        e.preventDefault();
+        e.returnValue = '¿Estás seguro de que quieres salir? Se perderán los cambios no guardados.';
+        return e.returnValue;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      // Don't close modal when tab becomes hidden/visible
+      // This prevents the modal from closing when switching tabs
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isOpen, folderName, isSubmitting]);
 
   if (!isOpen) return null;
 

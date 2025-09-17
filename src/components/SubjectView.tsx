@@ -657,6 +657,19 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder, o
               </Card>
             ) : (
               <div className="space-y-3">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-gray-600">
+                    {folders.length} carpeta{folders.length !== 1 ? 's' : ''}
+                  </h3>
+                  <Button
+                    onClick={() => setShowCreateFolder(true)}
+                    size="sm"
+                    className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-4 py-2"
+                  >
+                    <Plus size={16} className="mr-1" />
+                    Agregar
+                  </Button>
+                </div>
                 {folders.map((folder) => (
                   <FolderItem
                     key={folder.id}
