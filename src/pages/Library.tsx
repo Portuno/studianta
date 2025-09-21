@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
-  Search, 
   Folder, 
   FileText, 
   Headphones, 
@@ -18,7 +17,6 @@ import {
   MoreVertical
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { usePrograms } from "@/hooks/useSupabase";
 import { useSubjects } from "@/hooks/useSupabase";
@@ -61,8 +59,6 @@ export default function Library() {
   const { subjects, loading: subjectsLoading, error: subjectsError, fetchSubjects } = useSubjects();
   const { materials, loading: materialsLoading, error: materialsError, fetchMaterials } = useStudyMaterials();
   const { goals: weeklyGoals, loading: weeklyGoalsLoading, error: weeklyGoalsError, fetchGoals: fetchWeeklyGoals } = useWeeklyGoals();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<any>(null);
   const [selectedSubject, setSelectedSubject] = useState<any>(null);
   const [showUpload, setShowUpload] = useState(false);
@@ -184,11 +180,6 @@ export default function Library() {
     setShowAddProgram(false);
   };
 
-  // Filter materials by search query
-  const filteredMaterials = materials.filter(material =>
-    material.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    material.subjects?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   // Show error state
   if (hasError) {
@@ -296,25 +287,6 @@ export default function Library() {
             )}
           </div>
           
-          <div className="flex items-center gap-2">
-            <div className="hidden md:block min-w-[320px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-300" size={18} />
-                <Input 
-                  placeholder="Buscar en tus materiales..." 
-                  className="pl-10 rounded-xl border-pink-200 bg-white/80 backdrop-blur-sm focus:border-pink-300 focus:ring-pink-200"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className="p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white transition-all duration-200 md:hidden"
-            >
-              <Search size={20} className="text-pink-400" />
-            </button>
-          </div>
         </div>
 
         {/* Program Selector Dropdown */}
@@ -371,21 +343,6 @@ export default function Library() {
           </div>
         )}
         
-        {/* Search Bar */}
-        {showSearch && (
-          <div className="mb-4 animate-in slide-in-from-top-2 duration-200">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pink-300" size={18} />
-              <Input 
-                placeholder="Buscar en tus materiales..." 
-                className="pl-10 rounded-2xl border-pink-200 bg-white/80 backdrop-blur-sm focus:border-pink-300 focus:ring-pink-200"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Content Area */}
@@ -473,44 +430,6 @@ export default function Library() {
           </div>
         )}
 
-        {/* Search Results */}
-        {searchQuery && !selectedSubject && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-medium text-gray-700 mb-4">Resultados de Búsqueda</h2>
-            {filteredMaterials.length === 0 ? (
-              <Card className="p-6 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm text-center">
-                <p className="text-gray-500">No se encontraron materiales para "{searchQuery}"</p>
-                <p className="text-sm text-gray-400 mt-2">Intenta con un término de búsqueda diferente</p>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {filteredMaterials.map((material) => (
-                  <Card 
-                    key={material.id} 
-                    className="p-4 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                        {getFileIcon(material.type)}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-medium text-gray-800">{material.title}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-500">
-                            {material.subjects?.name || 'Asignatura Desconocida'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <FileStatusBadge status="completed" size="sm" />
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Floating Action Button - Only show when not in subject view */}

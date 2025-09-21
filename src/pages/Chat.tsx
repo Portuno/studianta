@@ -1637,30 +1637,43 @@ export default function Chat() {
       const showMabotBanner = !mabotConfigured;
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      {/* Header - Fixed height */}
-      <div className="flex items-center justify-between pt-8 pb-4 px-6 flex-shrink-0">
-        <div className="text-left">
-          <h1 className="text-2xl font-light text-foreground/90 mb-1">Chat</h1>
-          <p className="text-muted-foreground text-sm">Acción inmediata → Contexto opcional</p>
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
+      {/* Mobile-optimized Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-background/95 backdrop-blur-sm border-b border-border/50 flex-shrink-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <h1 className="text-lg font-semibold text-foreground truncate">Chat</h1>
+          {currentChat && (
+            <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+              <span className="truncate max-w-[120px]">
+                {currentChat.contextType === "agenda"
+                  ? "Agenda"
+                  : currentChat.contextType === "subject"
+                  ? currentChat.subjectName || "Asignatura"
+                  : currentChat.contextType === "program"
+                  ? currentChat.programName || "Carrera"
+                  : "General"}
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" className="rounded-xl" onClick={handleCreateNewChat} aria-label="Nuevo chat">
-            <Plus size={14} className="mr-1" /> Nuevo chat
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="rounded-lg h-8 px-3 text-xs" 
+            onClick={handleCreateNewChat} 
+            aria-label="Nuevo chat"
+          >
+            <Plus size={14} className="sm:mr-1" />
+            <span className="hidden sm:inline">Nuevo</span>
           </Button>
           {currentChat && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" className="rounded-xl bg-violet-300 text-white hover:bg-violet-400 border-0">
-                  {`Contexto: ${
-                    currentChat.contextType === "agenda"
-                      ? "Agenda"
-                      : currentChat.contextType === "subject"
-                      ? currentChat.subjectName || "Asignatura"
-                      : currentChat.contextType === "program"
-                      ? currentChat.programName || "Carrera"
-                      : "Chat General"
-                  }`}
+                <Button size="sm" className="rounded-lg bg-violet-500 text-white hover:bg-violet-600 border-0 h-8 px-3 text-xs">
+                  <span className="hidden sm:inline">Contexto</span>
+                  <span className="sm:hidden">⚙️</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-56">
@@ -1723,49 +1736,75 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Sessions list - Fixed height */}
-      <div className="px-6 -mt-2 mb-2 flex items-center gap-2 overflow-x-auto flex-shrink-0">
-        {chatSessions.map((s) => (
-          <div key={s.id} className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 border ${s.id === currentChatId ? 'bg-primary/10 border-primary/40' : 'bg-background border-border'} cursor-pointer`}
-               onClick={() => handleSelectSession(s.id)}
-               role="button" tabIndex={0}
-               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectSession(s.id); }}
-               aria-label={`Seleccionar chat ${s.title}`}>
-            <span className="text-sm whitespace-nowrap max-w-[200px] truncate">{s.title}</span>
-            <button
-              type="button"
-              className="p-1 rounded hover:bg-muted"
-              aria-label={`Eliminar chat ${s.title}`}
-              onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }}
-            >
-              <Trash2 size={14} className="text-muted-foreground" />
-            </button>
-          </div>
-        ))}
+      {/* Mobile-optimized Sessions list */}
+      <div className="px-4 py-2 border-b border-border/30 flex-shrink-0">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide smooth-scroll">
+          {chatSessions.length === 0 ? (
+            <div className="text-sm text-muted-foreground px-3 py-2">
+              No hay conversaciones. Crea una nueva para empezar.
+            </div>
+          ) : (
+            chatSessions.map((s) => (
+              <div 
+                key={s.id} 
+                className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 border flex-shrink-0 cursor-pointer transition-colors ${
+                  s.id === currentChatId 
+                    ? 'bg-primary/10 border-primary/40 text-primary' 
+                    : 'bg-muted/50 border-border hover:bg-muted'
+                }`}
+                onClick={() => handleSelectSession(s.id)}
+                role="button" 
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectSession(s.id); }}
+                aria-label={`Seleccionar chat ${s.title}`}
+              >
+                <span className="text-sm whitespace-nowrap max-w-[140px] sm:max-w-[200px] truncate">
+                  {s.title}
+                </span>
+                <button
+                  type="button"
+                  className="p-1 rounded hover:bg-muted-foreground/20 transition-colors"
+                  aria-label={`Eliminar chat ${s.title}`}
+                  onClick={(e) => { e.stopPropagation(); handleDeleteSession(s.id); }}
+                >
+                  <Trash2 size={12} className="text-muted-foreground" />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
-      {/* Selector de carrera fijo al lado del contexto para acceso rápido - Fixed height */}
-      <div className="px-6 -mt-2 mb-2 flex items-center gap-2 flex-shrink-0">
-        {programs.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" className="rounded-xl bg-violet-300 text-white hover:bg-violet-400 border-0">
-                {`Carrera: ${currentProgram?.name || "—"}`}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-56">
-              <DropdownMenuLabel>Cambiar carrera</DropdownMenuLabel>
-              {programs.map((p) => (
-                <DropdownMenuItem key={p.id} className="cursor-pointer" onClick={() => handleSelectProgram(p.id, p.name)}>
-                  <GraduationCap size={14} className="mr-2" />
-                  <span className="flex-1">{p.name}</span>
-                  {currentProgramId === p.id && <span className="text-xs text-primary">✓</span>}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
+      {/* Mobile-optimized Program selector - Only show if needed */}
+      {programs.length > 0 && (
+        <div className="px-4 py-2 bg-muted/30 border-b border-border/20 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <GraduationCap size={14} className="text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Carrera:</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-6 px-2 text-xs font-medium text-foreground hover:bg-muted"
+                >
+                  {currentProgram?.name || "Seleccionar"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-48">
+                <DropdownMenuLabel>Cambiar carrera</DropdownMenuLabel>
+                {programs.map((p) => (
+                  <DropdownMenuItem key={p.id} className="cursor-pointer" onClick={() => handleSelectProgram(p.id, p.name)}>
+                    <GraduationCap size={14} className="mr-2" />
+                    <span className="flex-1">{p.name}</span>
+                    {currentProgramId === p.id && <span className="text-xs text-primary">✓</span>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      )}
 
       {showMabotBanner && (
         <div className="mx-6 mb-2 rounded-xl border border-yellow-300/40 bg-yellow-500/5 px-3 py-2 text-yellow-700 flex items-center gap-2 flex-shrink-0" role="alert" aria-live="polite">
@@ -1776,26 +1815,28 @@ export default function Chat() {
         </div>
       )}
 
-      {/* Chat Messages Area - Scrollable container */}
+      {/* Mobile-optimized Chat Messages Area */}
       {currentChat && (
         <div className="flex-1 min-h-0 flex flex-col">
           {/* Messages container with proper scrolling */}
-          <div className="flex-1 overflow-y-auto px-6 py-4">
-            <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 sm:py-4 smooth-scroll">
+            <div className="space-y-3 sm:space-y-4">
               {currentChat.messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}>
                   <Card
-                    className={`max-w-[80%] p-4 rounded-2xl ${
-                      msg.type === "user" ? "bg-primary text-primary-foreground ml-8" : "gradient-card border-border/30 mr-8"
+                    className={`max-w-[85%] sm:max-w-[80%] p-3 sm:p-4 rounded-xl sm:rounded-2xl ${
+                      msg.type === "user" 
+                        ? "bg-primary text-primary-foreground ml-2 sm:ml-8" 
+                        : "gradient-card border-border/30 mr-2 sm:mr-8"
                     }`}
                   >
-                    <div className="flex items-start gap-2 mb-2">
+                    <div className="flex items-start gap-2 mb-1 sm:mb-2">
                       {msg.type === "bot" ? (
-                        <Bot size={16} className="text-primary mt-0.5" />
+                        <Bot size={14} className="text-primary mt-0.5 flex-shrink-0" />
                       ) : (
-                        <User size={16} className="text-primary-foreground mt-0.5" />
+                        <User size={14} className="text-primary-foreground mt-0.5 flex-shrink-0" />
                       )}
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
                           components={{
@@ -1803,22 +1844,22 @@ export default function Chat() {
                               <a {...props} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2" />
                             ),
                             ul: ({node, ...props}) => (
-                              <ul {...props} className="list-disc ml-5 my-2" />
+                              <ul {...props} className="list-disc ml-4 sm:ml-5 my-1 sm:my-2" />
                             ),
                             ol: ({node, ...props}) => (
-                              <ol {...props} className="list-decimal ml-5 my-2" />
+                              <ol {...props} className="list-decimal ml-4 sm:ml-5 my-1 sm:my-2" />
                             ),
                             li: ({node, ...props}) => <li {...props} className="my-0.5" />,
                             code: ({node, className, children, ...props}) => (
-                              <code className={`rounded px-1 py-0.5 bg-muted text-foreground/90 ${className || ''}`} {...props}>{children}</code>
+                              <code className={`rounded px-1 py-0.5 bg-muted text-foreground/90 text-xs sm:text-sm ${className || ''}`} {...props}>{children}</code>
                             )
                           }}
-                          className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+                          className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words"
                         >
                           {msg.message}
                         </ReactMarkdown>
                         <span
-                          className={`text-xs mt-2 block ${msg.type === "user" ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                          className={`text-xs mt-1 sm:mt-2 block ${msg.type === "user" ? "text-primary-foreground/70" : "text-muted-foreground"}`}
                         >
                           {msg.time}
                         </span>
@@ -1830,16 +1871,16 @@ export default function Chat() {
 
               {isLoading && (
                 <div className="flex justify-start">
-                  <Card className="gradient-card border-border/30 p-4 rounded-2xl mr-8">
+                  <Card className="gradient-card border-border/30 p-3 sm:p-4 rounded-xl sm:rounded-2xl mr-2 sm:mr-8">
                     <div className="flex items-center gap-2">
-                      <Bot size={16} className="text-primary" />
-                      <div className="flex items-center gap-1">
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
+                      <Bot size={14} className="text-primary flex-shrink-0" />
+                      <div className="flex items-center gap-1 min-w-0">
+                        <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs sm:text-sm text-muted-foreground truncate">
                           {currentChat?.contextType === "subject" && !currentChat?.contextUploaded 
-                            ? "Procesando materiales y archivos..." 
+                            ? "Procesando materiales..." 
                             : isProcessingFiles
-                             ? "Procesando archivos PDF (esto puede tomar un momento)..." 
+                             ? "Procesando PDFs..." 
                              : "Pensando..."
                            }
                         </span>
@@ -1854,36 +1895,36 @@ export default function Chat() {
         </div>
       )}
 
-      {/* Input Area - Fixed at bottom */}
+      {/* Mobile-optimized Input Area */}
       {currentChat && (
-        <div className="px-6 pb-5 pt-2 border-t border-violet-300/50 bg-violet-200/60 backdrop-blur supports-[backdrop-filter]:bg-violet-200/60 flex-shrink-0">
-          {/* Context status indicator */}
+        <div className="px-3 sm:px-6 py-3 sm:py-4 border-t border-border/50 bg-background/95 backdrop-blur-sm flex-shrink-0">
+          {/* Context status indicator - Mobile optimized */}
           {currentChat.contextType === "subject" && (
             <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <BookOpen size={12} />
-              <span>
+              <BookOpen size={12} className="flex-shrink-0" />
+              <span className="truncate">
                 {currentChat.contextUploaded 
-                  ? "📎 Contexto cargado con materiales y archivos" 
-                  : "🔄 El contexto se actualizará con los materiales y archivos más recientes"
+                  ? "📎 Contexto cargado" 
+                  : "🔄 Actualizando contexto"
                 }
               </span>
             </div>
           )}
 
-          {/* Attached files chips */}
+          {/* Attached files chips - Mobile optimized */}
           {attachedFiles.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-2">
+            <div className="mb-2 flex flex-wrap gap-1 sm:gap-2">
               {attachedFiles.map((f, idx) => (
                 <span key={`${f.title}-${idx}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs text-foreground">
-                  <FileText size={12} className="text-muted-foreground" />
-                  <span className="max-w-[180px] truncate" title={f.title}>{f.title}</span>
+                  <FileText size={10} className="text-muted-foreground flex-shrink-0" />
+                  <span className="max-w-[120px] sm:max-w-[180px] truncate" title={f.title}>{f.title}</span>
                   <button
                     type="button"
                     aria-label={`Quitar ${f.title}`}
-                    className="rounded-full p-0.5 hover:bg-muted-foreground/10"
+                    className="rounded-full p-0.5 hover:bg-muted-foreground/10 flex-shrink-0"
                     onClick={() => handleRemoveAttachment(idx)}
                   >
-                    <X size={12} />
+                    <X size={10} />
                   </button>
                 </span>
               ))}
@@ -1894,12 +1935,13 @@ export default function Chat() {
             <Button
               type="button"
               size="icon"
-              className="rounded-2xl bg-pink-500 text-white hover:bg-pink-600 shadow-lg shadow-pink-200/40"
+              className="rounded-xl sm:rounded-2xl bg-pink-500 text-white hover:bg-pink-600 shadow-lg shadow-pink-200/40 h-9 w-9 sm:h-10 sm:w-10"
               onClick={handleChooseFiles}
-              aria-label="Adjuntar archivos (PDF o TXT)"
+              aria-label="Adjuntar archivos"
               disabled={isLoading}
             >
-              <Paperclip size={18} />
+              <Paperclip size={16} className="sm:hidden" />
+              <Paperclip size={18} className="hidden sm:block" />
             </Button>
             <input
               ref={fileInputRef}
@@ -1927,18 +1969,19 @@ export default function Chat() {
                   handleSendMessage();
                 }
               }}
-              className="flex-1 rounded-2xl border-violet-300/50 focus:border-violet-400/50 focus:ring-violet-400/20"
+              className="flex-1 rounded-xl sm:rounded-2xl border-border/50 focus:border-primary/50 focus:ring-primary/20 h-9 sm:h-10 text-sm"
               disabled={isLoading}
             />
             <Button
               type="button"
               size="icon"
-              className="rounded-2xl bg-violet-500 text-white hover:bg-violet-600 shadow-lg shadow-violet-200/40"
+              className="rounded-xl sm:rounded-2xl bg-violet-500 text-white hover:bg-violet-600 shadow-lg shadow-violet-200/40 h-9 w-9 sm:h-10 sm:w-10"
               onClick={handleSendMessage}
               aria-label="Enviar mensaje"
               disabled={isLoading || !inputMessage.trim()}
             >
-              <Send size={18} />
+              <Send size={16} className="sm:hidden" />
+              <Send size={18} className="hidden sm:block" />
             </Button>
           </div>
         </div>
