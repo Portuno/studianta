@@ -28,6 +28,7 @@ import { useSubjects } from "@/hooks/useSupabase";
 // import { useTopics } from "@/hooks/useSupabase"; // REMOVIDO: useTopics fue eliminado
 import { useStudyMaterials } from "@/hooks/useSupabase";
 import { useNotes } from "@/hooks/useSupabase";
+import { useToast } from "@/hooks/use-toast";
 import { FileStatusBadge } from "@/components/FileStatusBadge";
 import { FileUploadModal } from "@/components/FileUploadModal";
 import { AddProgramModal } from "@/components/AddProgramModal";
@@ -66,6 +67,7 @@ export default function Library() {
   const { materials, loading: materialsLoading, error: materialsError, fetchMaterials } = useStudyMaterials();
   const { goals: weeklyGoals, loading: weeklyGoalsLoading, error: weeklyGoalsError, fetchGoals: fetchWeeklyGoals } = useWeeklyGoals();
   const { addNote } = useNotes();
+  const { toast } = useToast();
   const [selectedProgram, setSelectedProgram] = useState<any>(null);
   const [selectedSubject, setSelectedSubject] = useState<any>(null);
   const [showUpload, setShowUpload] = useState(false);
@@ -157,9 +159,20 @@ export default function Library() {
         if (selectedProgram?.id) {
           fetchSubjects(selectedProgram.id);
         }
+
+        // Show success notification
+        toast({
+          title: "Asignatura eliminada ✅",
+          description: "La asignatura se ha eliminado exitosamente",
+          className: "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-800 shadow-lg",
+        });
       } catch (error) {
         console.error('Error deleting subject:', error);
-        alert('Error al eliminar la asignatura. Por favor, inténtalo de nuevo.');
+        toast({
+          title: "❌ Error al eliminar",
+          description: "No se pudo eliminar la asignatura. Por favor, inténtalo de nuevo.",
+          className: "bg-gradient-to-r from-red-50 to-rose-50 border-red-200 text-red-800 shadow-lg",
+        });
       }
     }
   };
@@ -201,7 +214,11 @@ export default function Library() {
 
   const handleCreateQuickNote = async () => {
     if (!quickNoteSubject || !quickNoteName.trim()) {
-      alert('Por favor selecciona una asignatura y escribe un nombre para la nota');
+      toast({
+        title: "⚠️ Campos requeridos",
+        description: "Por favor selecciona una asignatura y escribe un nombre para la nota",
+        className: "bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 text-amber-800 shadow-lg",
+      });
       return;
     }
 
@@ -223,11 +240,19 @@ export default function Library() {
       setQuickNoteContent("");
       setShowQuickNote(false);
       
-      // Show success message
-      alert('Nota creada exitosamente');
+      // Show success notification
+      toast({
+        title: "¡Nota creada! ✨",
+        description: "Tu nota se ha guardado exitosamente",
+        className: "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-800 shadow-lg",
+      });
     } catch (error) {
       console.error('Error creating note:', error);
-      alert('Error al crear la nota. Por favor, inténtalo de nuevo.');
+      toast({
+        title: "❌ Error al crear nota",
+        description: "No se pudo crear la nota. Por favor, inténtalo de nuevo.",
+        className: "bg-gradient-to-r from-red-50 to-rose-50 border-red-200 text-red-800 shadow-lg",
+      });
     } finally {
       setIsSavingNote(false);
     }

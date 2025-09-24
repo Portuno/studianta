@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNotes, useSubjects, usePrograms } from "@/hooks/useSupabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -52,6 +53,7 @@ export default function Notas() {
   const [isEditing, setIsEditing] = useState(false);
   const [noteName, setNoteName] = useState("");
   const [noteContent, setNoteContent] = useState("");
+  const [noteSubjectId, setNoteSubjectId] = useState<string>("");
   const [showSubjectSelector, setShowSubjectSelector] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -81,21 +83,28 @@ export default function Notas() {
     ? notes.filter(note => note.subject_id === selectedSubject)
     : notes;
 
-  // Get unique subjects from notes
-  const subjectsWithNotes = subjects.filter(subject => 
-    notes.some(note => note.subject_id === subject.id)
-  );
+  // Show all subjects in the selector, not just those with notes
+  const allSubjects = subjects;
 
   const handleCreateNote = async () => {
-    if (!selectedSubject) {
-      alert('Por favor selecciona una asignatura primero');
+    if (!noteSubjectId) {
+      alert('Por favor selecciona una asignatura para la nota');
+      return;
+    }
+
+    // For "general" notes, we need to create a special subject or handle differently
+    // For now, we'll use the first available subject as a fallback
+    const subjectId = noteSubjectId === "general" ? allSubjects[0]?.id : noteSubjectId;
+    
+    if (!subjectId) {
+      alert('No hay asignaturas disponibles. Por favor, crea una asignatura primero.');
       return;
     }
 
     setIsSaving(true);
     try {
       const { error } = await addNote({
-        subject_id: selectedSubject,
+        subject_id: subjectId,
         name: noteName || `Nota - ${new Date().toLocaleString('es-ES')}`,
         content: noteContent
       });
@@ -107,6 +116,7 @@ export default function Notas() {
       // Reset form
       setNoteName("");
       setNoteContent("");
+      setNoteSubjectId("");
       setSelectedNote(null);
       setIsEditing(false);
     } catch (error) {
@@ -166,6 +176,7 @@ export default function Notas() {
     setSelectedNote(note);
     setNoteName(note.name);
     setNoteContent(note.content);
+    setNoteSubjectId(note.subject_id);
     setIsEditing(true);
   };
 
@@ -173,6 +184,7 @@ export default function Notas() {
     setSelectedNote(null);
     setNoteName("");
     setNoteContent("");
+    setNoteSubjectId("");
     setIsEditing(true);
   };
 
@@ -181,6 +193,7 @@ export default function Notas() {
     setIsEditing(false);
     setNoteName("");
     setNoteContent("");
+    setNoteSubjectId("");
   };
 
   const formatDate = (dateString: string) => {
@@ -278,7 +291,7 @@ export default function Notas() {
                   {!selectedSubject && <span className="ml-auto text-pink-500">✓</span>}
                 </button>
 
-                {subjectsWithNotes.map((subject) => (
+                {allSubjects.map((subject) => (
                   <button
                     key={subject.id}
                     onClick={() => {
@@ -403,6 +416,33 @@ export default function Notas() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Asignatura
+                    </label>
+                    <Select value={noteSubjectId} onValueChange={setNoteSubjectId}>
+                      <SelectTrigger className="rounded-xl border-pink-200 focus:border-pink-400 focus:ring-pink-400">
+                        <SelectValue placeholder="Selecciona una asignatura o General" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">
+                          <div className="flex items-center gap-2">
+                            <BookOpen size={16} className="text-pink-400" />
+                            <span>General</span>
+                          </div>
+                        </SelectItem>
+                        {allSubjects.map((subject) => (
+                          <SelectItem key={subject.id} value={subject.id}>
+                            <div className="flex items-center gap-2">
+                              <BookOpen size={16} className="text-pink-400" />
+                              <span>{subject.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Nombre de la Nota
                     </label>
                     <Input
@@ -428,7 +468,7 @@ export default function Notas() {
                   <div className="flex gap-2">
                     <Button
                       onClick={selectedNote ? handleUpdateNote : handleCreateNote}
-                      disabled={isSaving || !noteName.trim()}
+                      disabled={isSaving || !noteName.trim() || !noteSubjectId}
                       className="flex-1 bg-pink-400 hover:bg-pink-500 text-white rounded-full"
                     >
                       {isSaving ? (
