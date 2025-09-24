@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Plus, Upload, Clock, User, MapPin, Folder, ChevronDown, X } from "lucide-react";
+import { FileText, Calendar, Plus, Upload, Clock, User, MapPin, Folder, ChevronDown, X, StickyNote } from "lucide-react";
 import { FileStatusBadge } from "./FileStatusBadge";
 import { Input } from "@/components/ui/input";
 import { PDFViewer } from "./PDFViewer";
@@ -25,6 +25,7 @@ interface SubjectViewProps {
   onAddFile: (opts?: { subjectId?: string; folderName?: string }) => void;
   onChatWithFolder?: (folderId: string, folderName: string, subjectId: string) => void;
   onFileDeleted?: () => void;
+  onViewNotes?: (subjectId: string) => void;
 }
 
 interface SubjectEvent {
@@ -77,7 +78,7 @@ const EVENT_TYPE_OPTIONS = [
 
 const getEventTypeLabel = (t: string) => EVENT_TYPE_OPTIONS.find(o => o.value === t)?.label || 'Otro';
 
-export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder, onFileDeleted }: SubjectViewProps) => {
+export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder, onFileDeleted, onViewNotes }: SubjectViewProps) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'files' | 'calendar'>('files');
   const [fileName, setFileName] = useState("");
@@ -713,13 +714,25 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder, o
                 <span className="text-lg">📄</span>
                 Otros Archivos
               </h3>
-              <Button
-                onClick={() => onAddFile({ subjectId: subject.id })}
-                className="bg-pink-500 hover:bg-pink-600 text-white rounded-lg px-4 py-2"
-              >
-                <Plus size={16} className="mr-2" />
-                Agregar Archivo
-              </Button>
+              <div className="flex gap-2">
+                {onViewNotes && (
+                  <Button
+                    onClick={() => onViewNotes(subject.id)}
+                    variant="outline"
+                    className="border-lavender-200 hover:bg-lavender-50 text-lavender-600 hover:text-lavender-700 rounded-lg px-4 py-2"
+                  >
+                    <StickyNote size={16} className="mr-2" />
+                    Ver Notas
+                  </Button>
+                )}
+                <Button
+                  onClick={() => onAddFile({ subjectId: subject.id })}
+                  className="bg-pink-500 hover:bg-pink-600 text-white rounded-lg px-4 py-2"
+                >
+                  <Plus size={16} className="mr-2" />
+                  Agregar Archivo
+                </Button>
+              </div>
             </div>
             
             {materials.filter(m => !folders.some(f => f.files.some(file => file.id === m.id))).length === 0 ? (
@@ -1084,6 +1097,18 @@ export const SubjectView = ({ subject, materials, onAddFile, onChatWithFolder, o
                 <Upload size={18} className="text-pink-500" />
                 <span className="text-gray-700 font-medium">Agregar Archivo</span>
               </button>
+              {onViewNotes && (
+                <button
+                  onClick={() => {
+                    onViewNotes(subject.id);
+                    setShowAddMenu(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-lavender-50 transition-colors flex items-center gap-3 rounded-lg mx-2"
+                >
+                  <StickyNote size={18} className="text-lavender-500" />
+                  <span className="text-gray-700 font-medium">Ver Notas</span>
+                </button>
+              )}
               <button
                 onClick={() => {
                   setShowCreateFolder(true);

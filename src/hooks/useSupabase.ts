@@ -511,4 +511,149 @@ export const useWeeklyGoals = () => {
     addGoal,
     updateGoal,
   }
+}
+
+// Hook para notas
+export const useNotes = () => {
+  const { user } = useAuth()
+  const [notes, setNotes] = useState<Tables<'notes'>[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
+
+  const fetchNotes = async (subjectId?: string) => {
+    if (!user) return
+    
+    try {
+      setLoading(true)
+      setError(null)
+      let query = supabase
+        .from('notes')
+        .select(`
+          *,
+          subjects!inner(
+            id,
+            name,
+            program_id,
+            programs!inner(
+              id,
+              name
+            )
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+
+      if (subjectId) {
+        query = query.eq('subject_id', subjectId)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+      setNotes(data || [])
+    } catch (error) {
+      console.error('Error fetching notes:', error)
+      setError(error as Error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const addNote = async (note: Omit<Inserts<'notes'>, 'user_id'>) => {
+    if (!user) return { error: 'No user logged in' }
+    
+    try {
+      // Generate automatic name if not provided
+      const noteName = note.name || `Nota - ${new Date().toLocaleString('es-ES')}`
+      
+      const { data, error } = await supabase
+        .from('notes')
+        .insert([{ ...note, user_id: user.id, name: noteName }])
+        .select(`
+          *,
+          subjects!inner(
+            id,
+            name,
+            program_id,
+            programs!inner(
+              id,
+              name
+            )
+          )
+        `)
+        .single()
+
+      if (error) throw error
+      setNotes(prev => [data, ...prev])
+      return { data, error: null }
+    } catch (error) {
+      console.error('Error adding note:', error)
+      return { error }
+    }
+  }
+
+  const updateNote = async (id: string, updates: Updates<'notes'>) => {
+    if (!user) return { error: 'No user logged in' }
+    
+    try {
+      const { data, error } = await supabase
+        .from('notes')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select(`
+          *,
+          subjects!inner(
+            id,
+            name,
+            program_id,
+            programs!inner(
+              id,
+              name
+            )
+          )
+        `)
+        .single()
+
+      if (error) throw error
+      setNotes(prev => prev.map(note => note.id === id ? data : note))
+      return { data, error: null }
+    } catch (error) {
+      console.error('Error updating note:', error)
+      return { error }
+    }
+  }
+
+  const deleteNote = async (id: string) => {
+    if (!user) return { error: 'No user logged in' }
+    
+    try {
+      const { error } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+      setNotes(prev => prev.filter(note => note.id !== id))
+      return { error: null }
+    } catch (error) {
+      console.error('Error deleting note:', error)
+      return { error }
+    }
+  }
+
+  useEffect(() => {
+    fetchNotes()
+  }, [user])
+
+  return {
+    notes,
+    loading,
+    error,
+    fetchNotes,
+    addNote,
+    updateNote,
+    deleteNote,
+  }
 } 

@@ -160,6 +160,11 @@ export default function Library() {
     navigate(`/chat?folderId=${folderId}&folderName=${encodeURIComponent(folderName)}&subjectId=${subjectId}`);
   };
 
+  const handleViewNotes = (subjectId: string) => {
+    // Navegar a notas con la asignatura preseleccionada
+    navigate(`/notas?subject=${subjectId}`);
+  };
+
   const handleAddProgram = () => {
     setShowAddProgram(true);
   };
@@ -420,6 +425,7 @@ export default function Library() {
               materials={materials.filter(m => m.subject_id === selectedSubject.id)}
               onAddFile={handleAddFile}
               onChatWithFolder={handleChatWithFolder}
+              onViewNotes={handleViewNotes}
               onFileDeleted={() => {
                 // Refresh materials for the current subject
                 if (selectedSubject?.id) {

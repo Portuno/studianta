@@ -177,6 +177,35 @@ export interface Database {
           updated_at?: string
         }
       }
+      notes: {
+        Row: {
+          id: string
+          user_id: string
+          subject_id: string
+          name: string
+          content: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          subject_id: string
+          name: string
+          content?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          subject_id?: string
+          name?: string
+          content?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
       subject_events: {
         Row: {
           id: string

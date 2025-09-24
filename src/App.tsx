@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Index from "./pages/Index";
 import Agenda from "./pages/Agenda";
 import Library from "./pages/Library";
+import Notas from "./pages/Notas";
 import Chat from "./pages/Chat";
 import Herramientas from "./pages/Herramientas";
 import Resumenes from "./pages/herramientas/Resumenes";
@@ -154,6 +155,7 @@ const AppContent = () => {
         <Route path="/" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
         <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
+        <Route path="/notas" element={<ProtectedRoute><Notas /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
         <Route path="/herramientas" element={<ProtectedRoute><Herramientas /></ProtectedRoute>} />
