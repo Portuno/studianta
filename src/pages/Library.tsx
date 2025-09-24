@@ -14,14 +14,20 @@ import {
   GraduationCap,
   ChevronDown,
   BookOpen,
-  MoreVertical
+  MoreVertical,
+  StickyNote,
+  Save,
+  X
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { usePrograms } from "@/hooks/useSupabase";
 import { useSubjects } from "@/hooks/useSupabase";
 // import { useTopics } from "@/hooks/useSupabase"; // REMOVIDO: useTopics fue eliminado
 import { useStudyMaterials } from "@/hooks/useSupabase";
+import { useNotes } from "@/hooks/useSupabase";
 import { FileStatusBadge } from "@/components/FileStatusBadge";
 import { FileUploadModal } from "@/components/FileUploadModal";
 import { AddProgramModal } from "@/components/AddProgramModal";
@@ -59,6 +65,7 @@ export default function Library() {
   const { subjects, loading: subjectsLoading, error: subjectsError, fetchSubjects } = useSubjects();
   const { materials, loading: materialsLoading, error: materialsError, fetchMaterials } = useStudyMaterials();
   const { goals: weeklyGoals, loading: weeklyGoalsLoading, error: weeklyGoalsError, fetchGoals: fetchWeeklyGoals } = useWeeklyGoals();
+  const { addNote } = useNotes();
   const [selectedProgram, setSelectedProgram] = useState<any>(null);
   const [selectedSubject, setSelectedSubject] = useState<any>(null);
   const [showUpload, setShowUpload] = useState(false);
@@ -68,6 +75,13 @@ export default function Library() {
   const [showEditSubject, setShowEditSubject] = useState(false);
   const [editingSubject, setEditingSubject] = useState<any>(null);
   const [uploadContext, setUploadContext] = useState<{ subjectId?: string; folderName?: string } | null>(null);
+  
+  // Quick note creation state
+  const [showQuickNote, setShowQuickNote] = useState(false);
+  const [quickNoteSubject, setQuickNoteSubject] = useState<string>("");
+  const [quickNoteName, setQuickNoteName] = useState("");
+  const [quickNoteContent, setQuickNoteContent] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
   const loading = programsLoading || subjectsLoading || materialsLoading || weeklyGoalsLoading;
   const hasError = programsError || subjectsError || materialsError || weeklyGoalsError;
@@ -183,6 +197,47 @@ export default function Library() {
     // The subjects will be refreshed automatically by the hook
     // We'll set the new program as selected when it loads
     setShowAddProgram(false);
+  };
+
+  const handleCreateQuickNote = async () => {
+    if (!quickNoteSubject || !quickNoteName.trim()) {
+      alert('Por favor selecciona una asignatura y escribe un nombre para la nota');
+      return;
+    }
+
+    setIsSavingNote(true);
+    try {
+      const { error } = await addNote({
+        subject_id: quickNoteSubject,
+        name: quickNoteName,
+        content: quickNoteContent
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Reset form
+      setQuickNoteSubject("");
+      setQuickNoteName("");
+      setQuickNoteContent("");
+      setShowQuickNote(false);
+      
+      // Show success message
+      alert('Nota creada exitosamente');
+    } catch (error) {
+      console.error('Error creating note:', error);
+      alert('Error al crear la nota. Por favor, inténtalo de nuevo.');
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
+
+  const handleCancelQuickNote = () => {
+    setQuickNoteSubject("");
+    setQuickNoteName("");
+    setQuickNoteContent("");
+    setShowQuickNote(false);
   };
 
 
@@ -413,6 +468,97 @@ export default function Library() {
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Quick Note Creation Section - Only show when not in subject view and there are subjects */}
+        {!selectedSubject && subjects.length > 0 && (
+          <div className="space-y-4 mt-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium text-gray-700">Crear Nota Rápida</h2>
+              <Button
+                onClick={() => setShowQuickNote(!showQuickNote)}
+                variant="outline"
+                size="sm"
+                className="bg-pink-50 border-pink-200 hover:bg-pink-100 text-pink-600 rounded-full px-4 py-2"
+              >
+                <StickyNote size={16} className="mr-2" />
+                {showQuickNote ? 'Ocultar' : 'Nueva Nota'}
+              </Button>
+            </div>
+
+            {showQuickNote && (
+              <Card className="p-6 rounded-2xl border-0 shadow-sm bg-white/80 backdrop-blur-sm">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Asignatura
+                      </label>
+                      <select
+                        value={quickNoteSubject}
+                        onChange={(e) => setQuickNoteSubject(e.target.value)}
+                        className="w-full p-3 rounded-xl border border-pink-200 focus:border-pink-400 focus:ring-pink-400 bg-white"
+                      >
+                        <option value="">Selecciona una asignatura</option>
+                        {subjects.map((subject) => (
+                          <option key={subject.id} value={subject.id}>
+                            {subject.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nombre de la Nota
+                      </label>
+                      <Input
+                        value={quickNoteName}
+                        onChange={(e) => setQuickNoteName(e.target.value)}
+                        placeholder="Título de la nota..."
+                        className="rounded-xl border-pink-200 focus:border-pink-400 focus:ring-pink-400"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contenido
+                    </label>
+                    <Textarea
+                      value={quickNoteContent}
+                      onChange={(e) => setQuickNoteContent(e.target.value)}
+                      placeholder="Escribe tu nota aquí..."
+                      className="min-h-[120px] rounded-xl border-pink-200 focus:border-pink-400 focus:ring-pink-400 resize-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      onClick={handleCancelQuickNote}
+                      variant="outline"
+                      className="rounded-full border-pink-200 hover:bg-pink-50"
+                    >
+                      <X size={16} className="mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleCreateQuickNote}
+                      disabled={isSavingNote || !quickNoteSubject || !quickNoteName.trim()}
+                      className="bg-pink-400 hover:bg-pink-500 text-white rounded-full px-6"
+                    >
+                      {isSavingNote ? (
+                        <Loader2 size={16} className="mr-2 animate-spin" />
+                      ) : (
+                        <Save size={16} className="mr-2" />
+                      )}
+                      Crear Nota
+                    </Button>
+                  </div>
+                </div>
+              </Card>
             )}
           </div>
         )}
