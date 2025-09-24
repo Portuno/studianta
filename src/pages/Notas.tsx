@@ -17,9 +17,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useNotes } from "@/hooks/useSupabase";
-import { useSubjects } from "@/hooks/useSupabase";
-import { usePrograms } from "@/hooks/useSupabase";
+import { useNotes, useSubjects, usePrograms } from "@/hooks/useSupabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -57,7 +55,7 @@ export default function Notas() {
   const [showSubjectSelector, setShowSubjectSelector] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Load subjects when component mounts
+  // Load subjects when programs are available
   useEffect(() => {
     if (programs.length > 0) {
       // Load subjects for all programs
@@ -296,7 +294,9 @@ export default function Notas() {
                     </div>
                     <div className="flex-1">
                       <span className="font-medium text-gray-800">{subject.name}</span>
-                      <p className="text-xs text-gray-500">{subject.programs?.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {programs.find(p => p.id === subject.program_id)?.name || 'Programa'}
+                      </p>
                     </div>
                     {selectedSubject === subject.id && <span className="ml-auto text-pink-500">✓</span>}
                   </button>

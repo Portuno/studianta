@@ -132,6 +132,7 @@ const AppContent = () => {
           <Route path="/" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
           <Route path="/library" element={<ProtectedRoute><Library /></ProtectedRoute>} />
+          <Route path="/notas" element={<ProtectedRoute><Notas /></ProtectedRoute>} />
           <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
           <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
           <Route path="/herramientas" element={<ProtectedRoute><Herramientas /></ProtectedRoute>} />
