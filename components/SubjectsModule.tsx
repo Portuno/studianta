@@ -108,7 +108,7 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
       </div>
 
       {selectedSubject && (
-        <div className="fixed inset-0 z-[150] bg-[#FFF0F5] overflow-y-hidden animate-in slide-in-from-right duration-500">
+        <div className="fixed inset-0 z-[150] bg-[#FFF0F5] overflow-hidden animate-in slide-in-from-right duration-500">
           <SubjectDetail 
             subject={selectedSubject} 
             onClose={() => setSelectedSubjectId(null)} 
@@ -346,7 +346,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
     <div className="h-screen bg-gradient-to-br from-[#FFF0F5] to-[#FDEEF4] flex flex-col overflow-hidden">
       {/* Header Fijo Refinado */}
       <div className="bg-white/40 border-b border-[#F8C8DC] p-4 md:p-8 shrink-0 backdrop-blur-md z-20">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-4">
             <button onClick={onClose} className="p-2 text-[#8B5E75] hover:bg-[#FFD1DC] rounded-full transition-all">
                <div className="rotate-180">{getIcon('chevron', 'w-6 h-6')}</div>
@@ -376,11 +376,11 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto max-w-7xl mx-auto w-full p-4 md:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+      <div className="flex-1 overflow-hidden max-w-[100vw] mx-auto w-full p-4 md:p-8 flex flex-col">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full flex-1 min-h-0">
           
           {/* Sidebar de Navegación */}
-          <div className="lg:col-span-2 space-y-2">
+          <div className="lg:col-span-2 space-y-2 overflow-y-auto no-scrollbar">
             {[
               { id: 'info', label: 'Cátedra', icon: 'book' },
               { id: 'plan', label: 'Horarios', icon: 'calendar' },
@@ -398,11 +398,11 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
             ))}
           </div>
 
-          {/* Área de Contenido */}
-          <div className="lg:col-span-10 flex flex-col min-h-0 font-inter">
+          {/* Área de Contenido Principal */}
+          <div className="lg:col-span-10 flex flex-col h-full min-h-0 font-inter">
             
             {activeTab === 'info' && (
-              <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
+              <div className="space-y-6 animate-in slide-in-from-bottom duration-500 overflow-y-auto pr-2 scroll-sm h-full pb-20">
                 <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg">
                   <h3 className="font-cinzel text-xl text-[#4A233E] mb-6 flex items-center gap-3 font-bold uppercase tracking-widest">
                     {getIcon('users', "w-6 h-6")} Datos de Cátedra
@@ -502,7 +502,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
             )}
 
             {activeTab === 'plan' && (
-              <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg animate-in slide-in-from-bottom duration-500">
+              <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg animate-in slide-in-from-bottom duration-500 overflow-y-auto pr-2 scroll-sm h-full pb-20">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Horarios de Cursada</h3>
                   <button 
@@ -514,7 +514,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {subject.schedules.length === 0 ? (
-                    <p className="col-span-full text-center py-12 italic opacity-50 font-garamond text-lg">Define tus coordenadas temporales de clase.</p>
+                    <p className="col-span-full text-center py-12 italic opacity-50 font-garamond text-2xl">Define tus coordenadas temporales de clase.</p>
                   ) : (
                     subject.schedules.map(s => (
                       <div key={s.id} className="bg-white/60 p-5 rounded-xl flex items-center justify-between border border-[#F8C8DC] group hover:border-[#D4AF37] transition-all shadow-sm">
@@ -522,7 +522,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                             <div className="text-[#E35B8F] bg-[#E35B8F]/5 p-2.5 rounded-xl">{getIcon('calendar', "w-5 h-5")}</div>
                             <div>
                               <p className="text-sm font-bold text-[#4A233E] uppercase tracking-widest">{s.day}</p>
-                              <p className="text-xs text-[#8B5E75] font-black font-inter">{s.startTime} - {s.endTime}</p>
+                              <p className="text-xl text-[#4A233E] font-black font-inter">{s.startTime} - {s.endTime}</p>
                             </div>
                          </div>
                          <button 
@@ -539,7 +539,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
             )}
 
             {activeTab === 'notas' && (
-              <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
+              <div className="space-y-6 animate-in slide-in-from-bottom duration-500 overflow-y-auto pr-2 scroll-sm h-full pb-20">
                  <div className="flex justify-between items-center px-4">
                     <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Apuntes Académicos</h3>
                     <button 
@@ -553,29 +553,29 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                  <div className="grid grid-cols-1 gap-6">
                     {subject.notes.length === 0 ? (
                       <div className="text-center py-20 bg-white/40 rounded-[3rem] border-2 border-dashed border-[#F8C8DC]">
-                         <p className="font-garamond italic text-2xl opacity-40">Las páginas aguardan tus revelaciones de clase.</p>
+                         <p className="font-garamond italic text-3xl opacity-40">Las páginas aguardan tus revelaciones de clase.</p>
                       </div>
                     ) : (
                       subject.notes.map(n => (
                         <div 
                           key={n.id} 
                           onClick={() => { setEditingNote(n); setShowNoteModal(true); }}
-                          className="glass-card p-8 rounded-[3rem] hover:shadow-2xl transition-all border-l-4 border-l-[#D4AF37] group cursor-pointer relative overflow-hidden"
+                          className="glass-card p-10 rounded-[3rem] hover:shadow-2xl transition-all border-l-8 border-l-[#D4AF37] group cursor-pointer relative overflow-hidden"
                           style={{ background: 'linear-gradient(to bottom right, #FFF9FB, #FDF2F7)' }}
                         >
-                          <div className="flex justify-between items-start mb-4">
-                             <h4 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-tight">{n.title}</h4>
-                             <span className="text-[10px] text-[#8B5E75] font-black uppercase font-inter">{new Date(n.date).toLocaleDateString('es-ES', { dateStyle: 'long' })}</span>
+                          <div className="flex justify-between items-start mb-6">
+                             <h4 className="font-cinzel text-2xl text-[#4A233E] font-bold uppercase tracking-tight">{n.title}</h4>
+                             <span className="text-xs text-[#8B5E75] font-black uppercase font-inter">{new Date(n.date).toLocaleDateString('es-ES', { dateStyle: 'long' })}</span>
                           </div>
-                          <p className="font-garamond text-[#8B5E75] leading-relaxed whitespace-pre-wrap text-lg line-clamp-3 italic opacity-80">{n.content}</p>
+                          <p className="font-garamond text-[#4A233E] leading-relaxed whitespace-pre-wrap text-2xl line-clamp-3 italic opacity-90">{n.content}</p>
                           
-                          <div className="mt-6 pt-4 border-t border-[#F8C8DC]/30 flex justify-between items-center">
-                             <div className="flex items-center gap-2 text-[10px] text-[#D4AF37] font-bold uppercase tracking-widest">
-                                {getIcon('sparkles', 'w-3 h-3')} Sincronizado con Oráculo
+                          <div className="mt-8 pt-6 border-t border-[#F8C8DC]/40 flex justify-between items-center">
+                             <div className="flex items-center gap-3 text-xs text-[#D4AF37] font-bold uppercase tracking-widest">
+                                {getIcon('sparkles', 'w-4 h-4')} Sincronizado con Oráculo
                              </div>
                              <button 
                                onClick={(e) => { e.stopPropagation(); onUpdate({...subject, notes: subject.notes.filter(note => note.id !== n.id)}); }}
-                               className="text-[10px] text-red-400 font-bold uppercase hover:underline tracking-widest opacity-0 group-hover:opacity-100 transition-opacity"
+                               className="text-xs text-red-500 font-black uppercase hover:underline tracking-widest opacity-0 group-hover:opacity-100 transition-opacity"
                              >
                                Eliminar Apunte
                              </button>
@@ -588,19 +588,19 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
             )}
 
             {activeTab === 'lab' && (
-              <div className="flex-1 flex flex-col min-h-0 glass-card rounded-[3.5rem] overflow-hidden shadow-[0_10px_40px_rgba(227,91,143,0.15)] border-2 border-[#D4AF37]/30 bg-white/10 animate-in slide-in-from-bottom duration-500">
+              <div className="flex-1 flex flex-col h-full min-h-0 glass-card rounded-[4rem] overflow-hidden shadow-[0_10px_60px_rgba(227,91,143,0.2)] border-2 border-[#D4AF37]/40 bg-white/10 animate-in slide-in-from-bottom duration-500">
                 {/* Ribbon de Fuentes Integrado */}
-                <div className="bg-[#E35B8F] px-8 py-3.5 flex items-center justify-between text-white shadow-sm z-30">
-                  <div className="flex items-center gap-4 overflow-hidden">
-                    <span className="font-marcellus text-xs font-black uppercase tracking-[0.2em] opacity-90 shrink-0">Fuentes:</span>
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+                <div className="bg-[#E35B8F] px-10 py-4 flex items-center justify-between text-white shadow-sm z-30 shrink-0">
+                  <div className="flex items-center gap-6 overflow-hidden">
+                    <span className="font-marcellus text-sm font-black uppercase tracking-[0.25em] opacity-95 shrink-0">Sincronía:</span>
+                    <div className="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth py-1">
                       {subject.materials.filter(m => selectedContextIds.includes(m.id)).map(m => (
-                        <span key={m.id} className="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-bold font-marcellus whitespace-nowrap border border-white/10">📄 {m.name}</span>
+                        <span key={m.id} className="bg-white/25 px-5 py-1.5 rounded-full text-[11px] font-bold font-marcellus whitespace-nowrap border border-white/20 shadow-sm">📄 {m.name}</span>
                       ))}
                       {subject.notes.filter(n => selectedContextIds.includes(n.id)).map(n => (
-                        <span key={n.id} className="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-bold font-marcellus whitespace-nowrap border border-white/10">📝 {n.title}</span>
+                        <span key={n.id} className="bg-white/25 px-5 py-1.5 rounded-full text-[11px] font-bold font-marcellus whitespace-nowrap border border-white/20 shadow-sm">📝 {n.title}</span>
                       ))}
-                      {selectedContextIds.length === 0 && <span className="text-[10px] font-inter italic opacity-70">Sin fuentes sincronizadas...</span>}
+                      {selectedContextIds.length === 0 && <span className="text-[11px] font-inter italic opacity-80">Sincroniza para iniciar...</span>}
                     </div>
                   </div>
                   <button 
@@ -611,34 +611,34 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                   </button>
                 </div>
 
-                {/* Título del Oráculo */}
-                <div className="bg-[#4A233E]/95 p-6 text-white flex justify-between items-center shadow-md border-b border-[#D4AF37]/20 relative z-20">
+                {/* Título del Oráculo Académico */}
+                <div className="bg-[#4A233E] p-6 text-white flex justify-between items-center shadow-xl border-b border-[#D4AF37]/40 relative z-20 shrink-0">
                   <div className="flex items-center gap-4">
                     {getIcon('brain', "w-8 h-8 text-[#D4AF37]")}
-                    <span className="font-marcellus text-sm md:text-base tracking-[0.3em] font-black uppercase">Oráculo Académico Maestro</span>
+                    <span className="font-marcellus text-lg tracking-[0.35em] font-black uppercase">Oráculo Académico Maestro</span>
                   </div>
-                  <div className="text-[10px] font-black text-[#D4AF37] border border-[#D4AF37]/50 px-4 py-1.5 rounded-full bg-[#D4AF37]/10 tracking-widest hidden md:block">CANALIZANDO RAG</div>
+                  <div className="text-[10px] font-black text-[#D4AF37] border-2 border-[#D4AF37]/40 px-5 py-1.5 rounded-full bg-[#D4AF37]/10 tracking-[0.2em] hidden md:block">REVELACIÓN ACTIVA</div>
                 </div>
                   
-                {/* Ventana de Diálogo */}
-                <div className="flex-1 p-8 overflow-y-auto space-y-8 bg-[#FFF9FB]/60 scroll-sm relative z-10">
+                {/* Ventana de Diálogo Expandida */}
+                <div className="flex-1 p-10 overflow-y-auto space-y-10 bg-[#FFF9FB]/70 scroll-sm relative z-10 font-garamond">
                   {chatHistory.length === 0 && (
-                    <div className="h-full flex flex-col items-center justify-center text-center px-16 opacity-50">
-                      <div className="w-28 h-28 rounded-full border-2 border-dashed border-[#D4AF37] flex items-center justify-center text-[#D4AF37] mb-8 animate-pulse">
-                        {getIcon('chat', 'w-14 h-14')}
+                    <div className="h-full flex flex-col items-center justify-center text-center px-16 opacity-60">
+                      <div className="w-28 h-28 rounded-full border-4 border-dashed border-[#D4AF37] flex items-center justify-center text-[#D4AF37] mb-8 animate-pulse">
+                        {getIcon('chat', 'w-12 h-12')}
                       </div>
-                      <h4 className="font-marcellus text-2xl font-bold text-[#4A233E] mb-6 uppercase tracking-[0.2em]">Inicia la Revelación</h4>
-                      <p className="font-garamond italic text-[#8B5E75] text-xl leading-relaxed max-w-2xl">
-                        "Sincroniza tus apuntes y materiales usando el botón + en el panel de fuentes. Mis respuestas se fundamentarán estrictamente en tu legado de estudio."
+                      <h4 className="font-marcellus text-2xl font-bold text-[#4A233E] mb-4 uppercase tracking-[0.25em]">Inicia la Revelación</h4>
+                      <p className="font-garamond italic text-[#8B5E75] text-2xl leading-relaxed max-w-2xl">
+                        "Víncula tus pergaminos y apuntes. Mi visión iluminará el camino hacia la excelencia."
                       </p>
                     </div>
                   )}
                     
                   {chatHistory.map((chat, idx) => (
-                    <div key={idx} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-4 duration-500`}>
-                      <div className={`max-w-[90%] p-8 rounded-[3rem] shadow-xl ${chat.role === 'user' ? 'bg-[#E35B8F] text-white rounded-tr-none' : 'bg-white/95 border border-[#F8C8DC] text-[#4A233E] rounded-tl-none font-garamond text-lg leading-relaxed shadow-pink-100/30'}`}>
+                    <div key={idx} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-6 duration-700`}>
+                      <div className={`max-w-[92%] p-10 rounded-[4rem] shadow-2xl ${chat.role === 'user' ? 'bg-[#E35B8F] text-white rounded-tr-none' : 'bg-white/95 border border-[#F8C8DC] text-[#4A233E] rounded-tl-none text-2xl leading-relaxed shadow-pink-200/40'}`}>
                         {chat.text.split('\n').map((line, lidx) => (
-                          <p key={lidx} className={line.startsWith('📌') || line.startsWith('📖') || line.startsWith('💡') || line.startsWith('📚') || line.startsWith('❓') || line.startsWith('🔗') || line.startsWith('📊') ? 'font-black font-marcellus text-[#E35B8F] mt-6 mb-3 tracking-widest text-[13px] uppercase' : 'mb-3'}>
+                          <p key={lidx} className={line.startsWith('📌') || line.startsWith('📖') || line.startsWith('💡') || line.startsWith('📚') || line.startsWith('❓') || line.startsWith('🔗') || line.startsWith('📊') ? 'font-black font-marcellus text-[#E35B8F] mt-8 mb-4 tracking-[0.25em] text-[15px] uppercase border-b border-[#F8C8DC] pb-1 inline-block' : 'mb-3'}>
                             {line}
                           </p>
                         ))}
@@ -648,26 +648,26 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                     
                   {loadingIa && (
                     <div className="flex justify-start">
-                      <div className="bg-white/70 p-8 rounded-[3rem] rounded-tl-none animate-pulse flex items-center gap-4 shadow-inner border border-[#F8C8DC]">
-                         <div className="w-3 h-3 bg-[#D4AF37] rounded-full animate-bounce shadow-[0_0_12px_#D4AF37]" />
-                         <div className="w-3 h-3 bg-[#D4AF37] rounded-full animate-bounce [animation-delay:0.2s] shadow-[0_0_12px_#D4AF37]" />
-                         <div className="w-3 h-3 bg-[#D4AF37] rounded-full animate-bounce [animation-delay:0.4s] shadow-[0_0_12px_#D4AF37]" />
+                      <div className="bg-white/80 p-8 rounded-[4rem] rounded-tl-none animate-pulse flex items-center gap-4 shadow-inner border border-[#F8C8DC]">
+                         <div className="w-4 h-4 bg-[#D4AF37] rounded-full animate-bounce shadow-[0_0_15px_#D4AF37]" />
+                         <div className="w-4 h-4 bg-[#D4AF37] rounded-full animate-bounce [animation-delay:0.2s] shadow-[0_0_15px_#D4AF37]" />
+                         <div className="w-4 h-4 bg-[#D4AF37] rounded-full animate-bounce [animation-delay:0.4s] shadow-[0_0_15px_#D4AF37]" />
                       </div>
                     </div>
                   )}
                   <div ref={chatEndRef} />
                 </div>
 
-                {/* Input de Protocolo Refinado */}
-                <div className="p-8 bg-white/90 border-t border-[#F8C8DC] shadow-[0_-4px_20px_rgba(0,0,0,0.03)] relative z-30 shrink-0">
+                {/* Input de Protocolo Maestro */}
+                <div className="p-10 bg-white/95 border-t border-[#F8C8DC] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] relative z-30 shrink-0">
                   <form 
                     onSubmit={handleIaQuery} 
-                    className="flex gap-6 items-center max-w-5xl mx-auto"
+                    className="flex gap-6 items-center max-w-6xl mx-auto"
                   >
                     <input 
                       ref={queryInputRef}
                       name="query" 
-                      placeholder="¿Qué misterio académico desentrañaremos hoy?..." 
+                      placeholder="Invoca la sabiduría del Oráculo..." 
                       disabled={loadingIa}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -675,17 +675,17 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                           handleIaQuery(e as any);
                         }
                       }}
-                      className="flex-1 bg-white border-2 border-[#F8C8DC]/50 rounded-[2.5rem] px-10 py-6 text-lg font-garamond focus:border-[#E35B8F] outline-none shadow-inner placeholder:italic transition-all disabled:opacity-50 text-[#4A233E]" 
+                      className="flex-1 bg-white border-4 border-[#F8C8DC]/50 rounded-[3rem] px-12 py-6 text-2xl font-garamond focus:border-[#E35B8F] outline-none shadow-inner placeholder:italic transition-all disabled:opacity-50 text-[#4A233E]" 
                     />
                     <button 
                       type="submit" 
                       disabled={loadingIa}
-                      className={`w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-2xl transition-all active:scale-95 ${loadingIa ? 'bg-[#D4AF37] cursor-not-allowed' : 'bg-[#E35B8F] hover:scale-105 hover:shadow-[#E35B8F]/40'}`}
+                      className={`w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-2xl transition-all active:scale-90 ${loadingIa ? 'bg-[#D4AF37]/50 cursor-not-allowed animate-pulse' : 'bg-[#E35B8F] hover:scale-105 hover:shadow-[#E35B8F]/50'}`}
                     >
-                      {loadingIa ? <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" /> : getIcon('chat', 'w-9 h-9 text-white')}
+                      {loadingIa ? <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" /> : getIcon('chat', 'w-10 h-10 text-white')}
                     </button>
                   </form>
-                  <p className="text-[10px] text-[#8B5E75]/70 mt-4 text-center font-inter uppercase tracking-[0.2em] font-bold">Shift + Enter para salto de línea • Enter para enviar al Oráculo</p>
+                  <p className="text-[11px] text-[#8B5E75] mt-4 text-center font-inter uppercase tracking-[0.3em] font-black opacity-70">Shift + Enter para salto de línea • Enter para enviar al Oráculo</p>
                 </div>
               </div>
             )}
@@ -693,7 +693,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
         </div>
       </div>
 
-      {/* Modales Re-implementados */}
+      {/* Modales e Interfaces Adicionales */}
       {showMilestoneModal && (activeTab !== 'lab') && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4">
           <form onSubmit={addMilestone} className="glass-card w-full max-w-md p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300">
@@ -721,26 +721,26 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
 
       {/* Selector de Contexto IA */}
       {showMilestoneModal && (activeTab === 'lab') && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4">
-          <div className="glass-card w-full max-w-md p-8 rounded-[3rem] shadow-2xl animate-in zoom-in duration-300 border-[#D4AF37] border-2">
-            <h2 className="font-marcellus text-xl text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">Vincular Sabiduría</h2>
-            <div className="space-y-3 max-h-96 overflow-y-auto pr-2 scroll-sm">
-               <p className="text-[10px] uppercase font-black tracking-widest text-[#8B5E75] border-b border-[#F8C8DC] pb-2">Archivos y Syllabus</p>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-xl p-4">
+          <div className="glass-card w-full max-w-xl p-12 rounded-[4rem] shadow-[0_0_80px_rgba(212,175,55,0.2)] animate-in zoom-in duration-500 border-2 border-[#D4AF37]">
+            <h2 className="font-marcellus text-2xl text-[#4A233E] mb-8 text-center font-bold tracking-[0.3em] uppercase">Vínculo de Sabiduría</h2>
+            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-4 scroll-sm">
+               <p className="text-[12px] uppercase font-black tracking-[0.3em] text-[#8B5E75] border-b border-[#F8C8DC] pb-3">Materiales de Cátedra</p>
                {subject.materials.map(m => (
                  <button 
                    key={m.id} 
                    onClick={() => toggleContext(m.id)}
-                   className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all border ${selectedContextIds.includes(m.id) ? 'bg-[#D4AF37] text-white border-[#D4AF37]' : 'bg-white/40 text-[#4A233E] border-[#F8C8DC]'}`}
+                   className={`w-full text-left px-6 py-4 rounded-2xl text-sm font-bold transition-all border-2 ${selectedContextIds.includes(m.id) ? 'bg-[#D4AF37] text-white border-[#D4AF37] shadow-lg' : 'bg-white/40 text-[#4A233E] border-[#F8C8DC] hover:border-[#D4AF37]/50'}`}
                  >
                    📄 {m.name}
                  </button>
                ))}
-               <p className="text-[10px] uppercase font-black tracking-widest text-[#8B5E75] border-b border-[#F8C8DC] pt-4 pb-2">Apuntes de Clase</p>
+               <p className="text-[12px] uppercase font-black tracking-[0.3em] text-[#8B5E75] border-b border-[#F8C8DC] pt-8 pb-3">Registros de Apunte</p>
                {subject.notes.map(n => (
                  <button 
                    key={n.id} 
                    onClick={() => toggleContext(n.id)}
-                   className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all border ${selectedContextIds.includes(n.id) ? 'bg-[#E35B8F] text-white border-[#E35B8F]' : 'bg-white/40 text-[#4A233E] border-[#F8C8DC]'}`}
+                   className={`w-full text-left px-6 py-4 rounded-2xl text-sm font-bold transition-all border-2 ${selectedContextIds.includes(n.id) ? 'bg-[#E35B8F] text-white border-[#E35B8F] shadow-lg' : 'bg-white/40 text-[#4A233E] border-[#F8C8DC] hover:border-[#E35B8F]/50'}`}
                  >
                    📝 {n.title}
                  </button>
@@ -748,9 +748,9 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
             </div>
             <button 
               onClick={() => setShowMilestoneModal(false)}
-              className="btn-primary w-full py-4 mt-8 rounded-2xl font-marcellus text-xs font-black uppercase tracking-widest"
+              className="btn-primary w-full py-5 mt-10 rounded-[2.5rem] font-marcellus text-sm font-black uppercase tracking-[0.4em] shadow-2xl active:scale-95"
             >
-              Confirmar Sincronía
+              Consagrar Sincronía
             </button>
           </div>
         </div>
@@ -778,39 +778,34 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
       )}
 
       {showNoteModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4">
-          <form onSubmit={saveNote} className="glass-card w-full max-w-3xl p-10 rounded-[4rem] shadow-2xl animate-in zoom-in duration-300 border-[#D4AF37] border-2" style={{ background: 'linear-gradient(to bottom right, #FFF9FB, #FDF2F7)' }}>
-            <div className="flex justify-between items-center mb-8 border-b border-[#F8C8DC] pb-4">
-               <h2 className="font-cinzel text-2xl text-[#4A233E] font-bold uppercase tracking-[0.2em]">{editingNote ? 'Refinar Apunte' : 'Nueva Revelación de Clase'}</h2>
-               <div className="text-[9px] font-black font-inter text-[#D4AF37] uppercase tracking-widest">{new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-lg p-4">
+          <form onSubmit={saveNote} className="glass-card w-full max-w-5xl p-12 rounded-[5rem] shadow-[0_20px_100px_rgba(0,0,0,0.2)] animate-in zoom-in duration-300 border-2 border-[#D4AF37]" style={{ background: 'linear-gradient(to bottom right, #FFF9FB, #FDF2F7)' }}>
+            <div className="flex justify-between items-center mb-10 border-b-2 border-[#F8C8DC] pb-6">
+               <h2 className="font-cinzel text-3xl text-[#4A233E] font-bold uppercase tracking-[0.3em]">{editingNote ? 'Refinar Saber' : 'Trascender la Lección'}</h2>
+               <div className="text-[12px] font-black font-inter text-[#D4AF37] uppercase tracking-[0.4em]">{new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
             </div>
-            <div className="space-y-6 font-inter">
+            <div className="space-y-8 font-inter">
               <div>
-                <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest block mb-2 px-1">Título de la Sesión</label>
+                <label className="text-[12px] uppercase font-black text-[#8B5E75] tracking-[0.3em] block mb-3 px-1">Título del Pergamino</label>
                 <input 
                   required name="title" 
                   defaultValue={editingNote?.title || `Clase de ${subject.name} - ${new Date().toLocaleDateString()}`}
-                  placeholder="Ej: Unidad 2 - Introducción a la Estética Moderna" 
-                  className="w-full bg-white/50 border-2 border-[#F8C8DC]/30 rounded-2xl px-6 py-4 text-sm focus:border-[#E35B8F] outline-none font-bold text-[#4A233E] shadow-inner font-cinzel" 
+                  className="w-full bg-white/60 border-2 border-[#F8C8DC] rounded-[2rem] px-8 py-5 text-2xl focus:border-[#E35B8F] outline-none font-bold text-[#4A233E] shadow-inner font-cinzel" 
                 />
               </div>
               <div>
-                <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest block mb-2 px-1">Cuerpo del Conocimiento</label>
+                <label className="text-[12px] uppercase font-black text-[#8B5E75] tracking-[0.3em] block mb-3 px-1">Cuerpo del Conocimiento</label>
                 <textarea 
                   required name="content" 
                   defaultValue={editingNote?.content || ''}
-                  placeholder="Captura la esencia de la lección aquí..." 
-                  className="w-full bg-white/20 border-2 border-dashed border-[#F8C8DC]/60 rounded-3xl p-8 text-lg font-garamond leading-relaxed text-[#4A233E] h-80 focus:outline-none focus:border-[#D4AF37]/50 resize-none shadow-sm" 
+                  className="w-full bg-white/30 border-2 border-dashed border-[#F8C8DC] rounded-[3rem] p-10 text-3xl font-garamond leading-relaxed text-[#4A233E] h-96 focus:outline-none focus:border-[#D4AF37] resize-none shadow-sm" 
                 />
               </div>
-              <div className="flex items-center gap-3 text-[10px] font-bold text-[#8B5E75] uppercase tracking-widest bg-[#FDEEF4] p-3 rounded-xl border border-[#F8C8DC]">
-                 {getIcon('sparkles', 'w-4 h-4 text-[#D4AF37]')} Autoguardado activo • Esta nota será procesada por el Oráculo.
-              </div>
             </div>
-            <div className="flex gap-6 mt-10">
-              <button type="button" onClick={() => { setShowNoteModal(false); setEditingNote(null); }} className="flex-1 py-4 text-xs font-black text-[#8B5E75] uppercase tracking-widest hover:bg-[#FDEEF4] rounded-2xl transition-all">Descartar</button>
-              <button type="submit" className="flex-[2] btn-primary py-4 rounded-2xl font-cinzel text-xs font-black uppercase tracking-[0.3em] shadow-xl shadow-pink-200">
-                {editingNote ? 'Actualizar Saber' : 'Sellar Apunte (+3 Mérito)'}
+            <div className="flex gap-8 mt-12">
+              <button type="button" onClick={() => { setShowNoteModal(false); setEditingNote(null); }} className="flex-1 py-5 text-sm font-black text-[#8B5E75] uppercase tracking-[0.4em] hover:bg-[#FDEEF4] rounded-[2rem] transition-all">Descartar</button>
+              <button type="submit" className="flex-[2] btn-primary py-5 rounded-[2rem] font-cinzel text-sm font-black uppercase tracking-[0.5em] shadow-2xl">
+                {editingNote ? 'Actualizar Registro' : 'Sellar en Grimorio (+3 Mérito)'}
               </button>
             </div>
           </form>

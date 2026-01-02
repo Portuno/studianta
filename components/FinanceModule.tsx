@@ -231,7 +231,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
           </div>
         </div>
 
-        {/* Panel Derecho: Historial y Oráculo */}
+        {/* Panel Derecho: Historial y Oráculo Financiero */}
         <div className="lg:col-span-8 flex flex-col h-full overflow-hidden">
           <div className="glass-card h-full rounded-[3.5rem] flex flex-col border-[#D4AF37]/40 shadow-2xl relative overflow-hidden bg-white/20">
             {/* Toggle Panel Superior */}
@@ -250,13 +250,13 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
                </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-10 scroll-sm">
+            <div className="flex-1 overflow-y-auto p-10 md:p-14 scroll-sm">
               {rightPanelTab === 'history' ? (
                 <div className="space-y-4">
                   {sortedTransactions.length === 0 ? (
                     <div className="h-full py-32 flex flex-col items-center justify-center opacity-30 text-center px-12">
                       <div className="w-24 h-24 rounded-full border-2 border-dashed border-[#D4AF37] flex items-center justify-center text-[#D4AF37] mb-8">{getIcon('scale', 'w-12 h-12')}</div>
-                      <p className="font-garamond italic text-2xl">"Las crónicas aguardan el primer movimiento de tu esencia capital."</p>
+                      <p className="font-garamond italic text-3xl">"Las crónicas aguardan el primer movimiento de tu esencia capital."</p>
                     </div>
                   ) : (
                     sortedTransactions.map(t => (
@@ -270,8 +270,8 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
                             {getIcon(t.category === 'Ajuste Tesorería' ? 'scale' : (t.type === 'Ingreso' ? 'sparkles' : 'low-battery'), 'w-7 h-7')}
                           </div>
                           <div>
-                            <h4 className="text-lg font-bold text-[#4A233E] truncate max-w-[300px]">{t.description}</h4>
-                            <p className="text-[11px] text-[#8B5E75] font-inter uppercase tracking-widest font-black opacity-60">
+                            <h4 className="text-xl font-bold text-[#4A233E] truncate max-w-[350px]">{t.description}</h4>
+                            <p className="text-[12px] text-[#8B5E75] font-inter uppercase tracking-widest font-black opacity-60">
                               {new Date(t.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} • {t.category}
                             </p>
                           </div>
@@ -292,22 +292,22 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
                   )}
                 </div>
               ) : (
-                <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-4xl mx-auto">
+                <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-5xl mx-auto">
                   {oracleDiagnosis ? (
                     <div className="prose prose-plum max-w-none text-[#4A233E]">
                       {oracleDiagnosis.split('\n').map((line, i) => (
-                        <p key={i} className={line.includes(':') ? 'font-black font-marcellus text-[#E35B8F] mt-10 first:mt-0 uppercase tracking-[0.2em] text-sm border-b border-[#F8C8DC] pb-2 inline-block' : 'font-garamond italic text-xl leading-relaxed mt-4'}>
+                        <p key={i} className={line.includes(':') ? 'font-black font-marcellus text-[#E35B8F] mt-12 first:mt-0 uppercase tracking-[0.3em] text-sm border-b border-[#F8C8DC] pb-2 inline-block' : 'font-garamond italic text-[22px] leading-relaxed mt-6'}>
                           {line}
                         </p>
                       ))}
                     </div>
                   ) : (
-                    <div className="h-full py-40 flex flex-col items-center justify-center text-center px-16 opacity-50">
-                       <div className="w-32 h-32 rounded-full border-2 border-[#D4AF37]/20 flex items-center justify-center text-[#D4AF37] mb-10 animate-pulse">
+                    <div className="h-full py-40 flex flex-col items-center justify-center text-center px-16 opacity-60">
+                       <div className="w-32 h-32 rounded-full border-2 border-[#D4AF37]/20 flex items-center justify-center text-[#D4AF37] mb-12 animate-pulse">
                          {getIcon('chat', 'w-16 h-16')}
                        </div>
-                       <h4 className="font-marcellus text-2xl font-bold text-[#4A233E] mb-6 uppercase tracking-widest">Sincronía de la Balanza</h4>
-                       <p className="font-garamond italic text-2xl max-w-lg">
+                       <h4 className="font-marcellus text-3xl font-bold text-[#4A233E] mb-6 uppercase tracking-widest">Sincronía de la Balanza</h4>
+                       <p className="font-garamond italic text-2xl max-w-2xl">
                          "Solicita un diagnóstico para revelar los patrones ocultos en tu flujo de capital."
                        </p>
                     </div>
@@ -317,16 +317,16 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
             </div>
             
             {loadingOracle && (
-              <div className="absolute inset-0 bg-white/70 backdrop-blur-xl flex flex-col items-center justify-center z-50">
-                 <div className="w-24 h-24 border-8 border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin mb-10 shadow-2xl" />
-                 <p className="font-cinzel text-base font-black text-[#4A233E] tracking-[0.6em] uppercase animate-pulse">Canalizando Sabiduría Arfwedsonita...</p>
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-2xl flex flex-col items-center justify-center z-50">
+                 <div className="w-28 h-28 border-[10px] border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin mb-12 shadow-2xl" />
+                 <p className="font-cinzel text-lg font-black text-[#4A233E] tracking-[0.6em] uppercase animate-pulse">Canalizando Sabiduría...</p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Modal de Edición de Crónica */}
+      {/* Modal de Edición */}
       {editingTransaction && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4">
            <form 

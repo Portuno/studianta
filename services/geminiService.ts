@@ -5,62 +5,36 @@ export class GeminiService {
   constructor() {}
 
   async queryAcademicOracle(subjectName: string, prompt: string, context: string, studentProfile: any) {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `${context ? `--- GRIMORIO DIGITAL (FUENTES RAG) ---\n${context}\n--- FIN FUENTES ---\n\n` : ''}Pregunta del Usuario: ${prompt}`,
+        contents: {
+          parts: [{
+            text: `${context ? `--- FUENTES DE ESTUDIO ---\n${context}\n--- FIN FUENTES ---\n\n` : ''}Pregunta del estudiante: ${prompt}`
+          }]
+        },
         config: {
-          systemInstruction: `
-            Eres el Oráculo Académico de Studianta, un tutor inteligente especializado en ${subjectName}. 
-            Tu rol es acompañar a la estudiante en su viaje de aprendizaje con claridad, empatía y rigor académico.
-
-            1. PROPÓSITO:
-            - Entiende el contenido específico de la asignatura (syllabus, apuntes, materiales).
-            - Adapta explicaciones al nivel de comprensión actual.
-            - Detecta conceptos débiles y sugiere refuerzo.
-            - Genera preguntas de práctica adaptativas.
-            - Evita alucinaciones: Solo responde basado en el material cargado.
-
-            2. PRINCIPIOS:
-            - Precisión: Si no tienes información en el contexto, dilo explícitamente.
-            - Empoderamiento: El objetivo es que la estudiante ENTIENDA, no que memorice. Guía hacia la respuesta.
-            - Honestidad: Reconoce tus alcances.
-
-            3. INFORMACIÓN DE LA ESTUDIANTE:
-            - Mood: ${studentProfile.mood || 'No registrado'}.
-            - Historial: Contexto previo disponible en el chat.
-
-            4. RESTRICCIONES CRÍTICAS:
-            - NUNCA proporciones respuestas directas a tareas o exámenes.
-            - NUNCA hagas el trabajo que la estudiante debe hacer.
-            - NUNCA inventes información. Redirige preguntas fuera de alcance.
-
-            5. TONO DE VOZ:
-            - Cálido pero profesional. Claro y accesible.
-            - Usa emojis: 📚, 💡, ✓. Celebra logros pequeños.
-
-            6. ESTRUCTURA DE RESPUESTA (OBLIGATORIA):
-            📌 RECONOCIMIENTO: Valida la pregunta.
-            📖 CONTEXTO: Relaciona con el syllabus o apuntes.
-            💡 EXPLICACIÓN: Concepto claro en 2-3 párrafos.
-            📚 EJEMPLO: Basado en el material o análogo.
-            ❓ PREGUNTA DE SEGUIMIENTO: Pregunta diagnóstica para verificar comprensión.
-            🔗 RECURSOS: Indica qué revisar (PDF, notas, página).
-            📊 SUGERENCIA PERSONALIZADA: Acción práctica o ejercicio similar.
-          `,
+          systemInstruction: `Eres el Oráculo Académico de Studianta, un tutor especializado en la asignatura "${subjectName}". 
+          Tu tono es erudito, empoderador y sumamente claro. 
+          
+          REGLAS DE RESPUESTA:
+          1. Utiliza prioritariamente el material de las fuentes proporcionadas.
+          2. Estructura tu respuesta con estos encabezados exactos: 📌 RECONOCIMIENTO, 📖 CONTEXTO, 💡 EXPLICACIÓN, 📚 EJEMPLO, ❓ PREGUNTA DE SEGUIMIENTO.
+          3. Mantén un lenguaje elegante pero accesible.
+          4. No inventes datos fuera del contexto académico si el estudiante pregunta sobre sus apuntes específicos.`,
           temperature: 0.7,
         }
       });
       return response.text;
     } catch (error) {
       console.error("Gemini Academic Error:", error);
-      return "📌 RECONOCIMIENTO: He sentido una perturbación en el Atanor.\n\n📖 CONTEXTO: Error de conexión.\n\n💡 EXPLICACIÓN: No he podido canalizar la respuesta del Oráculo.";
+      return "📌 RECONOCIMIENTO: Se ha producido una fractura en el flujo de conocimiento.\n\n📖 CONTEXTO: Error interno de canalización.\n\n💡 EXPLICACIÓN: El Oráculo no puede responder en este momento debido a una inestabilidad en el éter digital (Error 500). Por favor, intenta de nuevo en unos instantes.";
     }
   }
 
   async analyzeFinancialHealth(budget: number, transactions: any[]) {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     const transactionsContext = transactions.map(t => `${t.date}: ${t.amount} en ${t.category} (${t.description})`).join('\n');
     const spent = transactions.reduce((acc, t) => acc + (t.type === 'Gasto' ? t.amount : 0), 0);
     const income = transactions.reduce((acc, t) => acc + (t.type === 'Ingreso' ? t.amount : 0), 0);
@@ -69,15 +43,20 @@ export class GeminiService {
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Presupuesto: $${budget}. Balance actual: $${balance}.\n\nMovimientos:\n${transactionsContext}`,
+        contents: {
+          parts: [{
+            text: `CONTEXTO FINANCIERO:\nPresupuesto Mensual: $${budget}\nCapital Actual: $${balance}\nGastos e Ingresos recientes:\n${transactionsContext}`
+          }]
+        },
         config: {
-          systemInstruction: `Eres el Oráculo de la Balanza de Latón. Proporciona un diagnóstico, identifica patrones de gasto y da consejos pragmáticos y sofisticados.`,
+          systemInstruction: `Eres el Oráculo de la Balanza de Latón. Proporciona un diagnóstico financiero místico pero muy útil. Analiza si el presupuesto es sostenible basado en los gastos. Usa un lenguaje sofisticado y EB Garamond como referencia estética mental.`,
           temperature: 0.5,
         }
       });
       return response.text;
     } catch (error) {
-      return "La balanza está en desequilibrio técnico.";
+      console.error("Gemini Finance Error:", error);
+      return "La balanza de latón se ha bloqueado. No es posible leer los astros financieros en este momento.";
     }
   }
 }
