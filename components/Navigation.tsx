@@ -21,7 +21,6 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
   if (isMobile) {
     return (
       <nav className="fixed bottom-0 left-0 right-0 h-24 glass-card border-t border-[#F8C8DC] flex items-center justify-between px-2 pb-8 z-[150] rounded-t-[2.5rem] shadow-[0_-8px_25px_rgba(74,35,62,0.1)]">
-        {/* Lado Izquierdo: Asignaturas y Calendario */}
         <div className="flex flex-1 justify-around">
           <NavButton 
             id={NavView.SUBJECTS} 
@@ -41,7 +40,6 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
           />
         </div>
 
-        {/* Centro: ATANOR (Dashboard) */}
         <div className="relative -mt-10 px-2">
           <button 
             onClick={() => setActiveView(NavView.DASHBOARD)}
@@ -54,7 +52,6 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
           </button>
         </div>
 
-        {/* Lado Derecho: Enfoque y Balanza */}
         <div className="flex flex-1 justify-around">
           <NavButton 
             id={NavView.FOCUS} 
@@ -77,7 +74,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
     );
   }
 
-  // Desktop Sidebar
+  // Tablet/Desktop Sidebar
   const sidebarItems = [
     { id: NavView.SUBJECTS, icon: 'book', moduleId: 'subjects', label: 'Asignaturas' },
     { id: NavView.CALENDAR, icon: 'calendar', moduleId: 'calendar', label: 'Calendario' },
@@ -88,19 +85,20 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
   ];
 
   return (
-    <aside className="w-64 h-full glass-card flex flex-col z-50 shadow-2xl border-r border-[#F8C8DC]">
-      <div className="p-8 flex-1 flex flex-col">
+    <aside className="w-20 md:w-24 lg:w-64 h-full glass-card flex flex-col z-50 shadow-2xl border-r border-[#F8C8DC] transition-all duration-500">
+      <div className="p-4 lg:p-8 flex-1 flex flex-col items-center lg:items-stretch">
         <div 
           className="flex flex-col items-center cursor-pointer mb-10"
           onClick={() => setActiveView(NavView.DASHBOARD)}
         >
-          <h1 className="font-cinzel text-2xl font-black tracking-[0.2em] text-[#4A233E]">
-            STUDI<span className="text-[#E35B8F]">A</span>NTA
+          <h1 className="font-cinzel text-xl lg:text-2xl font-black tracking-[0.2em] text-[#4A233E]">
+            ST<span className="hidden lg:inline">UDI<span className="text-[#E35B8F]">A</span>NTA</span>
+            <span className="lg:hidden text-[#E35B8F]">A</span>
           </h1>
-          <div className="h-0.5 w-12 bg-[#D4AF37] mt-1" />
+          <div className="h-0.5 w-8 lg:w-12 bg-[#D4AF37] mt-1" />
         </div>
 
-        <nav className="space-y-2">
+        <nav className="space-y-4 lg:space-y-2">
           {sidebarItems.map((item) => {
             const locked = isLocked(item.moduleId);
             return (
@@ -108,50 +106,49 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
                 key={item.id}
                 disabled={locked}
                 onClick={() => setActiveView(item.id)}
-                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 relative ${
+                className={`w-full flex items-center justify-center lg:justify-start gap-4 p-3 lg:px-4 lg:py-3.5 rounded-2xl transition-all duration-300 relative ${
                   activeView === item.id 
                     ? 'bg-[#E35B8F] text-white shadow-lg' 
                     : locked ? 'text-[#8B5E75]/30 grayscale cursor-not-allowed' : 'text-[#8B5E75] hover:bg-[#FFD1DC]/40'
                 }`}
+                title={item.label}
               >
-                {getIcon(item.icon, "w-5 h-5")}
-                <span className="font-inter font-bold text-xs tracking-widest uppercase">{item.label}</span>
-                {locked && <div className="ml-auto text-[#D4AF37]">{getIcon('lock', 'w-3 h-3')}</div>}
+                {getIcon(item.icon, "w-6 h-6 lg:w-5 lg:h-5")}
+                <span className="hidden lg:inline font-inter font-bold text-xs tracking-widest uppercase">{item.label}</span>
+                {locked && !isMobile && <div className="absolute top-1 right-1 lg:static lg:ml-auto text-[#D4AF37]">{getIcon('lock', 'w-2.5 h-2.5 lg:w-3 lg:h-3')}</div>}
               </button>
             );
           })}
         </nav>
       </div>
 
-      <div className="p-6 bg-[#FFF9FA]/50 border-t border-[#F8C8DC]/30 space-y-4">
-        {/* Botón de Oráculo Especial */}
+      <div className="p-4 lg:p-6 bg-[#FFF9FA]/50 border-t border-[#F8C8DC]/30 space-y-4 lg:space-y-4">
         <button 
-          onClick={() => alert("El Oráculo General está meditando en este momento. Estará disponible en futuras actualizaciones de la Logia.")}
-          className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-2xl bg-[#4A233E] text-[#D4AF37] shadow-lg hover:scale-[1.02] transition-all group"
+          onClick={() => alert("El Oráculo General está meditando en este momento.")}
+          className="w-full flex items-center justify-center gap-3 py-3.5 px-2 lg:px-4 rounded-2xl bg-[#4A233E] text-[#D4AF37] shadow-lg hover:scale-[1.05] transition-all group"
         >
-          {getIcon('brain', 'w-5 h-5 group-hover:rotate-12 transition-transform')}
-          <span className="font-cinzel text-[10px] font-black uppercase tracking-[0.2em]">Consultar Oráculo</span>
+          {getIcon('brain', 'w-6 h-6 lg:w-5 lg:h-5 transition-transform')}
+          <span className="hidden lg:inline font-cinzel text-[10px] font-black uppercase tracking-[0.2em]">Oráculo</span>
         </button>
 
-        <div className="flex items-center justify-between px-2">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between px-2 text-center lg:text-left">
           <div className="flex flex-col">
-             <p className="text-[9px] font-cinzel font-bold text-[#4A233E] uppercase tracking-widest opacity-60">Esencia Real</p>
-             <p className="font-inter text-2xl font-black text-[#D4AF37] leading-none drop-shadow-sm">{essence}</p>
+             <p className="hidden lg:block text-[9px] font-cinzel font-bold text-[#4A233E] uppercase tracking-widest opacity-60">Esencia</p>
+             <p className="font-inter text-xl lg:text-2xl font-black text-[#D4AF37] leading-none">{essence}</p>
           </div>
-          <div className="text-[#D4AF37] animate-pulse">
-            {getIcon('sparkles', 'w-5 h-5')}
+          <div className="text-[#D4AF37] mt-1 lg:mt-0 self-center lg:self-auto">
+            {getIcon('sparkles', 'w-4 h-4')}
           </div>
         </div>
 
-        {/* Referencia al Perfil (Auth Readiness) */}
         <button 
           onClick={() => setActiveView(NavView.PROFILE)}
-          className="w-full flex items-center gap-3 p-3 rounded-2xl bg-white/60 border border-[#F8C8DC] hover:border-[#E35B8F]/30 transition-all group"
+          className="w-full flex items-center justify-center lg:justify-start gap-3 p-2 lg:p-3 rounded-2xl bg-white/60 border border-[#F8C8DC] hover:border-[#E35B8F]/30 transition-all group"
         >
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E35B8F] to-[#D4AF37] border-2 border-white shadow-md flex-shrink-0" />
-          <div className="text-left overflow-hidden">
-             <p className="text-[10px] font-bold text-[#4A233E] truncate">Académico Real</p>
-             <p className="text-[8px] text-[#8B5E75] uppercase font-black tracking-widest opacity-60">Gestionar Gnosis</p>
+          <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-[#E35B8F] to-[#D4AF37] border-2 border-white shadow-md flex-shrink-0" />
+          <div className="hidden lg:block text-left overflow-hidden">
+             <p className="text-[10px] font-bold text-[#4A233E] truncate">Académico</p>
+             <p className="text-[8px] text-[#8B5E75] uppercase font-black tracking-widest opacity-60">Perfil</p>
           </div>
         </button>
       </div>

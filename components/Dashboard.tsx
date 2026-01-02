@@ -13,7 +13,6 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ modules, onActivate, isMobile, setActiveView }) => {
   const [hoveredCell, setHoveredCell] = useState<NavView | null>(null);
 
-  // Mapeo de IDs de módulos a NavViews para navegación
   const MODULE_TO_VIEW: Record<string, NavView> = {
     'subjects': NavView.SUBJECTS,
     'calendar': NavView.CALENDAR,
@@ -26,7 +25,6 @@ const Dashboard: React.FC<DashboardProps> = ({ modules, onActivate, isMobile, se
     'social': NavView.SOCIAL
   };
 
-  // Solo para PC
   const GRID_MAPPING: Record<number, { view: NavView; label: string; moduleId?: string }> = {
     40: { view: NavView.PROFILE, label: 'P', moduleId: 'profile' },
     10: { view: NavView.SUBJECTS, label: 'A', moduleId: 'subjects' },
@@ -39,19 +37,21 @@ const Dashboard: React.FC<DashboardProps> = ({ modules, onActivate, isMobile, se
     52: { view: NavView.AI, label: 'O', moduleId: 'ai' },
   };
 
+  const isModuleActive = (moduleId?: string) => {
+    if (!moduleId) return true;
+    return modules.find(m => m.id === moduleId)?.active || false;
+  };
+
   if (isMobile) {
     return (
-      <div className="h-full flex flex-col gap-6 pb-20 animate-fade-in px-2">
-        {/* Atanor Header Mobile - Simplified */}
+      <div className="h-full flex flex-col gap-6 pb-20 animate-fade-in px-2 overflow-y-auto no-scrollbar">
         <section className="text-center pt-8 mb-4">
           <h1 className="font-cinzel text-4xl font-black text-[#4A233E] tracking-[0.25em] uppercase">El Atanor</h1>
           <div className="h-0.5 w-12 bg-[#D4AF37] mx-auto mt-2 opacity-50 rounded-full" />
         </section>
 
-        {/* Unified Modules Section */}
         <section className="flex-1">
           <h3 className="text-[11px] font-inter font-black uppercase tracking-[0.3em] text-[#8B5E75] border-b border-[#F8C8DC] pb-3 mb-6 px-2">Módulos</h3>
-          
           <div className="grid grid-cols-2 gap-4 pb-12">
             {modules.map(mod => {
               const isActive = mod.active;
@@ -59,12 +59,8 @@ const Dashboard: React.FC<DashboardProps> = ({ modules, onActivate, isMobile, se
                 <div 
                   key={mod.id} 
                   onClick={() => {
-                    if (isActive) {
-                      const targetView = MODULE_TO_VIEW[mod.id] || NavView.DASHBOARD;
-                      setActiveView(targetView);
-                    } else {
-                      onActivate(mod.id);
-                    }
+                    if (isActive) setActiveView(MODULE_TO_VIEW[mod.id] || NavView.DASHBOARD);
+                    else onActivate(mod.id);
                   }}
                   className={`glass-card aspect-square rounded-[2rem] flex flex-col items-center justify-center p-4 transition-all duration-300 active:scale-95 relative border-2 ${isActive ? 'border-[#D4AF37]/30 shadow-md' : 'border-transparent opacity-60 grayscale-[0.4]'}`}
                 >
@@ -79,11 +75,6 @@ const Dashboard: React.FC<DashboardProps> = ({ modules, onActivate, isMobile, se
                       {mod.cost} {getIcon('sparkles', 'w-2 h-2')}
                     </div>
                   )}
-                  {!isActive && (
-                    <div className="absolute top-3 right-3 text-[#D4AF37]/40">
-                      {getIcon('lock', 'w-3 h-3')}
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -93,27 +84,21 @@ const Dashboard: React.FC<DashboardProps> = ({ modules, onActivate, isMobile, se
     );
   }
 
-  // Desktop View with Grid
-  const isModuleActive = (moduleId?: string) => {
-    if (!moduleId) return true;
-    return modules.find(m => m.id === moduleId)?.active || false;
-  };
-
   return (
-    <div className="h-full flex gap-12 pb-10 max-w-7xl mx-auto">
-      {/* Visual Section: Atanor Grid */}
-      <div className="w-1/2 flex flex-col items-center justify-center relative bg-white/20 rounded-[4rem] overflow-hidden border border-[#F8C8DC]/30">
-        <div className="absolute top-16 z-10 text-center">
-          <h2 className="font-cinzel text-4xl text-[#4A233E] font-black tracking-[0.4em] uppercase">ATANOR</h2>
-          <div className="h-1 w-12 bg-[#D4AF37] mx-auto mt-2 rounded-full" />
+    <div className="h-full flex flex-col md:flex-row gap-6 lg:gap-12 pb-10 max-w-7xl mx-auto overflow-hidden">
+      {/* Visual Section: Atanor Grid - Visible on Tablets too */}
+      <div className="w-full md:w-1/2 flex flex-col items-center justify-center relative bg-white/20 rounded-[3rem] lg:rounded-[4rem] overflow-hidden border border-[#F8C8DC]/30 min-h-[400px] md:min-h-0">
+        <div className="absolute top-12 lg:top-16 z-10 text-center">
+          <h2 className="font-cinzel text-3xl lg:text-4xl text-[#4A233E] font-black tracking-[0.4em] uppercase">ATANOR</h2>
+          <div className="h-1 w-10 lg:w-12 bg-[#D4AF37] mx-auto mt-2 rounded-full" />
         </div>
         
-        <div className="iso-grid-container scale-[4.2]">
+        {/* Iso Grid with responsive scaling */}
+        <div className="iso-grid-container scale-[2.5] sm:scale-[3.2] md:scale-[3] lg:scale-[4.2]">
           <div className="iso-grid">
             {Array.from({ length: 81 }).map((_, i) => {
               const mapping = GRID_MAPPING[i];
               const isActive = mapping ? isModuleActive(mapping.moduleId) : false;
-              
               return (
                 <div 
                   key={i} 
@@ -134,37 +119,37 @@ const Dashboard: React.FC<DashboardProps> = ({ modules, onActivate, isMobile, se
         </div>
 
         {hoveredCell && (
-          <div className="absolute bottom-16 px-8 py-3 glass-card rounded-full border-[#D4AF37] animate-fade-in shadow-xl">
-             <p className="font-cinzel text-lg font-black text-[#4A233E] tracking-[0.3em] uppercase">{hoveredCell}</p>
+          <div className="absolute bottom-12 lg:bottom-16 px-6 lg:px-8 py-2 lg:py-3 glass-card rounded-full border-[#D4AF37] animate-fade-in shadow-xl">
+             <p className="font-cinzel text-sm lg:text-lg font-black text-[#4A233E] tracking-[0.3em] uppercase">{hoveredCell}</p>
           </div>
         )}
       </div>
 
-      {/* Modules List Desktop */}
-      <div className="flex-1 flex flex-col pt-8 overflow-hidden">
-        <div className="overflow-y-auto pr-2 space-y-10 no-scrollbar">
+      {/* Modules List Desktop/Tablet */}
+      <div className="flex-1 flex flex-col pt-4 lg:pt-8 overflow-hidden">
+        <div className="overflow-y-auto pr-2 space-y-8 lg:space-y-10 no-scrollbar">
           <section>
-            <h3 className="text-[11px] font-inter font-black uppercase tracking-[0.3em] text-[#8B5E75] border-b-2 border-[#F8C8DC] pb-4 mb-6">Investigaciones Disponibles</h3>
-            <div className="grid gap-6">
+            <h3 className="text-[10px] lg:text-[11px] font-inter font-black uppercase tracking-[0.3em] text-[#8B5E75] border-b-2 border-[#F8C8DC] pb-4 mb-6">Investigaciones</h3>
+            <div className="grid gap-4 lg:gap-6">
               {modules.filter(m => !m.active).map(mod => (
-                <div key={mod.id} className="glass-card p-8 rounded-[3rem] flex items-center justify-between group hover:shadow-2xl transition-all duration-500 border-[#F8C8DC]/50">
-                  <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 rounded-[2rem] bg-white border border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] group-hover:scale-110 transition-transform shadow-inner">
-                      {getIcon(mod.icon, "w-10 h-10")}
+                <div key={mod.id} className="glass-card p-6 lg:p-8 rounded-[2rem] lg:rounded-[3rem] flex flex-col sm:flex-row items-center justify-between group hover:shadow-2xl transition-all duration-500 border-[#F8C8DC]/50 gap-4">
+                  <div className="flex items-center gap-4 lg:gap-6">
+                    <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-[1.5rem] lg:rounded-[2rem] bg-white border border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] group-hover:scale-105 transition-transform">
+                      {getIcon(mod.icon, "w-8 h-8 lg:w-10 lg:h-10")}
                     </div>
                     <div>
-                      <h4 className="font-cinzel text-2xl text-[#4A233E] font-black">{mod.name.toUpperCase()}</h4>
-                      <p className="text-base text-[#8B5E75] font-garamond italic mt-1 max-w-sm">{mod.description}</p>
+                      <h4 className="font-cinzel text-xl lg:text-2xl text-[#4A233E] font-black">{mod.name.toUpperCase()}</h4>
+                      <p className="hidden sm:block text-sm lg:text-base text-[#8B5E75] font-garamond italic mt-1 max-w-sm">{mod.description}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="flex items-center gap-2 text-[#D4AF37] font-cinzel font-black text-2xl mb-4">
+                  <div className="flex sm:flex-col items-center sm:items-end gap-4">
+                    <div className="flex items-center gap-2 text-[#D4AF37] font-cinzel font-black text-xl lg:text-2xl">
                       <span>{mod.cost}</span>
-                      {getIcon('sparkles', "w-6 h-6")}
+                      {getIcon('sparkles', "w-5 h-5 lg:w-6 lg:h-6")}
                     </div>
                     <button 
                       onClick={() => onActivate(mod.id)}
-                      className="btn-primary px-10 py-4 rounded-2xl font-cinzel text-xs font-black uppercase tracking-widest shadow-xl"
+                      className="btn-primary px-6 lg:px-10 py-3 lg:py-4 rounded-xl lg:rounded-2xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-xl"
                     >
                       Transmutar
                     </button>

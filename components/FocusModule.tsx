@@ -36,7 +36,6 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Audio Engine
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
@@ -136,70 +135,70 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
   ];
 
   return (
-    <div className="h-full flex flex-col items-center justify-center relative px-4 md:px-0">
-      <div className="absolute top-0 left-0 w-full h-1 bg-[#F8C8DC]/20 z-20">
+    <div className="h-full flex flex-col items-center justify-center relative px-4 py-8 md:py-0">
+      <div className="absolute top-0 left-0 w-full h-1.5 bg-[#F8C8DC]/20 z-20 overflow-hidden">
         <div 
-          className="h-full bg-gradient-to-r from-[#E35B8F] to-[#D4AF37] transition-all duration-1000"
+          className="h-full bg-gradient-to-r from-[#E35B8F] via-[#D4AF37] to-[#E35B8F] transition-all duration-1000 ease-linear"
           style={{ width: `${progress}%` }}
         />
       </div>
 
-      <div className="max-w-4xl w-full flex flex-col items-center gap-12">
+      <div className="max-w-4xl w-full flex flex-col items-center gap-8 lg:gap-12 animate-fade-in">
         <header className="text-center">
-          <h1 className="font-cinzel text-xl md:text-2xl text-[#8B5E75] tracking-[0.4em] uppercase opacity-60 mb-2">
+          <h1 className="font-cinzel text-xl md:text-2xl lg:text-3xl text-[#8B5E75] tracking-[0.4em] uppercase opacity-60 mb-2">
             El Reloj de Arena
           </h1>
-          <div className="h-0.5 w-16 bg-[#D4AF37] mx-auto opacity-30" />
+          <div className="h-0.5 w-16 lg:w-24 bg-[#D4AF37] mx-auto opacity-30" />
         </header>
 
         <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#E35B8F]/5 to-[#D4AF37]/5 rounded-full blur-3xl opacity-50 group-hover:opacity-100 transition-opacity duration-1000" />
-          <div className="glass-card w-64 h-64 md:w-80 md:h-80 rounded-full flex flex-col items-center justify-center border-2 border-[#F8C8DC]/40 shadow-2xl relative z-10">
-            <span className="font-mono text-5xl md:text-7xl font-black text-[#4A233E] tabular-nums tracking-tighter">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#E35B8F]/10 to-[#D4AF37]/10 rounded-full blur-[80px] opacity-50 group-hover:opacity-100 transition-opacity duration-1000" />
+          <div className="glass-card w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-full flex flex-col items-center justify-center border-2 border-[#F8C8DC]/40 shadow-2xl relative z-10">
+            <span className="font-mono text-5xl md:text-7xl lg:text-8xl font-black text-[#4A233E] tabular-nums tracking-tighter">
               {formatTime(timeLeft)}
             </span>
-            <div className="mt-4 flex gap-3">
+            <div className="mt-4 lg:mt-6 flex gap-4">
               {!isActive ? (
                 <button 
                   onClick={handleStart}
-                  className="btn-primary w-12 h-12 rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+                  className="btn-primary w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
                 >
-                  {getIcon('plus', 'w-6 h-6 rotate-45')}
+                  {getIcon('plus', 'w-8 h-8 rotate-45')}
                 </button>
               ) : (
                 <button 
                   onClick={handleStop}
-                  className="w-12 h-12 rounded-full border border-[#E35B8F] text-[#E35B8F] flex items-center justify-center hover:bg-[#E35B8F]/10 transition-colors"
+                  className="w-14 h-14 lg:w-16 lg:h-16 rounded-full border-2 border-[#E35B8F] text-[#E35B8F] flex items-center justify-center hover:bg-[#E35B8F]/10 transition-colors shadow-lg"
                 >
-                  <div className="w-3 h-3 bg-current rounded-sm" />
+                  <div className="w-4 h-4 lg:w-5 lg:h-5 bg-current rounded-sm" />
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
-          <div className="glass-card p-6 rounded-[2rem] border-[#F8C8DC]/30">
-            <p className="text-[10px] uppercase font-black text-[#8B5E75] tracking-widest mb-4">Intención de Estudio</p>
-            <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl lg:max-w-3xl">
+          <div className="glass-card p-6 lg:p-8 rounded-[2.5rem] border-[#F8C8DC]/30 shadow-sm">
+            <p className="text-[10px] lg:text-[11px] uppercase font-black text-[#8B5E75] tracking-widest mb-5 border-b border-[#F8C8DC]/30 pb-2">Vínculo Académico</p>
+            <div className="space-y-5">
               <select 
                 disabled={isActive}
                 value={selectedSubjectId}
                 onChange={(e) => setSelectedSubjectId(e.target.value)}
-                className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm font-garamond focus:outline-none focus:border-[#E35B8F] disabled:opacity-50"
+                className="w-full bg-white/60 border border-[#F8C8DC] rounded-xl px-4 py-3.5 text-base font-garamond focus:outline-none focus:border-[#E35B8F] disabled:opacity-50 appearance-none shadow-inner"
               >
                 <option value="" disabled>Seleccionar Asignatura</option>
                 {subjects.map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
-              <div className="flex gap-2">
-                {[25, 45].map(m => (
+              <div className="flex gap-3">
+                {[15, 25, 45, 60].map(m => (
                   <button
                     key={m}
                     disabled={isActive}
                     onClick={() => { setTimeLeft(m * 60); setTotalTime(m * 60); }}
-                    className={`flex-1 py-2 rounded-xl font-cinzel text-[10px] border transition-all ${totalTime === m * 60 ? 'bg-[#E35B8F] text-white border-[#E35B8F]' : 'text-[#8B5E75] border-[#F8C8DC] hover:bg-white/60'}`}
+                    className={`flex-1 py-3 rounded-xl font-cinzel text-[10px] lg:text-[11px] border-2 transition-all ${totalTime === m * 60 ? 'bg-[#E35B8F] text-white border-[#E35B8F] shadow-md scale-[1.03]' : 'text-[#8B5E75] border-[#F8C8DC] hover:bg-white/60'}`}
                   >
                     {m} MIN
                   </button>
@@ -208,78 +207,78 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
             </div>
           </div>
 
-          <div className="glass-card p-6 rounded-[2rem] border-[#F8C8DC]/30">
-            <p className="text-[10px] uppercase font-black text-[#8B5E75] tracking-widest mb-4">Ambiente Sensorial</p>
-            <div className="grid grid-cols-4 gap-2">
+          <div className="glass-card p-6 lg:p-8 rounded-[2.5rem] border-[#F8C8DC]/30 shadow-sm">
+            <p className="text-[10px] lg:text-[11px] uppercase font-black text-[#8B5E75] tracking-widest mb-5 border-b border-[#F8C8DC]/30 pb-2">Canalización de Sonido</p>
+            <div className="grid grid-cols-4 gap-3">
               {ambientSounds.map(snd => (
                 <button
                   key={snd.id}
                   onClick={() => setAmbient(snd.id as AmbientType)}
-                  className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all ${ambient === snd.id ? 'bg-[#D4AF37] text-white border-[#D4AF37]' : 'text-[#8B5E75] border-[#F8C8DC] hover:bg-white/60'}`}
+                  className={`flex flex-col items-center justify-center gap-3 p-3 rounded-xl border-2 transition-all ${ambient === snd.id ? 'bg-[#D4AF37] text-white border-[#D4AF37] shadow-md scale-[1.03]' : 'text-[#8B5E75] border-[#F8C8DC] hover:bg-white/60'}`}
                 >
-                  {getIcon(snd.icon, "w-5 h-5")}
-                  <span className="text-[8px] uppercase font-bold text-center">{snd.label}</span>
+                  {getIcon(snd.icon, "w-6 h-6 lg:w-7 lg:h-7")}
+                  <span className="text-[8px] lg:text-[9px] uppercase font-black text-center leading-tight">{snd.label}</span>
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="text-center opacity-40">
-          <p className="font-garamond italic">"El tiempo es la materia prima de la genialidad."</p>
+        <div className="text-center opacity-30 max-w-md">
+          <p className="font-garamond italic text-lg lg:text-xl">"Cada grano de arena que cae es un peldaño más hacia la cúspide de la Logia."</p>
         </div>
       </div>
 
       {showReflection && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-md p-6">
-          <div className="glass-card w-full max-w-lg p-8 md:p-10 rounded-[3rem] shadow-2xl animate-in zoom-in duration-500 overflow-y-auto max-h-[90vh]">
-            <h2 className="font-cinzel text-2xl text-[#4A233E] mb-2 font-black text-center uppercase tracking-widest">
-              Cosecha de Conocimiento
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-6">
+          <div className="glass-card w-full max-w-lg lg:max-w-xl p-8 lg:p-12 rounded-[3.5rem] shadow-[0_30px_60px_rgba(0,0,0,0.3)] animate-in zoom-in duration-500 overflow-y-auto max-h-[90vh] no-scrollbar">
+            <h2 className="font-cinzel text-2xl lg:text-3xl text-[#4A233E] mb-3 font-black text-center uppercase tracking-widest">
+              Cosecha de Gnosis
             </h2>
-            <p className="text-xs text-[#8B5E75] text-center mb-8 font-garamond italic">
-              {reflectionData.wasInterrupted ? "La forja ha sido suspendida. Reflexiona sobre el motivo." : "Santuario completado. Tu voluntad se ha fortalecido."}
+            <p className="text-sm lg:text-base text-[#8B5E75] text-center mb-10 font-garamond italic px-6">
+              {reflectionData.wasInterrupted ? "La forja ha sido interrumpida. Reflexiona para no perder la esencia." : "Misión cumplida. Tu voluntad ha transmutado el tiempo en poder real."}
             </p>
 
-            <div className="space-y-8">
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <label className="text-[10px] uppercase font-black tracking-widest text-[#8B5E75]">Nivel de Motivación</label>
-                  <span className="text-sm font-cinzel text-[#E35B8F]">{reflectionData.motivation}/10</span>
+            <div className="space-y-10">
+              <div className="px-4">
+                <div className="flex justify-between items-center mb-4">
+                  <label className="text-[10px] lg:text-[11px] uppercase font-black tracking-widest text-[#8B5E75]">Frecuencia Motivacional</label>
+                  <span className="text-lg font-cinzel text-[#E35B8F] font-black">{reflectionData.motivation}/10</span>
                 </div>
                 <input 
                   type="range" min="1" max="10" 
                   value={reflectionData.motivation}
                   onChange={(e) => setReflectionData({...reflectionData, motivation: parseInt(e.target.value)})}
-                  className="w-full h-1 bg-[#F8C8DC] rounded-lg appearance-none cursor-pointer accent-[#E35B8F]"
+                  className="w-full h-1.5 bg-[#F8C8DC] rounded-lg appearance-none cursor-pointer accent-[#E35B8F] shadow-inner"
                 />
               </div>
 
-              <div>
-                <label className="block text-[10px] uppercase font-black tracking-widest text-[#8B5E75] mb-3 px-1">Cosecha Intelectual</label>
+              <div className="px-4">
+                <label className="block text-[10px] lg:text-[11px] uppercase font-black tracking-widest text-[#8B5E75] mb-4 px-1">Hallazgo Trascendental</label>
                 <textarea 
                   value={reflectionData.harvest}
                   onChange={(e) => setReflectionData({...reflectionData, harvest: e.target.value})}
-                  placeholder="¿Cuál fue el descubrimiento más valioso de esta sesión?"
-                  className="w-full bg-white/60 border border-[#F8C8DC] rounded-2xl p-4 text-sm font-garamond h-32 focus:outline-none focus:border-[#E35B8F] resize-none"
+                  placeholder="¿Qué concepto clave has transmutado hoy?"
+                  className="w-full bg-white/80 border-2 border-[#F8C8DC] rounded-[2rem] p-6 text-base lg:text-lg font-garamond h-40 focus:outline-none focus:border-[#D4AF37] transition-all resize-none shadow-inner"
                 />
               </div>
 
               {reflectionData.wasInterrupted && (
-                <div>
-                  <label className="block text-[10px] uppercase font-black tracking-widest text-[#E35B8F] mb-3 px-1">Interrupción de la Forja</label>
+                <div className="px-4 animate-in slide-in-from-top-2">
+                  <label className="block text-[10px] lg:text-[11px] uppercase font-black tracking-widest text-[#E35B8F] mb-4 px-1">Obstáculo en el Camino</label>
                   <input 
                     type="text"
                     value={reflectionData.reason}
                     onChange={(e) => setReflectionData({...reflectionData, reason: e.target.value})}
-                    placeholder="Justificación del desvío..."
-                    className="w-full bg-[#E35B8F]/5 border border-[#E35B8F]/30 rounded-xl px-4 py-3 text-sm focus:outline-none"
+                    placeholder="Identifica la distracción..."
+                    className="w-full bg-[#E35B8F]/5 border-2 border-[#E35B8F]/20 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-[#E35B8F]"
                   />
                 </div>
               )}
 
               <button 
                 onClick={submitReflection}
-                className="btn-primary w-full py-4 rounded-2xl font-cinzel text-xs tracking-[0.2em] font-black uppercase shadow-xl"
+                className="btn-primary w-full py-5 rounded-[2rem] font-cinzel text-xs lg:text-sm tracking-[0.3em] font-black uppercase shadow-2xl hover:brightness-105"
               >
                 Transmutar en Esencia
               </button>
