@@ -174,55 +174,53 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     return (
       <div 
         key={date.toDateString()} 
-        className={`flex-1 flex flex-col min-w-[140px] md:min-w-0 border-r border-[#F8C8DC]/20 last:border-r-0 ${isToday ? 'bg-[#E35B8F]/5' : ''}`}
+        className={`flex-1 flex flex-col min-w-[150px] md:min-w-0 border-r border-[#D4AF37]/10 last:border-r-0 ${isToday ? 'bg-[#D4AF37]/5' : ''}`}
       >
-        <div className={`p-6 text-center border-b border-[#F8C8DC]/20 ${isToday ? 'text-[#E35B8F]' : 'text-[#8B5E75]'}`}>
-          <p className="text-[11px] uppercase font-black tracking-[0.25em] opacity-60">
+        <div className={`p-6 text-center border-b border-[#D4AF37]/20 ${isToday ? 'text-[#4A233E]' : 'text-[#8B5E75]'}`}>
+          <p className="text-[10px] uppercase font-cinzel font-black tracking-[0.2em] opacity-60">
             {date.toLocaleDateString('es-ES', { weekday: 'short' })}
           </p>
           <div className="flex items-center justify-center gap-2 mt-2">
-            <p className={`font-cinzel text-2xl ${isToday ? 'font-black scale-110' : ''}`}>
+            <p className={`font-cinzel text-2xl ${isToday ? 'font-black scale-110 text-[#D4AF37] drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]' : ''}`}>
               {date.getDate()}
             </p>
             {events.find(e => e.type === 'mood') && (
-              <div className="text-[#D4AF37]">
-                {getIcon(events.find(e => e.type === 'mood')?.moodIcon || 'sun', 'w-5 h-5')}
+              <div className="text-[#D4AF37] animate-pulse">
+                {getIcon(events.find(e => e.type === 'mood')?.moodIcon || 'sun', 'w-4 h-4')}
               </div>
             )}
           </div>
         </div>
-        <div className="flex-1 p-4 space-y-4 overflow-y-auto max-h-[70vh] md:max-h-full scroll-sm">
+        <div className="flex-1 p-3 space-y-3 overflow-y-auto max-h-[70vh] md:max-h-full no-scrollbar relative">
+          {/* Watermark in each column for mobile week view */}
+          {isMobile && <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]">
+             {getIcon('compass', 'w-32 h-32')}
+          </div>}
+
           {events.length === 0 ? (
              <div className="h-full flex items-center justify-center opacity-10">
-               {getIcon('sparkles', 'w-8 h-8')}
+               {getIcon('sparkles', 'w-6 h-6')}
              </div>
           ) : (
             events.map(event => (
               <div 
                 key={event.id} 
-                className={`p-5 rounded-[1.5rem] border-l-4 text-[12px] transition-all hover:scale-[1.03] shadow-md font-inter group relative ${
-                  event.type === 'mood' ? 'bg-[#FFF0F5]/50 border-l-[#D4AF37]' :
+                className={`p-4 rounded-[1.25rem] border-l-2 text-[11px] transition-all active:scale-95 shadow-sm font-inter group relative overflow-hidden ${
+                  event.type === 'mood' ? 'bg-[#FFF0F5]/40 border-l-[#D4AF37]' :
                   event.priority === 'high' 
-                    ? 'bg-white border-l-[#D4AF37] shadow-xl' 
-                    : 'bg-white/80 border-l-[#E35B8F]'
+                    ? 'bg-white border-l-[#D4AF37] shadow-md ring-1 ring-[#D4AF37]/10' 
+                    : 'bg-white/60 border-l-[#E35B8F]'
                 }`}
                 style={event.type === 'custom' ? { borderLeftColor: event.color } : {}}
               >
-                <div className="flex justify-between items-start mb-2">
-                   <span className="font-bold text-[#4A233E] truncate pr-1 text-sm">{event.title}</span>
-                   {event.type === 'mood' ? (
-                     <span className="text-[#D4AF37]">{getIcon(event.moodIcon!, 'w-4 h-4')}</span>
-                   ) : event.priority === 'high' ? <span className="text-[#D4AF37]">{getIcon('sparkles', 'w-4 h-4 animate-pulse')}</span> : null}
+                <div className="flex justify-between items-start mb-1.5">
+                   <span className="font-bold text-[#4A233E] truncate pr-1">{event.title}</span>
+                   {event.priority === 'high' && <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-ping shrink-0" />}
                 </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-[10px] text-[#8B5E75] font-bold uppercase tracking-widest opacity-80">
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-[9px] text-[#8B5E75] font-medium uppercase tracking-wider opacity-80">
                     {event.time ? `${event.time} • ` : ''}{event.subtitle}
                   </p>
-                  {event.type === 'finance' && event.amount !== undefined && (
-                    <p className={`text-[11px] font-black font-cinzel ${event.color === COLORS.gold ? 'text-green-600' : 'text-red-500'}`}>
-                      {event.color === COLORS.gold ? '+' : '-'}${event.amount.toLocaleString()}
-                    </p>
-                  )}
                 </div>
               </div>
             ))
@@ -245,7 +243,10 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     });
 
     return (
-      <div className="flex-1 flex overflow-x-auto md:overflow-hidden bg-white/30">
+      <div className="flex-1 flex overflow-x-auto md:overflow-hidden bg-white/20 relative">
+        {!isMobile && <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.02]">
+           {getIcon('compass', 'w-96 h-96')}
+        </div>}
         {days.map(d => renderDayColumn(d))}
       </div>
     );
@@ -257,7 +258,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     const daysInMonth = new Date(anchorDate.getFullYear(), anchorDate.getMonth() + 1, 0).getDate();
     
     return (
-      <div className="flex-1 grid grid-cols-7 border-t border-[#F8C8DC]/20 font-inter">
+      <div className="flex-1 grid grid-cols-7 border-t border-[#D4AF37]/10 font-inter">
         {Array.from({ length: 42 }).map((_, i) => {
           const dayNum = i - (startDay === 0 ? 6 : startDay - 1);
           const date = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), dayNum + 1);
@@ -265,30 +266,27 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
           const isToday = date.toDateString() === new Date().toDateString();
           const isOutside = dayNum < 0 || dayNum >= daysInMonth;
           const moodEvent = events.find(e => e.type === 'mood');
+          const hasHighPriority = events.some(e => e.priority === 'high');
 
           return (
             <div 
               key={i} 
               onClick={() => { if(!isOutside) { setAnchorDate(date); setView('day'); } }}
-              className={`p-3 border-r border-b border-[#F8C8DC]/20 min-h-[100px] md:min-h-[160px] transition-all cursor-pointer group ${isOutside ? 'opacity-20 bg-black/5' : 'hover:bg-[#FFF0F5]'}`}
+              className={`p-2 border-r border-b border-[#D4AF37]/10 min-h-[90px] md:min-h-[140px] transition-all cursor-pointer group ${isOutside ? 'opacity-10 grayscale bg-black/5' : 'hover:bg-[#FFF0F5]/50'}`}
             >
               <div className="flex justify-between items-start">
-                <span className={`text-[11px] md:text-base font-cinzel ${isToday ? 'bg-[#E35B8F] text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg font-bold' : 'text-[#8B5E75]'}`}>
+                <span className={`text-[10px] md:text-base font-cinzel transition-all ${isToday ? 'border-2 border-[#D4AF37] ring-2 ring-[#D4AF37]/20 text-[#4A233E] w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,175,55,0.3)] font-black' : 'text-[#8B5E75]'}`}>
                   {date.getDate()}
                 </span>
-                {moodEvent && (
-                  <div className="text-[#D4AF37] animate-in zoom-in duration-500">
-                    {getIcon(moodEvent.moodIcon!, 'w-4 h-4')}
-                  </div>
-                )}
+                <div className="flex gap-1">
+                  {moodEvent && <div className="text-[#D4AF37] scale-75">{getIcon(moodEvent.moodIcon!, 'w-4 h-4')}</div>}
+                  {hasHighPriority && <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse" />}
+                </div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {events.filter(e => e.type !== 'mood').slice(0, 5).map(e => (
-                  <div key={e.id} className={`h-2 w-full rounded-full transition-all group-hover:scale-y-150 shadow-sm`} style={{ backgroundColor: e.color }} title={e.title} />
+              <div className="mt-2 flex flex-col gap-1">
+                {events.filter(e => e.type !== 'mood').slice(0, 3).map(e => (
+                  <div key={e.id} className="h-1 w-full rounded-full opacity-60" style={{ backgroundColor: e.color }} />
                 ))}
-                {events.filter(e => e.type !== 'mood').length > 5 && (
-                  <div className="text-[9px] font-black text-[#8B5E75] uppercase opacity-60">+ {events.length - 5}</div>
-                )}
               </div>
             </div>
           );
@@ -300,122 +298,54 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
   const renderDayFocus = () => {
     const events = getEventsForDate(anchorDate);
     return (
-      <div className="flex-1 p-8 md:p-16 overflow-y-auto bg-gradient-to-b from-white/50 to-transparent relative scroll-sm">
-        <div className="mb-10 border-b-2 border-[#F8C8DC]/30 pb-6 flex justify-between items-end">
-          <div>
-            <h2 className="font-cinzel text-5xl text-[#4A233E] font-bold tracking-tight">{anchorDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric' })}</h2>
-            <p className="text-xs text-[#8B5E75] uppercase tracking-[0.4em] font-bold mt-2">Sincronización Astral Académica</p>
-          </div>
-          <button 
-            onClick={() => setShowAddEventModal(true)}
-            className="btn-primary flex items-center gap-3 px-8 py-4 rounded-2xl font-cinzel text-xs font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all"
-          >
-            {getIcon('plus', "w-5 h-5")} Inscribir Hito Manual
-          </button>
+      <div className="flex-1 p-6 md:p-12 overflow-y-auto bg-gradient-to-b from-white/30 to-transparent relative no-scrollbar">
+        {/* Mystic Watermark */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] overflow-hidden">
+           {getIcon('compass', 'w-[80vw] h-[80vw]')}
+        </div>
+
+        <div className="mb-8 border-b border-[#D4AF37]/30 pb-4">
+          <h2 className="font-cinzel text-3xl md:text-5xl text-[#4A233E] font-bold tracking-tight text-center md:text-left">{anchorDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric' })}</h2>
+          <p className="text-[9px] text-[#8B5E75] text-center md:text-left uppercase tracking-[0.3em] font-black mt-1.5 opacity-60">Sincronía de Cronos</p>
         </div>
         
         {events.length === 0 ? (
-          <div className="h-96 flex flex-col items-center justify-center opacity-30 text-center px-12">
-            <div className="w-24 h-24 rounded-full border-2 border-dashed border-[#D4AF37] flex items-center justify-center text-[#D4AF37] mb-6">
-              {getIcon('compass', 'w-12 h-12')}
+          <div className="h-64 md:h-96 flex flex-col items-center justify-center opacity-20 text-center px-10">
+            <div className="w-16 h-16 rounded-full border border-dashed border-[#D4AF37] flex items-center justify-center text-[#D4AF37] mb-6">
+              {getIcon('compass', 'w-8 h-8')}
             </div>
-            <p className="font-garamond italic text-3xl">"El campo de operaciones converge en calma absoluta."</p>
-            <p className="font-inter text-[10px] uppercase font-bold tracking-widest mt-6">No hay influencias marcadas para este día.</p>
+            <p className="font-garamond italic text-xl md:text-2xl">"El flujo de este día fluye sin registros marcados."</p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-4 md:space-y-6">
             {events.map(event => (
               <div 
                 key={event.id}
-                className={`glass-card p-10 rounded-[3rem] border-l-8 flex items-center justify-between group transition-all duration-500 hover:translate-x-3 font-inter shadow-xl`}
+                className={`glass-card p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border-l-4 flex items-center justify-between group transition-all duration-300 font-inter shadow-md`}
                 style={{ borderLeftColor: event.color }}
               >
-                <div className="flex items-center gap-10">
-                   <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-inner`} style={{ backgroundColor: `${event.color}15`, color: event.color }}>
-                      {event.type === 'milestone' ? getIcon('calendar', 'w-10 h-10') : 
-                       event.type === 'finance' ? getIcon('scale', 'w-10 h-10') : 
-                       event.type === 'mood' ? getIcon(event.moodIcon!, 'w-10 h-10') :
-                       event.type === 'custom' ? getIcon('pen', 'w-10 h-10') :
-                       getIcon('book', 'w-10 h-10')}
+                <div className="flex items-center gap-4 md:gap-8">
+                   <div className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shadow-inner`} style={{ backgroundColor: `${event.color}10`, color: event.color }}>
+                      {event.type === 'milestone' ? getIcon('calendar', 'w-6 h-6 md:w-8 md:h-8') : 
+                       event.type === 'finance' ? getIcon('scale', 'w-6 h-6 md:w-8 md:h-8') : 
+                       event.type === 'mood' ? getIcon(event.moodIcon!, 'w-6 h-6 md:w-8 md:h-8') :
+                       getIcon('book', 'w-6 h-6 md:w-8 md:h-8')}
                    </div>
                    <div>
-                     <div className="flex items-center gap-4 mb-2">
-                       <h4 className="font-cinzel text-2xl font-bold text-[#4A233E] tracking-tight">{event.title}</h4>
-                       {event.time && <span className="text-[11px] bg-[#4A233E] text-white px-4 py-1 rounded-full font-black tracking-widest uppercase shadow-md">{event.time}</span>}
+                     <div className="flex items-center gap-3">
+                       <h4 className="font-cinzel text-base md:text-xl font-bold text-[#4A233E] tracking-tight">{event.title}</h4>
+                       {event.time && <span className="text-[8px] bg-[#4A233E]/10 text-[#4A233E] px-3 py-0.5 rounded-full font-bold uppercase">{event.time}</span>}
                      </div>
-                     <p className="text-sm text-[#8B5E75] font-bold uppercase tracking-widest opacity-80">{event.subtitle}</p>
-                     {event.type === 'finance' && event.amount !== undefined && (
-                       <p className={`text-xl font-black font-cinzel mt-1 ${event.color === COLORS.gold ? 'text-green-600' : 'text-red-500'}`}>
-                         {event.color === COLORS.gold ? '+' : '-'}${event.amount.toLocaleString()}
-                       </p>
-                     )}
+                     <p className="text-[9px] md:text-xs text-[#8B5E75] font-bold uppercase tracking-wider opacity-60 mt-0.5">{event.subtitle}</p>
                    </div>
                 </div>
-                <div className="flex items-center gap-8">
-                  {event.priority === 'high' && (
-                    <div className="flex items-center gap-3 text-[#D4AF37]">
-                      <span className="text-[11px] font-black uppercase tracking-[0.25em]">Prioridad Crítica</span>
-                      <div className="w-4 h-4 rounded-full bg-[#D4AF37] animate-ping" />
-                    </div>
-                  )}
-                  {event.type === 'custom' && (
-                    <button 
-                      onClick={() => onDeleteCustomEvent(event.id)}
-                      className="text-[#8B5E75] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-4 bg-white/80 rounded-full shadow-md"
-                    >
-                      {getIcon('trash', 'w-6 h-6')}
-                    </button>
-                  )}
-                </div>
+                {event.type === 'custom' && (
+                  <button onClick={() => onDeleteCustomEvent(event.id)} className="text-[#8B5E75] p-2 hover:bg-white/60 rounded-full transition-all">
+                    {getIcon('trash', 'w-4 h-4')}
+                  </button>
+                )}
               </div>
             ))}
-          </div>
-        )}
-
-        {/* Form Modal for Manual Event */}
-        {showAddEventModal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4">
-            <form onSubmit={handleAddCustomEvent} className="glass-card w-full max-w-lg p-10 md:p-12 rounded-[4rem] shadow-2xl animate-in zoom-in duration-500 font-inter border-[#D4AF37]/30">
-              <h2 className="font-cinzel text-2xl text-[#4A233E] mb-8 text-center font-bold tracking-[0.3em] uppercase">Inscribir en Astrolabio</h2>
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-[10px] uppercase font-black tracking-widest text-[#8B5E75] mb-2 px-1">Título de la Operación</label>
-                  <input required name="title" type="text" placeholder="Ej: Lectura Crítica de Postestructuralismo" className="w-full bg-white/40 border-2 border-[#F8C8DC]/50 rounded-2xl px-6 py-4 text-sm focus:border-[#E35B8F] outline-none shadow-inner" />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-black tracking-widest text-[#8B5E75] mb-2 px-1">Descripción del Hito</label>
-                  <textarea name="description" placeholder="Detalles, objetivos o metas específicas..." className="w-full bg-white/40 border-2 border-[#F8C8DC]/50 rounded-2xl px-6 py-4 text-sm focus:border-[#E35B8F] outline-none h-24 resize-none shadow-inner" />
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-[10px] uppercase font-black tracking-widest text-[#8B5E75] mb-2 px-1">Coordenada Temporal (Hora)</label>
-                    <input name="time" type="time" className="w-full bg-white/40 border-2 border-[#F8C8DC]/50 rounded-2xl px-6 py-4 text-sm focus:border-[#E35B8F] outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] uppercase font-black tracking-widest text-[#8B5E75] mb-2 px-1">Prioridad de Voluntad</label>
-                    <select name="priority" className="w-full bg-white/40 border-2 border-[#F8C8DC]/50 rounded-2xl px-6 py-4 text-sm outline-none cursor-pointer">
-                      <option value="low">Flujo Ordinario</option>
-                      <option value="high">Inercia Crítica</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-black tracking-widest text-[#8B5E75] mb-2 px-1">Cromatismo Visual (Aura)</label>
-                  <div className="flex justify-between mt-3 px-2">
-                    {[COLORS.primary, COLORS.gold, COLORS.plum, COLORS.mauve, '#48C9B0', '#5DADE2', '#AF7AC5'].map(c => (
-                      <label key={c} className="cursor-pointer relative group">
-                        <input type="radio" name="color" value={c} required className="peer sr-only" defaultChecked={c === COLORS.primary} />
-                        <div className="w-10 h-10 rounded-full border-4 border-white shadow-md transition-all peer-checked:scale-125 peer-checked:ring-2 peer-checked:ring-[#E35B8F]" style={{ backgroundColor: c }} />
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-6 mt-12">
-                <button type="button" onClick={() => setShowAddEventModal(false)} className="flex-1 py-4 text-xs font-black text-[#8B5E75] uppercase tracking-widest hover:bg-[#FDEEF4] rounded-2xl transition-colors">Descartar</button>
-                <button type="submit" className="flex-[2] btn-primary py-4 rounded-2xl font-cinzel text-xs font-black uppercase tracking-[0.3em] shadow-xl">Sellar en el Tiempo</button>
-              </div>
-            </form>
           </div>
         )}
       </div>
@@ -423,31 +353,30 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col pb-6">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 px-2">
-        <div className="flex items-center gap-8">
-          <div className="flex gap-3">
-            <button onClick={() => navigate(-1)} className="w-12 h-12 rounded-full glass-card border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] hover:bg-[#E35B8F] hover:text-white transition-all shadow-md">
-              <div className="rotate-180">{getIcon('chevron', 'w-6 h-6')}</div>
+    <div className="h-full flex flex-col pb-10">
+      <header className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 px-2">
+        <div className="flex items-center gap-4">
+          <div className="flex gap-2">
+            <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full glass-card border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm">
+              <div className="rotate-180">{getIcon('chevron', 'w-5 h-5')}</div>
             </button>
-            <button onClick={() => navigate(1)} className="w-12 h-12 rounded-full glass-card border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] hover:bg-[#E35B8F] hover:text-white transition-all shadow-md">
-              {getIcon('chevron', 'w-6 h-6')}
+            <button onClick={() => navigate(1)} className="w-10 h-10 rounded-full glass-card border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm">
+              {getIcon('chevron', 'w-5 h-5')}
             </button>
           </div>
-          <div>
-            <h1 className="font-cinzel text-3xl md:text-4xl font-bold text-[#4A233E] capitalize tracking-tight">
-              {anchorDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
+          <div className="text-center md:text-left">
+            <h1 className="font-cinzel text-2xl md:text-3xl font-bold text-[#4A233E] capitalize tracking-tight">
+              {anchorDate.toLocaleString('es-ES', { month: 'long' })}
             </h1>
-            <p className="text-[10px] text-[#8B5E75] uppercase font-black tracking-[0.4em] mt-1">Santuario del Astrolabio Maestral</p>
           </div>
         </div>
 
-        <div className="flex gap-2 bg-[#FDEEF4] p-1.5 rounded-2xl w-full md:w-auto overflow-x-auto shadow-inner border border-[#F8C8DC]">
+        <div className="flex gap-1.5 bg-white/40 p-1 rounded-xl w-full md:w-auto overflow-x-auto no-scrollbar shadow-inner border border-[#D4AF37]/20">
           {(['month', 'week', 'day'] as const).map(v => (
             <button 
               key={v}
               onClick={() => setView(v)}
-              className={`flex-1 md:flex-none px-8 py-2.5 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest transition-all ${view === v ? 'bg-[#E35B8F] text-white shadow-lg' : 'text-[#8B5E75] hover:bg-white/50'}`}
+              className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-cinzel text-[9px] font-black uppercase tracking-[0.15em] transition-all ${view === v ? 'bg-[#E35B8F] text-white shadow-md' : 'text-[#8B5E75] hover:bg-white/40'}`}
             >
               {v === 'month' ? 'Mes' : v === 'week' ? 'Semana' : 'Día'}
             </button>
@@ -455,15 +384,16 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
         </div>
       </header>
 
-      <div className="flex-1 glass-card rounded-[3rem] md:rounded-[4rem] overflow-hidden flex flex-col shadow-2xl relative border-[#F8C8DC]">
+      <div className="flex-1 glass-card rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden flex flex-col shadow-xl relative border-[#D4AF37]/10">
         {view === 'month' ? (
           <>
-            <div className="grid grid-cols-7 bg-[#4A233E] text-white py-4 shadow-md">
+            {/* Elegant Table Header for Month */}
+            <div className="grid grid-cols-7 glass-card border-b border-[#D4AF37]/30 py-3 shadow-sm z-10 sticky top-0">
                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => (
-                 <div key={d} className="text-center text-[10px] uppercase tracking-[0.3em] font-black opacity-60">{d}</div>
+                 <div key={d} className="text-center text-[10px] uppercase tracking-[0.2em] font-cinzel font-black text-[#8B5E75]">{d}</div>
                ))}
             </div>
-            <div className="flex-1 overflow-y-auto scroll-sm">
+            <div className="flex-1 overflow-y-auto no-scrollbar">
               {renderMonthGrid()}
             </div>
           </>
@@ -473,6 +403,50 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
           renderDayFocus()
         )}
       </div>
+
+      {/* Floating Sello de Lacre Button (Mobile FAB) */}
+      {isMobile && (
+        <button 
+          onClick={() => setShowAddEventModal(true)}
+          className="fixed bottom-28 right-6 w-14 h-14 bg-[#E35B8F] border-2 border-[#D4AF37] rounded-full flex items-center justify-center shadow-[0_10px_20px_rgba(227,91,143,0.3)] z-[100] hover:scale-110 active:scale-90 transition-all overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#E35B8F] to-[#FFD1DC] opacity-50"></div>
+          <div className="relative z-10 text-white drop-shadow-md">
+            {getIcon('plus', "w-6 h-6")}
+          </div>
+        </button>
+      )}
+
+      {/* Form Modal for Manual Event */}
+      {showAddEventModal && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-md p-4">
+          <form onSubmit={handleAddCustomEvent} className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 font-inter border-[#D4AF37]/40">
+            <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold tracking-[0.2em] uppercase">Inscribir en Astrolabio</h2>
+            <div className="space-y-4">
+              <input required name="title" type="text" placeholder="Título de la Operación..." className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-3.5 text-sm outline-none font-bold" />
+              <div className="grid grid-cols-2 gap-3">
+                <input name="time" type="time" className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-3.5 text-xs outline-none" />
+                <select name="priority" className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-3.5 text-xs outline-none">
+                  <option value="low">Flujo Ordinario</option>
+                  <option value="high">Inercia Crítica</option>
+                </select>
+              </div>
+              <div className="flex justify-between p-2">
+                {[COLORS.primary, COLORS.gold, COLORS.mauve, '#48C9B0', '#5DADE2'].map(c => (
+                  <label key={c} className="cursor-pointer">
+                    <input type="radio" name="color" value={c} required className="peer sr-only" defaultChecked={c === COLORS.primary} />
+                    <div className="w-8 h-8 rounded-full border-2 border-white shadow-sm transition-all peer-checked:scale-125 peer-checked:ring-2 peer-checked:ring-[#E35B8F]" style={{ backgroundColor: c }} />
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-4 mt-8">
+              <button type="button" onClick={() => setShowAddEventModal(false)} className="flex-1 py-3 text-[10px] font-black text-[#8B5E75] uppercase tracking-widest">Cerrar</button>
+              <button type="submit" className="flex-[2] btn-primary py-3.5 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-lg">Sellar Tiempo</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

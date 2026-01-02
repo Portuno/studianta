@@ -15,21 +15,18 @@ interface FinanceModuleProps {
 }
 
 const GASTO_CATEGORIES = [
-  "Alimentación",
-  "Transporte",
-  "Material de Estudio",
-  "Ocio",
-  "Servicios",
-  "Otra"
+  "Alquiler",
+  "Apuntes",
+  "Comida",
+  "Otros"
 ];
 
 const INGRESO_CATEGORIES = [
-  "Mesada/Familiar",
+  "Mesada",
   "Beca",
   "Sueldo",
   "Venta",
-  "Premio",
-  "Otra"
+  "Otros"
 ];
 
 const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onUpdateBudget, onAdd, onDelete, onUpdate, isMobile }) => {
@@ -39,14 +36,11 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
   const [tempBudget, setTempBudget] = useState(budget.toString());
   const [transType, setTransType] = useState<'Ingreso' | 'Gasto'>('Gasto');
   const [rightPanelTab, setRightPanelTab] = useState<'history' | 'oracle'>('history');
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const totalSpent = transactions.filter(t => t.type === 'Gasto').reduce((acc, curr) => acc + curr.amount, 0);
   const totalIncome = transactions.filter(t => t.type === 'Ingreso').reduce((acc, curr) => acc + curr.amount, 0);
-  const availableCapital = budget + totalIncome;
-  const balance = availableCapital - totalSpent;
+  const balance = (budget + totalIncome) - totalSpent;
   
-  const isHealthy = balance >= availableCapital * 0.2;
   const isCritical = balance < 0;
 
   const handleConsultOracle = async () => {
@@ -63,7 +57,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
     const amount = parseFloat(formData.get('amount') as string);
     const date = formData.get('date') as string;
     const category = formData.get('category') as string;
-    const rawDescription = formData.get('description') as string;
+    const description = formData.get('description') as string;
 
     if (isNaN(amount)) return;
 
@@ -73,191 +67,184 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
       category: category,
       amount: amount,
       date: date || new Date().toISOString().split('T')[0],
-      description: rawDescription.trim() || category,
+      description: description.trim() || category,
     };
     onAdd(newT);
     e.currentTarget.reset();
   };
 
   const handleSaveBudget = () => {
-    const newBudget = parseFloat(tempBudget) || 0;
-    if (newBudget !== budget) {
-      const diff = newBudget - budget;
-      const logEntry: Transaction = {
-        id: Math.random().toString(36).substring(7),
-        type: diff >= 0 ? 'Ingreso' : 'Gasto',
-        category: 'Ajuste Tesorería',
-        amount: Math.abs(diff),
-        date: new Date().toISOString().split('T')[0],
-        description: `Actualización de Presupuesto Mensual (${budget} -> ${newBudget})`,
-      };
-      onAdd(logEntry);
-    }
-    onUpdateBudget(newBudget);
+    onUpdateBudget(parseFloat(tempBudget) || 0);
     setShowBudgetInput(false);
   };
 
-  const categories = transType === 'Gasto' ? GASTO_CATEGORIES : INGRESO_CATEGORIES;
-
-  const sortedTransactions = [...transactions].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-
   return (
-    <div className="h-full flex flex-col pb-10">
-      <header className="mb-8 px-2">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-          <div>
-            <h1 className="font-cinzel text-3xl md:text-4xl font-bold text-[#4A233E]">Balanza de Latón</h1>
-            <p className="text-sm text-[#8B5E75] font-inter italic">Equilibrio y administración de la materia económica.</p>
+    <div className="min-h-screen flex flex-col pb-24 overflow-y-auto no-scrollbar font-inter bg-[#FFF0F5]">
+      {/* Header Compacto */}
+      <header className="pt-8 pb-4 px-4 sticky top-0 z-20 bg-[#FFF0F5]/80 backdrop-blur-md border-b border-[#F8C8DC]/30">
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="font-marcellus text-2xl md:text-4xl font-black text-[#4A233E] tracking-widest uppercase">Balanza de Latón</h1>
+            <button 
+              onClick={handleConsultOracle}
+              className="w-10 h-10 md:w-12 md:h-12 bg-[#4A233E] text-[#D4AF37] rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all hover:scale-105"
+            >
+              {getIcon('sparkles', 'w-5 h-5 md:w-6 md:h-6')}
+            </button>
           </div>
-          <button 
-            onClick={handleConsultOracle}
-            disabled={loadingOracle || transactions.length === 0}
-            className="flex items-center gap-2 px-8 py-3 bg-[#4A233E] text-white rounded-2xl font-cinzel text-xs font-bold uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
-          >
-            {loadingOracle ? <div className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> : getIcon('sparkles', 'w-4 h-4 text-[#D4AF37]')}
-            Consultar Oráculo
-          </button>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="glass-card p-8 rounded-[3rem] relative overflow-hidden group border-[#F8C8DC]">
-            <div className="flex justify-between items-start">
-              <div>
-                <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#8B5E75]">Presupuesto Mensual Base</span>
-                {showBudgetInput ? (
-                  <div className="flex items-center gap-2 mt-2">
-                    <input 
-                      autoFocus
-                      type="number" 
-                      value={tempBudget}
-                      onChange={(e) => setTempBudget(e.target.value)}
-                      className="bg-white/60 border-2 border-[#E35B8F] rounded-xl px-4 py-2 text-2xl font-cinzel text-[#4A233E] w-48 outline-none shadow-inner"
-                    />
-                    <button onClick={handleSaveBudget} className="text-[#D4AF37] hover:scale-110 transition-transform">
-                      {getIcon('check', 'w-8 h-8')}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-4 group mt-1">
-                    <h2 className="font-cinzel text-5xl text-[#4A233E] tracking-tight">${budget.toLocaleString()}</h2>
-                    <button onClick={() => setShowBudgetInput(true)} className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-[#8B5E75] hover:text-[#E35B8F]">
-                      {getIcon('pen', 'w-5 h-5')}
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="text-[#D4AF37] opacity-20 transform -rotate-12">{getIcon('scale', 'w-16 h-16')}</div>
+          {/* Dashboard de Balance Compacto */}
+          <div className="grid grid-cols-2 gap-4 max-w-3xl">
+            <div className="glass-card p-5 rounded-[1.75rem] border-[#F8C8DC] shadow-sm">
+              <p className="text-[9px] md:text-[11px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-2 opacity-60">Presupuesto</p>
+              {showBudgetInput ? (
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="number" value={tempBudget} onChange={(e) => setTempBudget(e.target.value)}
+                    className="w-full bg-transparent border-b-2 border-[#E35B8F] text-xl font-marcellus text-[#4A233E] outline-none"
+                    autoFocus
+                  />
+                  <button onClick={handleSaveBudget} className="p-2 bg-[#E35B8F] text-white rounded-lg shadow-sm">{getIcon('check', 'w-4 h-4')}</button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between cursor-pointer group" onClick={() => setShowBudgetInput(true)}>
+                  <h2 className="font-marcellus text-2xl md:text-4xl font-black text-[#4A233E] tracking-tighter">${budget}</h2>
+                  {getIcon('pen', 'w-3 h-3 text-[#8B5E75] opacity-0 group-hover:opacity-40 transition-opacity')}
+                </div>
+              )}
             </div>
-          </div>
-
-          <div className={`glass-card p-8 rounded-[3rem] border-2 transition-all duration-700 flex flex-col justify-center ${isCritical ? 'border-red-400 bg-red-50/40 shadow-red-100 shadow-2xl' : isHealthy ? 'border-green-400 bg-green-50/40 shadow-green-100 shadow-2xl' : 'border-[#D4AF37]/40 shadow-amber-100 shadow-2xl'}`}>
-            <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#8B5E75]">Capital Residual</span>
-            <div className="flex justify-between items-end mt-2">
-              <h2 className={`font-cinzel text-5xl tracking-tight ${isCritical ? 'text-red-600' : 'text-[#4A233E]'}`}>
-                ${balance.toLocaleString()}
-              </h2>
-              <div className={`text-[10px] font-black uppercase tracking-[0.2em] px-5 py-2 rounded-2xl shadow-sm ${isCritical ? 'bg-red-500 text-white animate-pulse' : isHealthy ? 'bg-green-500 text-white' : 'bg-[#D4AF37] text-white'}`}>
-                {isCritical ? 'Déficit Crítico' : isHealthy ? 'Estable' : 'Inercia de Gasto'}
-              </div>
+            <div className={`glass-card p-5 rounded-[1.75rem] border-2 shadow-sm ${isCritical ? 'border-red-400 bg-red-50' : 'border-[#D4AF37]/30'}`}>
+              <p className="text-[9px] md:text-[11px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-2 opacity-60">Capital Residual</p>
+              <h2 className={`font-marcellus text-2xl md:text-4xl font-black tracking-tighter ${isCritical ? 'text-red-500' : 'text-[#4A233E]'}`}>${balance}</h2>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-8 overflow-hidden">
-        {/* Formulario */}
-        <div className="lg:col-span-4 flex flex-col gap-8 h-full">
-          <div className="glass-card flex-1 p-8 rounded-[3rem] border-[#F8C8DC] shadow-2xl flex flex-col justify-center bg-white/40">
-            <h3 className="font-marcellus text-xl text-[#4A233E] mb-8 text-center font-bold uppercase tracking-[0.2em]">Registrar Operación</h3>
+      <main className="px-4 max-w-7xl mx-auto w-full pt-8">
+        {/* Layout Condicional: En Desktop es un grid de 2 columnas paralelas */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          
+          {/* LADO IZQUIERDO: La Forja Económica (Formulario) */}
+          <section className="glass-card p-8 md:p-12 rounded-[3.5rem] border-[#F8C8DC] shadow-2xl bg-white/70 h-fit">
+            <h3 className="font-marcellus text-lg md:text-xl font-black text-[#4A233E] mb-8 text-center tracking-[0.3em] uppercase border-b border-[#F8C8DC] pb-4">Registrar Operación</h3>
             
-            <div className="mb-10">
-              <div className="flex bg-[#FDEEF4] p-1.5 rounded-[2.2rem] border border-[#F8C8DC] w-full shadow-inner">
-                 <button type="button" onClick={() => setTransType('Gasto')} className={`flex-1 py-4.5 rounded-[1.8rem] text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-3 ${transType === 'Gasto' ? 'bg-[#E35B8F] text-white shadow-xl scale-105' : 'text-[#8B5E75]'}`}>
-                   {getIcon('plus', 'w-5 h-5 rotate-45')} Gasto
-                 </button>
-                 <button type="button" onClick={() => setTransType('Ingreso')} className={`flex-1 py-4.5 rounded-[1.8rem] text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 flex items-center justify-center gap-3 ${transType === 'Ingreso' ? 'bg-[#D4AF37] text-white shadow-xl scale-105' : 'text-[#8B5E75]'}`}>
-                   {getIcon('plus', 'w-5 h-5')} Ingreso
-                 </button>
-              </div>
+            <div className="flex bg-[#FDEEF4] p-1.5 rounded-2xl border border-[#F8C8DC] mb-8 shadow-inner">
+               <button onClick={() => setTransType('Gasto')} className={`flex-1 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all ${transType === 'Gasto' ? 'bg-[#E35B8F] text-white shadow-md scale-[1.02]' : 'text-[#8B5E75] hover:bg-white/40'}`}>Gasto</button>
+               <button onClick={() => setTransType('Ingreso')} className={`flex-1 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all ${transType === 'Ingreso' ? 'bg-[#D4AF37] text-white shadow-md scale-[1.02]' : 'text-[#8B5E75] hover:bg-white/40'}`}>Ingreso</button>
             </div>
 
-            <form onSubmit={handleAddTransaction} className="space-y-6 font-inter">
-              <input name="description" type="text" placeholder="Concepto..." className="w-full bg-white/60 border-2 border-[#F8C8DC]/30 rounded-2xl px-6 py-4 text-sm focus:border-[#E35B8F] outline-none shadow-sm font-bold" />
-              <div className="grid grid-cols-2 gap-6">
-                <input required name="amount" type="number" step="0.01" placeholder="Monto ($)" className="w-full bg-white/60 border-2 border-[#F8C8DC]/30 rounded-2xl px-6 py-4 text-sm focus:border-[#E35B8F] outline-none font-black" />
-                <select name="category" className="w-full bg-white/60 border-2 border-[#F8C8DC]/30 rounded-2xl px-6 py-4 text-sm outline-none font-bold text-[#4A233E]">
-                  {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
+            <form onSubmit={handleAddTransaction} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Concepto de la Transacción</label>
+                <input required name="description" type="text" placeholder="Ej: Inscripción Congreso, Apuntes Bioética..." className="w-full bg-white/80 border border-[#F8C8DC] rounded-2xl px-6 py-4 text-sm text-[#4A233E] font-bold outline-none focus:border-[#E35B8F] transition-all" />
               </div>
-              <input name="date" type="date" className="w-full bg-white/60 border-2 border-[#F8C8DC]/30 rounded-2xl px-6 py-4 text-sm outline-none font-bold" defaultValue={new Date().toISOString().split('T')[0]} />
-              <button type="submit" className={`w-full py-6 rounded-[2.2rem] font-cinzel text-sm font-black uppercase tracking-[0.4em] text-white mt-8 ${transType === 'Gasto' ? 'bg-[#E35B8F]' : 'bg-[#D4AF37]'}`}>
-                Sellar {transType}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Monto de Operación</label>
+                  <input required name="amount" type="number" step="0.01" placeholder="0.00" className="w-full bg-white/80 border border-[#F8C8DC] rounded-2xl px-6 py-4 text-sm text-[#4A233E] font-black outline-none focus:border-[#E35B8F] transition-all" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Esfera de Gasto</label>
+                  <select name="category" className="w-full bg-white/80 border border-[#F8C8DC] rounded-2xl px-4 py-4 text-sm font-bold text-[#4A233E] outline-none focus:border-[#E35B8F] transition-all">
+                    {(transType === 'Gasto' ? GASTO_CATEGORIES : INGRESO_CATEGORIES).map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Fecha del Sello</label>
+                <input name="date" type="date" className="w-full bg-white/80 border border-[#F8C8DC] rounded-2xl px-6 py-4 text-sm text-[#4A233E] font-bold outline-none focus:border-[#E35B8F]" defaultValue={new Date().toISOString().split('T')[0]} />
+              </div>
+
+              <button type="submit" className={`w-full py-5 rounded-[2rem] font-marcellus text-xs font-black uppercase tracking-[0.3em] text-white shadow-xl transition-all active:scale-95 hover:brightness-105 mt-4 ${transType === 'Gasto' ? 'bg-[#E35B8F]' : 'bg-[#D4AF37]'}`}>
+                Sellar Operación Financiera
               </button>
             </form>
-          </div>
-        </div>
+          </section>
 
-        {/* Historial y Oráculo */}
-        <div className="lg:col-span-8 flex flex-col h-full overflow-hidden">
-          <div className="glass-card h-full rounded-[3.5rem] flex flex-col border-[#D4AF37]/40 shadow-2xl relative overflow-hidden bg-white/20">
-            <div className="bg-[#4A233E] p-4 flex gap-4 border-b border-[#D4AF37]/30 shrink-0">
-               <button onClick={() => setRightPanelTab('history')} className={`flex-1 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${rightPanelTab === 'history' ? 'bg-[#D4AF37] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}>Crónicas</button>
-               <button onClick={() => setRightPanelTab('oracle')} className={`flex-1 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${rightPanelTab === 'oracle' ? 'bg-[#E35B8F] text-white shadow-lg' : 'text-white/40 hover:text-white'}`}>Recinto del Oráculo</button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-10 md:p-14 scroll-sm">
-              {rightPanelTab === 'history' ? (
-                <div className="space-y-4">
-                  {sortedTransactions.map(t => (
-                    <div key={t.id} onClick={() => setEditingTransaction(t)} className="bg-white/70 border border-[#F8C8DC]/50 p-6 rounded-[2.5rem] flex items-center justify-between group hover:bg-white hover:shadow-2xl transition-all cursor-pointer">
-                      <div className="flex items-center gap-8">
-                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${t.type === 'Ingreso' ? 'bg-[#D4AF37]/20 text-[#D4AF37]' : 'bg-[#E35B8F]/20 text-[#E35B8F]'}`}>
-                          {getIcon(t.category === 'Ajuste Tesorería' ? 'scale' : (t.type === 'Ingreso' ? 'sparkles' : 'low-battery'), 'w-7 h-7')}
-                        </div>
-                        <div>
-                          <h4 className="text-xl font-bold text-[#4A233E] truncate max-w-[350px]">{t.description}</h4>
-                          <p className="text-[12px] text-[#8B5E75] font-inter uppercase tracking-widest font-black opacity-60">{new Date(t.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} • {t.category}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-8">
-                         <p className={`font-cinzel text-2xl font-black ${t.type === 'Ingreso' ? 'text-green-600' : 'text-red-500'}`}>{t.type === 'Ingreso' ? '+' : '-'}${t.amount.toLocaleString()}</p>
-                         <button onClick={(e) => { e.stopPropagation(); onDelete(t.id); }} className="text-red-300 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all p-4">{getIcon('trash', 'w-6 h-6')}</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-5xl mx-auto">
-                  {oracleDiagnosis ? (
-                    <div className="prose prose-plum max-w-none text-[#4A233E]">
-                      {oracleDiagnosis.split('\n').map((line, i) => (
-                        <p key={i} className={line.includes(':') ? 'font-black font-marcellus text-[#E35B8F] mt-12 first:mt-0 uppercase tracking-[0.3em] text-sm border-b border-[#F8C8DC] pb-2 inline-block' : 'font-garamond italic text-[24px] leading-relaxed mt-6'}>
-                          {line}
-                        </p>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="h-full py-40 flex flex-col items-center justify-center text-center px-16 opacity-60">
-                       <div className="w-32 h-32 rounded-full border-2 border-[#D4AF37]/20 flex items-center justify-center text-[#D4AF37] mb-12 animate-pulse">{getIcon('chat', 'w-16 h-16')}</div>
-                       <h4 className="font-marcellus text-3xl font-bold text-[#4A233E] mb-6 uppercase tracking-widest">Sincronía de la Balanza</h4>
-                       <p className="font-garamond italic text-2xl max-w-2xl">"Solicita un diagnóstico para revelar los patrones de tu flujo capital."</p>
-                    </div>
-                  )}
-                </div>
-              )}
+          {/* LADO DERECHO: Historial (Crónicas) */}
+          <section className="flex flex-col gap-6">
+            <div className="flex justify-between items-center px-4">
+              <h3 className="text-[11px] md:text-sm font-marcellus font-black uppercase tracking-[0.4em] text-[#4A233E]">Crónicas de la Tesorería</h3>
+              <button onClick={() => setRightPanelTab('history')} className="text-[9px] md:text-[10px] font-black text-[#E35B8F] uppercase tracking-widest hover:underline hover:opacity-80 transition-all">Acceder al Archivo</button>
             </div>
             
-            {loadingOracle && (
-              <div className="absolute inset-0 bg-white/70 backdrop-blur-2xl flex flex-col items-center justify-center z-50">
-                 <div className="w-28 h-28 border-[10px] border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin mb-12 shadow-2xl" />
-                 <p className="font-cinzel text-lg font-black text-[#4A233E] tracking-[0.6em] uppercase animate-pulse">Canalizando Sabiduría...</p>
-              </div>
-            )}
-          </div>
+            <div className="space-y-4 pr-2">
+              {transactions.length === 0 ? (
+                <div className="py-24 text-center glass-card rounded-[3rem] border-dashed border-2 border-[#F8C8DC]/60">
+                  <div className="opacity-20 flex flex-col items-center">
+                    {getIcon('scale', 'w-16 h-16 mb-4')}
+                    <p className="font-garamond italic text-2xl px-12">"La balanza aguarda el primer peso de tu gestión académica."</p>
+                  </div>
+                </div>
+              ) : (
+                transactions.slice(0, 10).map(t => (
+                  <div key={t.id} className="glass-card p-5 md:p-6 rounded-[2.5rem] flex items-center justify-between border-[#F8C8DC]/40 bg-white/40 hover:bg-white/70 transition-all shadow-sm group">
+                    <div className="flex items-center gap-5">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md transition-transform group-hover:rotate-6 ${t.type === 'Ingreso' ? 'bg-[#D4AF37]' : 'bg-[#E35B8F]'}`}>
+                        {getIcon(t.type === 'Ingreso' ? 'plus' : 'trash', 'w-5 h-5')}
+                      </div>
+                      <div>
+                        <p className="text-[14px] md:text-[16px] font-bold text-[#4A233E] leading-tight tracking-tight">{t.description}</p>
+                        <p className="text-[9px] md:text-[10px] text-[#8B5E75] uppercase font-black opacity-60 tracking-[0.2em] mt-1">{t.category} • {new Date(t.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</p>
+                      </div>
+                    </div>
+                    <div className="text-right flex flex-col items-end gap-1">
+                      <p className={`font-marcellus text-lg md:text-2xl font-black ${t.type === 'Ingreso' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {t.type === 'Ingreso' ? '+' : '-'}${t.amount}
+                      </p>
+                      <button onClick={() => onDelete(t.id)} className="text-[9px] text-red-300 uppercase font-black tracking-widest opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500">Anular</button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
         </div>
-      </div>
+      </main>
+
+      {/* Oracle Modal Overlay */}
+      {loadingOracle && (
+        <div className="fixed inset-0 z-[400] bg-[#FFF0F5]/90 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center">
+           <div className="w-24 h-24 border-[6px] border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin mb-10 shadow-2xl" />
+           <p className="font-marcellus text-lg font-black text-[#4A233E] tracking-[0.4em] uppercase animate-pulse">Consultando los Pesos Celestiales...</p>
+        </div>
+      )}
+
+      {oracleDiagnosis && rightPanelTab === 'oracle' && !loadingOracle && (
+        <div className="fixed inset-0 z-[400] bg-[#FFF0F5] overflow-y-auto p-10 animate-in fade-in slide-in-from-bottom-10 duration-500 flex flex-col items-center">
+           <div className="max-w-4xl w-full relative pt-12">
+             <button onClick={() => setRightPanelTab('history')} className="absolute top-0 right-0 text-[#4A233E] p-6 hover:scale-125 transition-all active:rotate-90">
+                {getIcon('trash', 'w-10 h-10 rotate-45 opacity-40')}
+             </button>
+             
+             <div className="text-center mb-16">
+               <h2 className="font-marcellus text-3xl md:text-5xl font-black text-[#4A233E] mb-4 uppercase tracking-[0.3em]">El Veredicto de la Balanza</h2>
+               <div className="h-1 w-24 bg-[#D4AF37] mx-auto rounded-full" />
+             </div>
+
+             <div className="glass-card p-10 md:p-16 rounded-[4rem] border-[#D4AF37]/30 shadow-2xl bg-white/80 relative">
+               {/* Watermark sutil */}
+               <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none overflow-hidden">
+                  {getIcon('scale', 'w-[40rem] h-[40rem]')}
+               </div>
+               
+               <div className="prose prose-plum max-w-none text-[#4A233E] font-garamond italic text-2xl md:text-3xl leading-relaxed space-y-8 text-justify relative z-10">
+                 {oracleDiagnosis.split('\n').map((line, i) => (
+                   <p key={i}>{line}</p>
+                 ))}
+               </div>
+             </div>
+
+             <button onClick={() => setRightPanelTab('history')} className="mt-16 w-full py-6 bg-[#4A233E] text-[#D4AF37] rounded-[2.5rem] font-marcellus text-sm font-black uppercase tracking-[0.5em] shadow-2xl transition-all hover:bg-[#321829] hover:shadow-pink-200/50">
+                Sellar Veredicto y Volver
+             </button>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
