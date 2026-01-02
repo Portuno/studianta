@@ -1,12 +1,12 @@
 
+// CRITICAL: This must be the first thing to run before any imports
+if (typeof (window as any).process === 'undefined') {
+  (window as any).process = { env: { API_KEY: '' } };
+}
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-
-// Polyfill process for browser environments (Vercel/Vite compatibility)
-if (typeof (window as any).process === 'undefined') {
-  (window as any).process = { env: {} };
-}
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
