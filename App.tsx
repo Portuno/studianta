@@ -127,6 +127,7 @@ const App: React.FC = () => {
             onUpdateBudget={setMonthlyBudget}
             onAdd={(t) => setTransactions([...transactions, t])} 
             onDelete={(id) => setTransactions(transactions.filter(t => t.id !== id))}
+            onUpdate={(t) => setTransactions(transactions.map(item => item.id === t.id ? t : item))}
             isMobile={isMobile} 
           />
         );

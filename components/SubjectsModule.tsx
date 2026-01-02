@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Subject, SubjectStatus, Milestone, Note, StudyMaterial, Schedule } from '../types';
 import { getIcon, COLORS } from '../constants';
 import { geminiService } from '../services/geminiService';
@@ -108,7 +108,7 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
       </div>
 
       {selectedSubject && (
-        <div className="fixed inset-0 z-[150] bg-[#FFF0F5] overflow-y-auto animate-in slide-in-from-right duration-500">
+        <div className="fixed inset-0 z-[150] bg-[#FFF0F5] overflow-y-hidden animate-in slide-in-from-right duration-500">
           <SubjectDetail 
             subject={selectedSubject} 
             onClose={() => setSelectedSubjectId(null)} 
@@ -186,6 +186,18 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
   const [editingNote, setEditingNote] = useState<Note | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const queryInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (activeTab === 'lab') {
+      scrollToBottom();
+    }
+  }, [chatHistory, activeTab]);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const toggleContext = (id: string) => {
     setSelectedContextIds(prev => 
@@ -195,10 +207,10 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
 
   const handleIaQuery = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.currentTarget;
-    const query = new FormData(form).get('query') as string;
-    if (!query) return;
+    const query = queryInputRef.current?.value;
+    if (!query || loadingIa) return;
 
+    if (queryInputRef.current) queryInputRef.current.value = '';
     setChatHistory(prev => [...prev, { role: 'user', text: query }]);
     setLoadingIa(true);
     
@@ -217,8 +229,6 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
     const res = await geminiService.queryAcademicOracle(subject.name, query, contextStr, { mood: 'Enfocada' });
     setChatHistory(prev => [...prev, { role: 'ia', text: res || '' }]);
     setLoadingIa(false);
-    
-    if (form) form.reset();
   };
 
   const addMilestone = (e: React.FormEvent<HTMLFormElement>) => {
@@ -270,10 +280,72 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
     setEditingNote(null);
   };
 
+  const downloadDossier = () => {
+    const doc = new jsPDF();
+    doc.setFont("times", "bold");
+    doc.setFontSize(22);
+    doc.text(`DOSSIER ACADÉMICO: ${subject.name.toUpperCase()}`, 20, 30);
+    
+    doc.setFontSize(12);
+    doc.setFont("times", "italic");
+    doc.text(`${subject.career} • Studianta Sanctuary`, 20, 38);
+    
+    doc.line(20, 42, 190, 42);
+    
+    doc.setFont("times", "bold");
+    doc.text("Información de Cátedra", 20, 52);
+    doc.setFont("times", "normal");
+    doc.text(`Profesor: ${subject.professor || 'No asignado'}`, 25, 60);
+    doc.text(`Email: ${subject.email || 'No asignado'}`, 25, 66);
+    doc.text(`Aula: ${subject.room || 'No asignado'}`, 25, 72);
+
+    let y = 85;
+    if (subject.schedules.length > 0) {
+      doc.setFont("times", "bold");
+      doc.text("Horarios de Cursada", 20, y);
+      y += 8;
+      doc.setFont("times", "normal");
+      subject.schedules.forEach(s => {
+        doc.text(`• ${s.day}: ${s.startTime} - ${s.endTime}`, 25, y);
+        y += 6;
+      });
+      y += 6;
+    }
+
+    if (subject.milestones.length > 0) {
+      doc.setFont("times", "bold");
+      doc.text("Exámenes e Hitos", 20, y);
+      y += 8;
+      doc.setFont("times", "normal");
+      subject.milestones.forEach(m => {
+        doc.text(`• ${m.title} (${m.date}) - ${m.type}`, 25, y);
+        y += 6;
+      });
+      y += 6;
+    }
+
+    doc.setFont("times", "bold");
+    doc.text("Apuntes Registrados", 20, y);
+    y += 8;
+    doc.setFont("times", "normal");
+    subject.notes.forEach(n => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setFont("times", "bold");
+      doc.text(`${n.title}`, 25, y);
+      y += 6;
+      doc.setFont("times", "normal");
+      const splitContent = doc.splitTextToSize(n.content, 160);
+      doc.text(splitContent, 30, y);
+      y += (splitContent.length * 5) + 5;
+    });
+
+    doc.save(`Dossier_${subject.name.replace(/\s+/g, '_')}.pdf`);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FFF0F5] to-[#FDEEF4] pb-24 md:pb-8">
-      {/* Header Fijo */}
-      <div className="bg-white/40 border-b border-[#F8C8DC] p-4 md:p-8 sticky top-0 z-10 backdrop-blur-md">
+    <div className="h-screen bg-gradient-to-br from-[#FFF0F5] to-[#FDEEF4] flex flex-col overflow-hidden">
+      {/* Header Fijo Refinado */}
+      <div className="bg-white/40 border-b border-[#F8C8DC] p-4 md:p-8 shrink-0 backdrop-blur-md z-20">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-4">
             <button onClick={onClose} className="p-2 text-[#8B5E75] hover:bg-[#FFD1DC] rounded-full transition-all">
@@ -285,10 +357,16 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
             </div>
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto">
+             <button 
+                onClick={downloadDossier}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-[#D4AF37] rounded-xl text-[10px] font-cinzel font-bold text-[#4A233E] uppercase tracking-widest hover:bg-[#D4AF37]/10 transition-all shadow-sm h-[42px]"
+              >
+                {getIcon('sparkles', 'w-4 h-4 text-[#D4AF37]')} Descargar Dossier
+              </button>
              <select 
                 value={subject.status} 
                 onChange={(e) => onStatusChange(e.target.value as SubjectStatus)}
-                className="flex-1 md:flex-none bg-white/80 border border-[#D4AF37] rounded-xl px-4 py-2.5 text-[10px] font-cinzel font-bold text-[#4A233E] uppercase tracking-widest outline-none shadow-sm"
+                className="flex-1 md:flex-none bg-white/80 border border-[#D4AF37] rounded-xl px-4 py-2.5 text-[10px] font-cinzel font-bold text-[#4A233E] uppercase tracking-widest outline-none shadow-sm h-[42px]"
               >
                 <option value="Cursando">Cursando</option>
                 <option value="Final Pendiente">Final Pendiente</option>
@@ -298,343 +376,325 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 p-4 md:p-8">
-        
-        {/* Sidebar de Navegación */}
-        <div className="lg:col-span-3 space-y-2">
-          {[
-            { id: 'info', label: 'Cátedra', icon: 'book' },
-            { id: 'plan', label: 'Horarios', icon: 'calendar' },
-            { id: 'notas', label: 'Apuntes', icon: 'pen' },
-            { id: 'lab', label: 'Mentor IA', icon: 'brain' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-300 font-cinzel text-xs tracking-widest uppercase font-bold ${activeTab === tab.id ? 'bg-[#E35B8F] text-white shadow-xl shadow-pink-200 translate-x-2' : 'bg-white/40 text-[#8B5E75] hover:bg-white/60'}`}
-            >
-              {getIcon(tab.icon, "w-5 h-5")}
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Área de Contenido */}
-        <div className="lg:col-span-9 space-y-8 animate-in slide-in-from-bottom duration-500 font-inter">
+      <div className="flex-1 overflow-y-auto max-w-7xl mx-auto w-full p-4 md:p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
           
-          {activeTab === 'info' && (
-            <div className="space-y-6">
-              <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg">
-                <h3 className="font-cinzel text-xl text-[#4A233E] mb-6 flex items-center gap-3 font-bold uppercase tracking-widest">
-                  {getIcon('users', "w-6 h-6")} Datos de Cátedra
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Profesor Titular</label>
-                    <input 
-                      type="text" value={subject.professor || ''} 
-                      onChange={(e) => onUpdate({...subject, professor: e.target.value})}
-                      placeholder="Nombre del docente..."
-                      className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:border-[#E35B8F] outline-none mt-1 shadow-inner"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Email de Contacto</label>
-                    <input 
-                      type="email" value={subject.email || ''} 
-                      onChange={(e) => onUpdate({...subject, email: e.target.value})}
-                      placeholder="profesor@universidad.edu"
-                      className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:border-[#E35B8F] outline-none mt-1 shadow-inner"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Teléfono / Despacho</label>
-                    <input 
-                      type="text" value={subject.phone || ''} 
-                      onChange={(e) => onUpdate({...subject, phone: e.target.value})}
-                      placeholder="+54 9 1234 5678"
-                      className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:border-[#E35B8F] outline-none mt-1 shadow-inner"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Aula / Ubicación</label>
-                    <input 
-                      type="text" value={subject.room || ''} 
-                      onChange={(e) => onUpdate({...subject, room: e.target.value})}
-                      placeholder="Aula 302, Edificio A"
-                      className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:border-[#E35B8F] outline-none mt-1 shadow-inner"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 md:col-span-2 pt-4 border-t border-[#F8C8DC]/30">
+          {/* Sidebar de Navegación */}
+          <div className="lg:col-span-2 space-y-2">
+            {[
+              { id: 'info', label: 'Cátedra', icon: 'book' },
+              { id: 'plan', label: 'Horarios', icon: 'calendar' },
+              { id: 'notas', label: 'Apuntes', icon: 'pen' },
+              { id: 'lab', label: 'Mentor IA', icon: 'brain' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all duration-300 font-cinzel text-xs tracking-widest uppercase font-bold ${activeTab === tab.id ? 'bg-[#E35B8F] text-white shadow-xl shadow-pink-200 translate-x-2' : 'bg-white/40 text-[#8B5E75] hover:bg-white/60'}`}
+              >
+                {getIcon(tab.icon, "w-5 h-5")}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Área de Contenido */}
+          <div className="lg:col-span-10 flex flex-col min-h-0 font-inter">
+            
+            {activeTab === 'info' && (
+              <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
+                <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg">
+                  <h3 className="font-cinzel text-xl text-[#4A233E] mb-6 flex items-center gap-3 font-bold uppercase tracking-widest">
+                    {getIcon('users', "w-6 h-6")} Datos de Cátedra
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Inicio de Cursada</label>
+                      <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Profesor Titular</label>
                       <input 
-                        type="date" value={subject.termStart || ''} 
-                        onChange={(e) => onUpdate({...subject, termStart: e.target.value})}
-                        className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm outline-none mt-1"
+                        type="text" value={subject.professor || ''} 
+                        onChange={(e) => onUpdate({...subject, professor: e.target.value})}
+                        placeholder="Nombre del docente..."
+                        className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:border-[#E35B8F] outline-none mt-1 shadow-inner"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Fin de Cursada</label>
+                      <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Email de Contacto</label>
                       <input 
-                        type="date" value={subject.termEnd || ''} 
-                        onChange={(e) => onUpdate({...subject, termEnd: e.target.value})}
-                        className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm outline-none mt-1"
+                        type="email" value={subject.email || ''} 
+                        onChange={(e) => onUpdate({...subject, email: e.target.value})}
+                        placeholder="profesor@universidad.edu"
+                        className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:border-[#E35B8F] outline-none mt-1 shadow-inner"
                       />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Teléfono / Despacho</label>
+                      <input 
+                        type="text" value={subject.phone || ''} 
+                        onChange={(e) => onUpdate({...subject, phone: e.target.value})}
+                        placeholder="+54 9 1234 5678"
+                        className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:border-[#E35B8F] outline-none mt-1 shadow-inner"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Aula / Ubicación</label>
+                      <input 
+                        type="text" value={subject.room || ''} 
+                        onChange={(e) => onUpdate({...subject, room: e.target.value})}
+                        placeholder="Aula 302, Edificio A"
+                        className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:border-[#E35B8F] outline-none mt-1 shadow-inner"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 md:col-span-2 pt-4 border-t border-[#F8C8DC]/30">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Inicio de Cursada</label>
+                        <input 
+                          type="date" value={subject.termStart || ''} 
+                          onChange={(e) => onUpdate({...subject, termStart: e.target.value})}
+                          className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm outline-none mt-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Fin de Cursada</label>
+                        <input 
+                          type="date" value={subject.termEnd || ''} 
+                          onChange={(e) => onUpdate({...subject, termEnd: e.target.value})}
+                          className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm outline-none mt-1"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg">
+                <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Exámenes e Hitos Críticos</h3>
+                    <button 
+                      onClick={() => setShowMilestoneModal(true)}
+                      className="bg-[#E35B8F] text-white p-2 rounded-xl hover:scale-110 shadow-md shadow-pink-100 transition-all"
+                    >
+                      {getIcon('plus', "w-5 h-5")}
+                    </button>
+                  </div>
+                  <div className="space-y-4">
+                    {subject.milestones.length === 0 ? (
+                      <p className="text-center italic text-[#8B5E75] py-6 font-garamond opacity-50">Aún no hay hitos inscritos en esta cátedra.</p>
+                    ) : (
+                      subject.milestones.map(m => (
+                        <div key={m.id} className="bg-white/60 p-5 rounded-2xl flex items-center justify-between border-l-4 border-l-[#D4AF37] group hover:bg-white/80 transition-all shadow-sm">
+                          <div>
+                            <h4 className="text-sm font-bold text-[#4A233E] uppercase">{m.title}</h4>
+                            <p className="text-[10px] text-[#8B5E75] uppercase tracking-widest font-black font-inter">
+                              {new Date(m.date).toLocaleDateString()} {m.time ? `@ ${m.time}` : ''} • {m.type}
+                            </p>
+                          </div>
+                          <button 
+                            onClick={() => onUpdate({...subject, milestones: subject.milestones.filter(mil => mil.id !== m.id)})}
+                            className="text-[#8B5E75] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-2"
+                          >
+                            {getIcon('trash', 'w-4 h-4')}
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'plan' && (
+              <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg animate-in slide-in-from-bottom duration-500">
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Exámenes e Hitos Críticos</h3>
+                  <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Horarios de Cursada</h3>
                   <button 
-                    onClick={() => setShowMilestoneModal(true)}
-                    className="bg-[#E35B8F] text-white p-2 rounded-xl hover:scale-110 shadow-md shadow-pink-100 transition-all"
+                    onClick={() => setShowScheduleModal(true)}
+                    className="bg-[#D4AF37] text-white p-2 rounded-xl hover:scale-110 shadow-md shadow-amber-100 transition-all"
                   >
                     {getIcon('plus', "w-5 h-5")}
                   </button>
                 </div>
-                <div className="space-y-4">
-                  {subject.milestones.length === 0 ? (
-                    <p className="text-center italic text-[#8B5E75] py-6 font-garamond opacity-50">Aún no hay hitos inscritos en esta cátedra.</p>
-                  ) : (
-                    subject.milestones.map(m => (
-                      <div key={m.id} className="bg-white/60 p-5 rounded-2xl flex items-center justify-between border-l-4 border-l-[#D4AF37] group hover:bg-white/80 transition-all shadow-sm">
-                        <div>
-                          <h4 className="text-sm font-bold text-[#4A233E] uppercase">{m.title}</h4>
-                          <p className="text-[10px] text-[#8B5E75] uppercase tracking-widest font-black font-inter">
-                            {new Date(m.date).toLocaleDateString()} {m.time ? `@ ${m.time}` : ''} • {m.type}
-                          </p>
-                        </div>
-                        <button 
-                          onClick={() => onUpdate({...subject, milestones: subject.milestones.filter(mil => mil.id !== m.id)})}
-                          className="text-[#8B5E75] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-2"
-                        >
-                          {getIcon('trash', 'w-4 h-4')}
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Repositorio de Saberes</h3>
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-[10px] font-bold text-[#E35B8F] flex items-center gap-2 hover:underline uppercase tracking-widest"
-                  >
-                    {getIcon('plus', "w-4 h-4")} Subir Syllabus / Material
-                  </button>
-                  <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const mat: StudyMaterial = { id: Math.random().toString(36).substring(7), name: file.name, type: file.name.toLowerCase().includes('syllabus') ? 'Syllabus' : 'PDF', date: new Date().toISOString() };
-                      onUpdate({ ...subject, materials: [mat, ...subject.materials] });
-                      onMaterialUpload();
-                    }
-                  }} />
-                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {subject.materials.map(m => (
-                    <div key={m.id} className={`p-4 rounded-xl flex items-center justify-between border transition-all group ${m.type === 'Syllabus' ? 'bg-[#D4AF37]/5 border-[#D4AF37]/30' : 'bg-white/60 border-[#F8C8DC]'}`}>
-                       <div className="flex items-center gap-3 overflow-hidden">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm ${m.type === 'Syllabus' ? 'bg-[#D4AF37] text-white' : 'bg-[#D4AF37]/10 text-[#D4AF37]'}`}>
-                             {getIcon('book', "w-4 h-4")}
-                          </div>
-                          <p className="text-xs font-bold text-[#4A233E] truncate">{m.name}</p>
-                       </div>
-                       <button 
-                          onClick={() => onUpdate({...subject, materials: subject.materials.filter(mat => mat.id !== m.id)})}
-                          className="text-[#8B5E75] hover:text-red-400 opacity-0 group-hover:opacity-100 p-1"
-                        >
-                          {getIcon('trash', "w-4 h-4")}
-                        </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'plan' && (
-            <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Horarios de Cursada</h3>
-                <button 
-                  onClick={() => setShowScheduleModal(true)}
-                  className="bg-[#D4AF37] text-white p-2 rounded-xl hover:scale-110 shadow-md shadow-amber-100 transition-all"
-                >
-                  {getIcon('plus', "w-5 h-5")}
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {subject.schedules.length === 0 ? (
-                  <p className="col-span-full text-center py-12 italic opacity-50 font-garamond">Define tus coordenadas temporales de clase.</p>
-                ) : (
-                  subject.schedules.map(s => (
-                    <div key={s.id} className="bg-white/60 p-5 rounded-xl flex items-center justify-between border border-[#F8C8DC] group hover:border-[#D4AF37] transition-all shadow-sm">
-                       <div className="flex items-center gap-4">
-                          <div className="text-[#E35B8F] bg-[#E35B8F]/5 p-2.5 rounded-xl">{getIcon('calendar', "w-5 h-5")}</div>
-                          <div>
-                            <p className="text-xs font-bold text-[#4A233E] uppercase tracking-widest">{s.day}</p>
-                            <p className="text-[10px] text-[#8B5E75] font-black font-inter">{s.startTime} - {s.endTime}</p>
-                          </div>
-                       </div>
-                       <button 
-                         onClick={() => onUpdate({...subject, schedules: subject.schedules.filter(sched => sched.id !== s.id)})}
-                         className="text-[#8B5E75] hover:text-red-500 opacity-0 group-hover:opacity-100 p-2 transition-opacity"
-                       >
-                         {getIcon('trash', 'w-4 h-4')}
-                       </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'notas' && (
-            <div className="space-y-6">
-               <div className="flex justify-between items-center px-4">
-                  <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Apuntes Académicos</h3>
-                  <button 
-                    onClick={() => { setEditingNote(null); setShowNoteModal(true); }}
-                    className="btn-primary flex items-center gap-2 px-8 py-2.5 rounded-xl font-cinzel text-[10px] font-bold uppercase shadow-lg shadow-pink-100 active:scale-95"
-                  >
-                    {getIcon('plus', "w-4 h-4")} Iniciar Apunte (+3 Mérito)
-                  </button>
-               </div>
-               
-               <div className="grid grid-cols-1 gap-6">
-                  {subject.notes.length === 0 ? (
-                    <div className="text-center py-20 bg-white/40 rounded-[3rem] border-2 border-dashed border-[#F8C8DC]">
-                       <p className="font-garamond italic text-xl opacity-40">Las páginas aguardan tus revelaciones de clase.</p>
-                    </div>
+                  {subject.schedules.length === 0 ? (
+                    <p className="col-span-full text-center py-12 italic opacity-50 font-garamond text-lg">Define tus coordenadas temporales de clase.</p>
                   ) : (
-                    subject.notes.map(n => (
-                      <div 
-                        key={n.id} 
-                        onClick={() => { setEditingNote(n); setShowNoteModal(true); }}
-                        className="glass-card p-8 rounded-[3rem] hover:shadow-2xl transition-all border-l-4 border-l-[#D4AF37] group cursor-pointer relative overflow-hidden"
-                        style={{ background: 'linear-gradient(to bottom right, #FFF9FB, #FDF2F7)' }}
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                           <h4 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-tight">{n.title}</h4>
-                           <span className="text-[10px] text-[#8B5E75] font-black uppercase font-inter">{new Date(n.date).toLocaleDateString('es-ES', { dateStyle: 'long' })}</span>
-                        </div>
-                        <p className="font-garamond text-[#8B5E75] leading-relaxed whitespace-pre-wrap text-base line-clamp-3 italic opacity-80">{n.content}</p>
-                        
-                        <div className="mt-6 pt-4 border-t border-[#F8C8DC]/30 flex justify-between items-center">
-                           <div className="flex items-center gap-2 text-[10px] text-[#D4AF37] font-bold uppercase tracking-widest">
-                              {getIcon('sparkles', 'w-3 h-3')} Sincronizado con Oráculo
-                           </div>
-                           <button 
-                             onClick={(e) => { e.stopPropagation(); onUpdate({...subject, notes: subject.notes.filter(note => note.id !== n.id)}); }}
-                             className="text-[10px] text-red-400 font-bold uppercase hover:underline tracking-widest opacity-0 group-hover:opacity-100 transition-opacity"
-                           >
-                             Eliminar Apunte
-                           </button>
-                        </div>
+                    subject.schedules.map(s => (
+                      <div key={s.id} className="bg-white/60 p-5 rounded-xl flex items-center justify-between border border-[#F8C8DC] group hover:border-[#D4AF37] transition-all shadow-sm">
+                         <div className="flex items-center gap-4">
+                            <div className="text-[#E35B8F] bg-[#E35B8F]/5 p-2.5 rounded-xl">{getIcon('calendar', "w-5 h-5")}</div>
+                            <div>
+                              <p className="text-sm font-bold text-[#4A233E] uppercase tracking-widest">{s.day}</p>
+                              <p className="text-xs text-[#8B5E75] font-black font-inter">{s.startTime} - {s.endTime}</p>
+                            </div>
+                         </div>
+                         <button 
+                           onClick={() => onUpdate({...subject, schedules: subject.schedules.filter(sched => sched.id !== s.id)})}
+                           className="text-[#8B5E75] hover:text-red-500 opacity-0 group-hover:opacity-100 p-2 transition-opacity"
+                         >
+                           {getIcon('trash', 'w-4 h-4')}
+                         </button>
                       </div>
                     ))
                   )}
-               </div>
-            </div>
-          )}
+                </div>
+              </div>
+            )}
 
-          {activeTab === 'lab' && (
-            <div className="flex flex-col h-[700px] gap-4">
-              {/* Sincronizador de Sabiduría */}
-              <div className="glass-card p-6 rounded-[2.5rem] border-[#D4AF37]/30 shadow-inner">
-                 <h4 className="font-cinzel text-[10px] font-black text-[#8B5E75] uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
-                    {getIcon('sparkles', 'w-4 h-4 text-[#D4AF37]')} Sincronizar Sabiduría del Atanor
-                 </h4>
-                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-2 scroll-sm">
-                    {subject.materials.map(m => (
-                      <button 
-                        key={m.id} 
-                        onClick={() => toggleContext(m.id)}
-                        className={`px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all border ${selectedContextIds.includes(m.id) ? 'bg-[#D4AF37] text-white border-[#D4AF37] shadow-md' : 'bg-white/50 text-[#8B5E75] border-[#F8C8DC] hover:border-[#D4AF37]/50'}`}
-                      >
-                        📄 {m.name}
-                      </button>
-                    ))}
-                    {subject.notes.map(n => (
-                      <button 
-                        key={n.id} 
-                        onClick={() => toggleContext(n.id)}
-                        className={`px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all border ${selectedContextIds.includes(n.id) ? 'bg-[#E35B8F] text-white border-[#E35B8F] shadow-md' : 'bg-white/50 text-[#8B5E75] border-[#F8C8DC] hover:border-[#E35B8F]/50'}`}
-                      >
-                        🖋️ {n.title}
-                      </button>
-                    ))}
+            {activeTab === 'notas' && (
+              <div className="space-y-6 animate-in slide-in-from-bottom duration-500">
+                 <div className="flex justify-between items-center px-4">
+                    <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Apuntes Académicos</h3>
+                    <button 
+                      onClick={() => { setEditingNote(null); setShowNoteModal(true); }}
+                      className="btn-primary flex items-center gap-2 px-8 py-2.5 rounded-xl font-cinzel text-[10px] font-bold uppercase shadow-lg shadow-pink-100 active:scale-95"
+                    >
+                      {getIcon('plus', "w-4 h-4")} Iniciar Apunte (+3 Mérito)
+                    </button>
+                 </div>
+                 
+                 <div className="grid grid-cols-1 gap-6">
+                    {subject.notes.length === 0 ? (
+                      <div className="text-center py-20 bg-white/40 rounded-[3rem] border-2 border-dashed border-[#F8C8DC]">
+                         <p className="font-garamond italic text-2xl opacity-40">Las páginas aguardan tus revelaciones de clase.</p>
+                      </div>
+                    ) : (
+                      subject.notes.map(n => (
+                        <div 
+                          key={n.id} 
+                          onClick={() => { setEditingNote(n); setShowNoteModal(true); }}
+                          className="glass-card p-8 rounded-[3rem] hover:shadow-2xl transition-all border-l-4 border-l-[#D4AF37] group cursor-pointer relative overflow-hidden"
+                          style={{ background: 'linear-gradient(to bottom right, #FFF9FB, #FDF2F7)' }}
+                        >
+                          <div className="flex justify-between items-start mb-4">
+                             <h4 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-tight">{n.title}</h4>
+                             <span className="text-[10px] text-[#8B5E75] font-black uppercase font-inter">{new Date(n.date).toLocaleDateString('es-ES', { dateStyle: 'long' })}</span>
+                          </div>
+                          <p className="font-garamond text-[#8B5E75] leading-relaxed whitespace-pre-wrap text-lg line-clamp-3 italic opacity-80">{n.content}</p>
+                          
+                          <div className="mt-6 pt-4 border-t border-[#F8C8DC]/30 flex justify-between items-center">
+                             <div className="flex items-center gap-2 text-[10px] text-[#D4AF37] font-bold uppercase tracking-widest">
+                                {getIcon('sparkles', 'w-3 h-3')} Sincronizado con Oráculo
+                             </div>
+                             <button 
+                               onClick={(e) => { e.stopPropagation(); onUpdate({...subject, notes: subject.notes.filter(note => note.id !== n.id)}); }}
+                               className="text-[10px] text-red-400 font-bold uppercase hover:underline tracking-widest opacity-0 group-hover:opacity-100 transition-opacity"
+                             >
+                               Eliminar Apunte
+                             </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                  </div>
               </div>
+            )}
 
-              {/* Chat Maestro RAG */}
-              <div className="flex-1 flex flex-col glass-card rounded-[3rem] overflow-hidden shadow-2xl relative border-2 border-[#D4AF37]/30">
-                <div className="bg-[#4A233E] p-5 text-white flex justify-between items-center shadow-md">
-                   <div className="flex items-center gap-3">
-                     {getIcon('brain', "w-6 h-6 text-[#D4AF37]")}
-                     <span className="font-cinzel text-xs tracking-[0.25em] font-black uppercase">Oráculo Académico Maestro</span>
-                   </div>
-                   <div className="text-[8px] font-black text-[#D4AF37] border border-[#D4AF37]/50 px-3 py-1 rounded-full bg-[#D4AF37]/10">RAG ACTIVO</div>
+            {activeTab === 'lab' && (
+              <div className="flex-1 flex flex-col min-h-0 glass-card rounded-[3.5rem] overflow-hidden shadow-[0_10px_40px_rgba(227,91,143,0.15)] border-2 border-[#D4AF37]/30 bg-white/10 animate-in slide-in-from-bottom duration-500">
+                {/* Ribbon de Fuentes Integrado */}
+                <div className="bg-[#E35B8F] px-8 py-3.5 flex items-center justify-between text-white shadow-sm z-30">
+                  <div className="flex items-center gap-4 overflow-hidden">
+                    <span className="font-marcellus text-xs font-black uppercase tracking-[0.2em] opacity-90 shrink-0">Fuentes:</span>
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+                      {subject.materials.filter(m => selectedContextIds.includes(m.id)).map(m => (
+                        <span key={m.id} className="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-bold font-marcellus whitespace-nowrap border border-white/10">📄 {m.name}</span>
+                      ))}
+                      {subject.notes.filter(n => selectedContextIds.includes(n.id)).map(n => (
+                        <span key={n.id} className="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-bold font-marcellus whitespace-nowrap border border-white/10">📝 {n.title}</span>
+                      ))}
+                      {selectedContextIds.length === 0 && <span className="text-[10px] font-inter italic opacity-70">Sin fuentes sincronizadas...</span>}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setShowMilestoneModal(true)} 
+                    className="w-10 h-10 rounded-full bg-[#D4AF37] text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all shrink-0 ml-4"
+                  >
+                    {getIcon('plus', 'w-5 h-5')}
+                  </button>
                 </div>
-                
-                <div className="flex-1 p-8 overflow-y-auto space-y-8 bg-white/5 scroll-sm">
+
+                {/* Título del Oráculo */}
+                <div className="bg-[#4A233E]/95 p-6 text-white flex justify-between items-center shadow-md border-b border-[#D4AF37]/20 relative z-20">
+                  <div className="flex items-center gap-4">
+                    {getIcon('brain', "w-8 h-8 text-[#D4AF37]")}
+                    <span className="font-marcellus text-sm md:text-base tracking-[0.3em] font-black uppercase">Oráculo Académico Maestro</span>
+                  </div>
+                  <div className="text-[10px] font-black text-[#D4AF37] border border-[#D4AF37]/50 px-4 py-1.5 rounded-full bg-[#D4AF37]/10 tracking-widest hidden md:block">CANALIZANDO RAG</div>
+                </div>
+                  
+                {/* Ventana de Diálogo */}
+                <div className="flex-1 p-8 overflow-y-auto space-y-8 bg-[#FFF9FB]/60 scroll-sm relative z-10">
                   {chatHistory.length === 0 && (
-                    <div className="h-full flex flex-col items-center justify-center text-center px-12 opacity-50">
-                      <div className="w-20 h-20 rounded-full border-2 border-dashed border-[#D4AF37] flex items-center justify-center text-[#D4AF37] mb-6 animate-pulse">
-                        {getIcon('chat', 'w-10 h-10')}
+                    <div className="h-full flex flex-col items-center justify-center text-center px-16 opacity-50">
+                      <div className="w-28 h-28 rounded-full border-2 border-dashed border-[#D4AF37] flex items-center justify-center text-[#D4AF37] mb-8 animate-pulse">
+                        {getIcon('chat', 'w-14 h-14')}
                       </div>
-                      <h4 className="font-cinzel text-lg font-bold text-[#4A233E] mb-4 uppercase tracking-[0.2em]">Inicia la Revelación</h4>
-                      <p className="font-garamond italic text-[#8B5E75] text-lg leading-relaxed">
-                        "Sincroniza tus apuntes y materiales. Mis respuestas se fundamentarán estrictamente en tu legado de estudio."
+                      <h4 className="font-marcellus text-2xl font-bold text-[#4A233E] mb-6 uppercase tracking-[0.2em]">Inicia la Revelación</h4>
+                      <p className="font-garamond italic text-[#8B5E75] text-xl leading-relaxed max-w-2xl">
+                        "Sincroniza tus apuntes y materiales usando el botón + en el panel de fuentes. Mis respuestas se fundamentarán estrictamente en tu legado de estudio."
                       </p>
                     </div>
                   )}
-                  
+                    
                   {chatHistory.map((chat, idx) => (
                     <div key={idx} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-4 duration-500`}>
-                      <div className={`max-w-[90%] p-6 rounded-[2rem] shadow-sm ${chat.role === 'user' ? 'bg-[#E35B8F] text-white rounded-tr-none' : 'bg-white/90 border border-[#F8C8DC] text-[#4A233E] rounded-tl-none text-sm leading-relaxed font-inter'}`}>
+                      <div className={`max-w-[90%] p-8 rounded-[3rem] shadow-xl ${chat.role === 'user' ? 'bg-[#E35B8F] text-white rounded-tr-none' : 'bg-white/95 border border-[#F8C8DC] text-[#4A233E] rounded-tl-none font-garamond text-lg leading-relaxed shadow-pink-100/30'}`}>
                         {chat.text.split('\n').map((line, lidx) => (
-                          <p key={lidx} className={line.startsWith('📌') || line.startsWith('📖') || line.startsWith('💡') || line.startsWith('📚') || line.startsWith('❓') || line.startsWith('🔗') || line.startsWith('📊') ? 'font-black font-cinzel text-[#E35B8F] mt-4 mb-2 tracking-widest text-[10px]' : 'mb-2'}>
+                          <p key={lidx} className={line.startsWith('📌') || line.startsWith('📖') || line.startsWith('💡') || line.startsWith('📚') || line.startsWith('❓') || line.startsWith('🔗') || line.startsWith('📊') ? 'font-black font-marcellus text-[#E35B8F] mt-6 mb-3 tracking-widest text-[13px] uppercase' : 'mb-3'}>
                             {line}
                           </p>
                         ))}
                       </div>
                     </div>
                   ))}
-                  
+                    
                   {loadingIa && (
                     <div className="flex justify-start">
-                      <div className="bg-white/40 p-6 rounded-[2rem] rounded-tl-none animate-pulse flex items-center gap-3 shadow-inner">
-                         <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce" />
-                         <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce [animation-delay:0.2s]" />
-                         <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce [animation-delay:0.4s]" />
+                      <div className="bg-white/70 p-8 rounded-[3rem] rounded-tl-none animate-pulse flex items-center gap-4 shadow-inner border border-[#F8C8DC]">
+                         <div className="w-3 h-3 bg-[#D4AF37] rounded-full animate-bounce shadow-[0_0_12px_#D4AF37]" />
+                         <div className="w-3 h-3 bg-[#D4AF37] rounded-full animate-bounce [animation-delay:0.2s] shadow-[0_0_12px_#D4AF37]" />
+                         <div className="w-3 h-3 bg-[#D4AF37] rounded-full animate-bounce [animation-delay:0.4s] shadow-[0_0_12px_#D4AF37]" />
                       </div>
                     </div>
                   )}
+                  <div ref={chatEndRef} />
                 </div>
 
-                <form onSubmit={handleIaQuery} className="p-6 bg-white/60 border-t border-[#F8C8DC] flex gap-4">
-                  <input name="query" placeholder="Consulta al Oráculo sobre tus materiales..." className="flex-1 bg-white border-2 border-[#F8C8DC]/50 rounded-2xl px-6 py-4 text-sm focus:border-[#E35B8F] outline-none shadow-inner font-inter" />
-                  <button type="submit" className="btn-primary w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all">
-                    {getIcon('chat', 'w-7 h-7')}
-                  </button>
-                </form>
+                {/* Input de Protocolo Refinado */}
+                <div className="p-8 bg-white/90 border-t border-[#F8C8DC] shadow-[0_-4px_20px_rgba(0,0,0,0.03)] relative z-30 shrink-0">
+                  <form 
+                    onSubmit={handleIaQuery} 
+                    className="flex gap-6 items-center max-w-5xl mx-auto"
+                  >
+                    <input 
+                      ref={queryInputRef}
+                      name="query" 
+                      placeholder="¿Qué misterio académico desentrañaremos hoy?..." 
+                      disabled={loadingIa}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleIaQuery(e as any);
+                        }
+                      }}
+                      className="flex-1 bg-white border-2 border-[#F8C8DC]/50 rounded-[2.5rem] px-10 py-6 text-lg font-garamond focus:border-[#E35B8F] outline-none shadow-inner placeholder:italic transition-all disabled:opacity-50 text-[#4A233E]" 
+                    />
+                    <button 
+                      type="submit" 
+                      disabled={loadingIa}
+                      className={`w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-2xl transition-all active:scale-95 ${loadingIa ? 'bg-[#D4AF37] cursor-not-allowed' : 'bg-[#E35B8F] hover:scale-105 hover:shadow-[#E35B8F]/40'}`}
+                    >
+                      {loadingIa ? <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" /> : getIcon('chat', 'w-9 h-9 text-white')}
+                    </button>
+                  </form>
+                  <p className="text-[10px] text-[#8B5E75]/70 mt-4 text-center font-inter uppercase tracking-[0.2em] font-bold">Shift + Enter para salto de línea • Enter para enviar al Oráculo</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
       {/* Modales Re-implementados */}
-      {showMilestoneModal && (
+      {showMilestoneModal && (activeTab !== 'lab') && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4">
           <form onSubmit={addMilestone} className="glass-card w-full max-w-md p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300">
             <h2 className="font-cinzel text-xl text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">Inscribir Hito Crítico</h2>
@@ -656,6 +716,43 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
               <button type="submit" className="flex-[2] btn-primary py-3 rounded-xl font-cinzel text-xs font-bold uppercase tracking-widest">Añadir Hito</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Selector de Contexto IA */}
+      {showMilestoneModal && (activeTab === 'lab') && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4">
+          <div className="glass-card w-full max-w-md p-8 rounded-[3rem] shadow-2xl animate-in zoom-in duration-300 border-[#D4AF37] border-2">
+            <h2 className="font-marcellus text-xl text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">Vincular Sabiduría</h2>
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-2 scroll-sm">
+               <p className="text-[10px] uppercase font-black tracking-widest text-[#8B5E75] border-b border-[#F8C8DC] pb-2">Archivos y Syllabus</p>
+               {subject.materials.map(m => (
+                 <button 
+                   key={m.id} 
+                   onClick={() => toggleContext(m.id)}
+                   className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all border ${selectedContextIds.includes(m.id) ? 'bg-[#D4AF37] text-white border-[#D4AF37]' : 'bg-white/40 text-[#4A233E] border-[#F8C8DC]'}`}
+                 >
+                   📄 {m.name}
+                 </button>
+               ))}
+               <p className="text-[10px] uppercase font-black tracking-widest text-[#8B5E75] border-b border-[#F8C8DC] pt-4 pb-2">Apuntes de Clase</p>
+               {subject.notes.map(n => (
+                 <button 
+                   key={n.id} 
+                   onClick={() => toggleContext(n.id)}
+                   className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all border ${selectedContextIds.includes(n.id) ? 'bg-[#E35B8F] text-white border-[#E35B8F]' : 'bg-white/40 text-[#4A233E] border-[#F8C8DC]'}`}
+                 >
+                   📝 {n.title}
+                 </button>
+               ))}
+            </div>
+            <button 
+              onClick={() => setShowMilestoneModal(false)}
+              className="btn-primary w-full py-4 mt-8 rounded-2xl font-marcellus text-xs font-black uppercase tracking-widest"
+            >
+              Confirmar Sincronía
+            </button>
+          </div>
         </div>
       )}
 
