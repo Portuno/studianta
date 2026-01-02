@@ -1,0 +1,8 @@
+{
+  "name": "Studianta - Sanctuary of Knowledge",
+  "description": "A high-performance academic management platform with a sophisticated Princess-Academic aesthetic.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
