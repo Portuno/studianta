@@ -5,7 +5,6 @@ export class GeminiService {
   constructor() {}
 
   async queryAcademicOracle(subjectName: string, prompt: string, context: string, studentProfile: any) {
-    // Ensure API key is available or fallback to empty string to prevent crash
     const apiKey = (window as any).process?.env?.API_KEY || '';
     const ai = new GoogleGenAI({ apiKey });
     
@@ -14,24 +13,24 @@ export class GeminiService {
         model: 'gemini-3-flash-preview',
         contents: [{
           parts: [{
-            text: `${context ? `--- FUENTES DE ESTUDIO ---\n${context}\n--- FIN FUENTES ---\n\n` : ''}Pregunta del estudiante: ${prompt}`
+            text: `${context ? `--- CONTEXTO ACADÉMICO Y MATERIALES ---\n${context}\n--- FIN CONTEXTO ---\n\n` : ''}Pregunta del estudiante: ${prompt}`
           }]
         }],
         config: {
           systemInstruction: `Eres el Oráculo Académico de Studianta, un tutor de élite para la asignatura "${subjectName}". 
           Tu tono es místico, erudito y profundamente empoderador.
           
-          ESTRUCTURA OBLIGATORIA:
-          - Usa encabezados con iconos: 📌 RECONOCIMIENTO, 📖 CONTEXTO, 💡 EXPLICACIÓN, 📚 EJEMPLO, ❓ PREGUNTA DE SEGUIMIENTO.
-          - Utiliza un lenguaje elegante y profesional.
-          - Si hay fuentes de estudio, básate exclusivamente en ellas.`,
+          REGLAS DE ORO:
+          - Estructura con encabezados: 📌 RECONOCIMIENTO, 📖 CONTEXTO, 💡 EXPLICACIÓN, 📚 EJEMPLO, ❓ PREGUNTA DE SEGUIMIENTO.
+          - Si el estudiante proporcionó materiales (Syllabus/Apuntes), úsalos como base principal.
+          - Mantén un lenguaje sofisticado pero de fácil asimilación.`,
           temperature: 0.7,
         }
       });
       return response.text;
     } catch (error) {
       console.error("Gemini Academic Error:", error);
-      return "📌 RECONOCIMIENTO: Se ha producido una fractura en el flujo de conocimiento.\n\n📖 CONTEXTO: Error de canalización digital.\n\n💡 EXPLICACIÓN: No he podido establecer conexión con el Oráculo en este momento. Por favor, intenta de nuevo.";
+      return "📌 RECONOCIMIENTO: Se ha detectado una interferencia en el Atanor.\n\n📖 CONTEXTO: Error de conexión con la red arcana.\n\n💡 EXPLICACIÓN: No he podido canalizar la respuesta del Oráculo. Por favor, verifica tu conexión o intenta en unos instantes.";
     }
   }
 
@@ -49,18 +48,18 @@ export class GeminiService {
         model: 'gemini-3-flash-preview',
         contents: [{
           parts: [{
-            text: `ESTADO DE LA BALANZA:\nPresupuesto Mensual: $${budget}\nCapital Actual: $${balance}\nMovimientos:\n${transactionsContext}`
+            text: `ESTADO FINANCIERO:\nPresupuesto: $${budget}\nBalance: $${balance}\nÚltimos Movimientos:\n${transactionsContext}`
           }]
         }],
         config: {
-          systemInstruction: `Eres el Oráculo de la Balanza de Latón. Proporciona un diagnóstico financiero místico pero útil. Usa un tono que evoque aristocracia y sabiduría económica.`,
+          systemInstruction: `Eres el Oráculo de la Balanza de Latón. Proporciona un diagnóstico financiero sofisticado y aristocrático.`,
           temperature: 0.5,
         }
       });
       return response.text;
     } catch (error) {
       console.error("Gemini Finance Error:", error);
-      return "La balanza de latón se encuentra bloqueada por fuerzas externas.";
+      return "La balanza de latón se ha bloqueado. Intenta consultar tu destino económico más tarde.";
     }
   }
 }
