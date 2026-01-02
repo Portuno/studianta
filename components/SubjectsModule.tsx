@@ -233,12 +233,15 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
     setChatHistory(prev => [...prev, { role: 'user', text: query }]);
     setLoadingIa(true);
     
+    // RAG Logic: Extracting text context from selected notes and materials
     const contextStr = `
       --- MATERIA: ${subject.name} ---
-      --- APUNTES SELECCIONADOS ---
-      ${subject.notes.filter(n => selectedContextIds.includes(n.id)).map(n => `TEMA: ${n.title}\n${n.content}`).join('\n\n')}
+      --- PROFESOR: ${subject.professor || 'Desconocido'} ---
       
-      --- MATERIALES CARGADOS ---
+      --- APUNTES SELECCIONADOS ---
+      ${subject.notes.filter(n => selectedContextIds.includes(n.id)).map(n => `TEMA: ${n.title}\nCONTENIDO: ${n.content}`).join('\n\n')}
+      
+      --- DOCUMENTACIÓN Y SYLLABUS ---
       ${subject.materials.filter(m => selectedContextIds.includes(m.id)).map(m => `Archivo: ${m.name}`).join('\n')}
     `;
     
@@ -251,35 +254,42 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
     const doc = new jsPDF();
     doc.setFont("times", "bold");
     doc.setFontSize(24);
-    doc.text(`DOSSIER: ${subject.name.toUpperCase()}`, 20, 30);
+    doc.text(`DOSSIER ACADÉMICO: ${subject.name.toUpperCase()}`, 20, 30);
     
     doc.setFontSize(12);
-    doc.setFont("times", "normal");
-    doc.text(`Carrera: ${subject.career}`, 20, 40);
-    doc.text(`Profesor: ${subject.professor || 'No asignado'}`, 20, 48);
-    doc.text(`Inicio Cursada: ${subject.termStart || 'N/A'}`, 20, 56);
-    doc.text(`Fin Cursada: ${subject.termEnd || 'N/A'}`, 20, 64);
-
-    let y = 80;
+    doc.setFont("times", "italic");
+    doc.text(`${subject.career} • Studianta Santuario`, 20, 38);
+    
+    doc.line(20, 42, 190, 42);
+    
     doc.setFont("times", "bold");
-    doc.text("CRONOGRAMA DE CURSADA", 20, y);
-    y += 10;
-    doc.setFontSize(10);
+    doc.text("Información de Cátedra", 20, 52);
     doc.setFont("times", "normal");
-    subject.schedules.forEach(s => {
-      doc.text(`- ${s.day}: ${s.startTime} a ${s.endTime}`, 25, y);
+    doc.text(`Profesor: ${subject.professor || 'No asignado'}`, 25, 60);
+    doc.text(`Email: ${subject.email || 'No asignado'}`, 25, 66);
+    doc.text(`Aula: ${subject.room || 'No asignada'}`, 25, 72);
+    doc.text(`Cursada: ${subject.termStart || 'N/A'} - ${subject.termEnd || 'N/A'}`, 25, 78);
+
+    let y = 90;
+    if (subject.schedules.length > 0) {
+      doc.setFont("times", "bold");
+      doc.text("Cronograma Semanal", 20, y);
       y += 8;
-    });
+      doc.setFont("times", "normal");
+      subject.schedules.forEach(s => {
+        doc.text(`• ${s.day}: ${s.startTime} - ${s.endTime}`, 25, y);
+        y += 6;
+      });
+      y += 10;
+    }
 
-    y += 10;
     doc.setFont("times", "bold");
-    doc.setFontSize(12);
-    doc.text("HITOS Y EXÁMENES", 20, y);
-    y += 10;
+    doc.text("Hitos y Evaluaciones", 20, y);
+    y += 8;
     doc.setFont("times", "normal");
     subject.milestones.forEach(m => {
-      doc.text(`- [${m.date}] ${m.title} (${m.type})`, 25, y);
-      y += 8;
+      doc.text(`• [${m.date}] ${m.title} (${m.type})`, 25, y);
+      y += 6;
     });
 
     doc.save(`Dossier_${subject.name.replace(/\s+/g, '_')}.pdf`);
@@ -287,26 +297,29 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
 
   return (
     <div className="h-screen bg-gradient-to-br from-[#FFF0F5] to-[#FDEEF4] flex flex-col overflow-hidden">
-      {/* Header Fijo */}
-      <div className="bg-white/50 border-b border-[#F8C8DC] p-6 shrink-0 backdrop-blur-md z-20">
+      {/* Header Fijo Refinado */}
+      <div className="bg-white/40 border-b border-[#F8C8DC] p-4 md:p-8 shrink-0 backdrop-blur-md z-20">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-4">
             <button onClick={onClose} className="p-2 text-[#8B5E75] hover:bg-[#FFD1DC] rounded-full transition-all">
                <div className="rotate-180">{getIcon('chevron', 'w-6 h-6')}</div>
             </button>
             <div>
-              <h1 className="font-cinzel text-3xl font-bold text-[#4A233E] tracking-tight">{subject.name}</h1>
+              <h1 className="font-cinzel text-2xl md:text-4xl font-bold text-[#4A233E] tracking-tight">{subject.name}</h1>
               <p className="text-xs text-[#8B5E75] uppercase font-bold tracking-widest font-inter">{subject.career}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto">
-             <button onClick={downloadDossier} className="flex items-center gap-2 px-5 py-2.5 bg-white/60 border-2 border-[#D4AF37] rounded-xl text-[11px] font-cinzel font-bold text-[#4A233E] uppercase tracking-widest hover:bg-[#D4AF37]/10 transition-all shadow-sm">
+             <button 
+                onClick={downloadDossier}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/60 border-2 border-[#D4AF37] rounded-xl text-[10px] font-cinzel font-bold text-[#4A233E] uppercase tracking-widest hover:bg-[#D4AF37]/10 transition-all shadow-sm h-[42px]"
+              >
                 {getIcon('sparkles', 'w-4 h-4 text-[#D4AF37]')} Dossier PDF
               </button>
              <select 
                 value={subject.status} 
                 onChange={(e) => onStatusChange(e.target.value as SubjectStatus)}
-                className="bg-white/80 border border-[#D4AF37] rounded-xl px-4 py-2.5 text-[11px] font-cinzel font-bold text-[#4A233E] uppercase tracking-widest outline-none shadow-sm"
+                className="flex-1 md:flex-none bg-white/80 border border-[#D4AF37] rounded-xl px-4 py-2.5 text-[10px] font-cinzel font-bold text-[#4A233E] uppercase tracking-widest outline-none shadow-sm h-[42px]"
               >
                 <option value="Cursando">Cursando</option>
                 <option value="Final Pendiente">Final Pendiente</option>
@@ -316,11 +329,11 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden max-w-[100vw] mx-auto w-full p-6 md:p-10 flex flex-col">
+      <div className="flex-1 overflow-hidden max-w-[100vw] mx-auto w-full p-4 md:p-8 flex flex-col">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full flex-1 min-h-0">
           
-          {/* Sidebar */}
-          <div className="lg:col-span-2 space-y-3 overflow-y-auto no-scrollbar">
+          {/* Sidebar de Navegación */}
+          <div className="lg:col-span-2 space-y-2 overflow-y-auto no-scrollbar">
             {[
               { id: 'info', label: 'Cátedra', icon: 'book' },
               { id: 'plan', label: 'Horarios', icon: 'calendar' },
@@ -338,49 +351,49 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
             ))}
           </div>
 
-          {/* Área Principal */}
+          {/* Área de Contenido Principal */}
           <div className="lg:col-span-10 flex flex-col h-full min-h-0 font-inter">
             
             {activeTab === 'info' && (
               <div className="space-y-6 animate-in slide-in-from-bottom duration-500 overflow-y-auto pr-2 scroll-sm h-full pb-20">
-                <div className="glass-card p-10 rounded-[3rem] border-[#F8C8DC] shadow-lg">
-                  <h3 className="font-cinzel text-xl text-[#4A233E] mb-8 flex items-center gap-3 font-bold uppercase tracking-widest border-b pb-4">
+                <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg">
+                  <h3 className="font-cinzel text-xl text-[#4A233E] mb-6 flex items-center gap-3 font-bold uppercase tracking-widest border-b pb-4">
                     {getIcon('users', "w-6 h-6")} Datos de Cátedra
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="text-[11px] uppercase font-black text-[#8B5E75] tracking-widest block mb-2 px-1">Profesor Titular</label>
+                      <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Profesor Titular</label>
                       <input 
                         type="text" value={subject.professor || ''} 
                         onChange={(e) => onUpdate({...subject, professor: e.target.value})}
                         placeholder="Nombre del docente..."
-                        className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-6 py-4 text-sm outline-none shadow-inner"
+                        className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:border-[#E35B8F] outline-none mt-1 shadow-inner"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] uppercase font-black text-[#8B5E75] tracking-widest block mb-2 px-1">Email / Contacto</label>
+                      <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Email de Contacto</label>
                       <input 
                         type="email" value={subject.email || ''} 
                         onChange={(e) => onUpdate({...subject, email: e.target.value})}
                         placeholder="profesor@universidad.edu"
-                        className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-6 py-4 text-sm outline-none shadow-inner"
+                        className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:border-[#E35B8F] outline-none mt-1 shadow-inner"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-[11px] uppercase font-black text-[#8B5E75] tracking-widest block mb-2 px-1">Inicio Cursada</label>
+                        <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Inicio Cursada</label>
                         <input 
                           type="date" value={subject.termStart || ''} 
                           onChange={(e) => onUpdate({...subject, termStart: e.target.value})}
-                          className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-xs"
+                          className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm outline-none mt-1"
                         />
                       </div>
                       <div>
-                        <label className="text-[11px] uppercase font-black text-[#8B5E75] tracking-widest block mb-2 px-1">Fin Cursada</label>
+                        <label className="text-[10px] uppercase font-bold text-[#8B5E75] tracking-widest">Fin Cursada</label>
                         <input 
                           type="date" value={subject.termEnd || ''} 
                           onChange={(e) => onUpdate({...subject, termEnd: e.target.value})}
-                          className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-xs"
+                          className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm outline-none mt-1"
                         />
                       </div>
                     </div>
@@ -388,41 +401,71 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                        <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".pdf,.txt,.doc" />
                        <button 
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full py-4 rounded-xl border-2 border-dashed border-[#E35B8F] text-[#E35B8F] text-[11px] font-bold uppercase tracking-widest hover:bg-[#E35B8F]/5 transition-all"
+                        className="w-full py-3.5 rounded-xl border-2 border-dashed border-[#E35B8F] text-[#E35B8F] text-[10px] font-bold uppercase tracking-widest hover:bg-[#E35B8F]/5 transition-all h-[48px]"
                        >
-                         {getIcon('plus', 'w-4 h-4')} Cargar Syllabus o Guía (+5 Esencia)
+                         {getIcon('plus', 'w-4 h-4')} Cargar Syllabus / Documentación (+5 Esencia)
                        </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="glass-card p-10 rounded-[3rem] border-[#F8C8DC] shadow-lg">
-                  <div className="flex justify-between items-center mb-8">
-                    <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Cronograma de Hitos</h3>
-                    <button onClick={() => setShowMilestoneModal(true)} className="bg-[#E35B8F] text-white p-3 rounded-2xl hover:scale-110 shadow-md transition-all">
+                <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Exámenes e Hitos</h3>
+                    <button onClick={() => setShowMilestoneModal(true)} className="bg-[#E35B8F] text-white p-2 rounded-xl hover:scale-110 shadow-md transition-all">
                       {getIcon('plus', "w-5 h-5")}
                     </button>
                   </div>
                   <div className="space-y-4">
-                    {subject.milestones.map(m => (
-                      <div key={m.id} className="bg-white/60 p-6 rounded-[2rem] flex items-center justify-between border-l-4 border-l-[#D4AF37] shadow-sm">
-                        <div className="flex items-center gap-6">
-                           <div className="w-12 h-12 rounded-full bg-[#FFF0F5] flex items-center justify-center text-[#D4AF37]">
-                              {getIcon('calendar', 'w-6 h-6')}
-                           </div>
-                           <div>
-                              <h4 className="text-sm font-bold text-[#4A233E] uppercase">{m.title}</h4>
-                              <p className="text-[10px] text-[#8B5E75] uppercase font-black tracking-widest">
-                                {m.date} • {m.type}
-                              </p>
-                           </div>
+                    {subject.milestones.length === 0 ? (
+                      <p className="text-center italic text-[#8B5E75] py-6 font-garamond opacity-50">No hay hitos trazados en esta cátedra.</p>
+                    ) : (
+                      subject.milestones.map(m => (
+                        <div key={m.id} className="bg-white/60 p-5 rounded-2xl flex items-center justify-between border-l-4 border-l-[#D4AF37] shadow-sm">
+                          <div>
+                            <h4 className="text-sm font-bold text-[#4A233E] uppercase">{m.title}</h4>
+                            <p className="text-[10px] text-[#8B5E75] uppercase tracking-widest font-black">
+                              {new Date(m.date).toLocaleDateString()} {m.time ? `@ ${m.time}` : ''} • {m.type}
+                            </p>
+                          </div>
+                          <button onClick={() => onUpdate({...subject, milestones: subject.milestones.filter(mil => mil.id !== m.id)})} className="text-[#8B5E75] hover:text-red-500 p-2">
+                            {getIcon('trash', 'w-4 h-4')}
+                          </button>
                         </div>
-                        <button onClick={() => onUpdate({...subject, milestones: subject.milestones.filter(mil => mil.id !== m.id)})} className="text-red-300 hover:text-red-500 p-2">
-                          {getIcon('trash', 'w-5 h-5')}
-                        </button>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'plan' && (
+              <div className="glass-card p-8 rounded-[3rem] border-[#F8C8DC] shadow-lg animate-in slide-in-from-bottom duration-500 overflow-y-auto pr-2 h-full pb-20">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Coordenadas Temporales (Clases)</h3>
+                  <button onClick={() => setShowScheduleModal(true)} className="bg-[#D4AF37] text-white p-2 rounded-xl hover:scale-110 shadow-md transition-all">
+                    {getIcon('plus', "w-5 h-5")}
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {subject.schedules.length === 0 ? (
+                    <p className="col-span-full text-center py-12 italic opacity-50 font-garamond text-2xl">Sin horarios definidos.</p>
+                  ) : (
+                    subject.schedules.map(s => (
+                      <div key={s.id} className="bg-white/60 p-5 rounded-xl flex items-center justify-between border border-[#F8C8DC] shadow-sm">
+                         <div className="flex items-center gap-4">
+                            <div className="text-[#E35B8F] bg-[#E35B8F]/5 p-2.5 rounded-xl">{getIcon('calendar', "w-5 h-5")}</div>
+                            <div>
+                              <p className="text-sm font-bold text-[#4A233E] uppercase tracking-widest">{s.day}</p>
+                              <p className="text-xl text-[#4A233E] font-black font-inter">{s.startTime} - {s.endTime}</p>
+                            </div>
+                         </div>
+                         <button onClick={() => onUpdate({...subject, schedules: subject.schedules.filter(sched => sched.id !== s.id)})} className="text-[#8B5E75] hover:text-red-500 p-2">
+                           {getIcon('trash', 'w-4 h-4')}
+                         </button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -430,38 +473,44 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
             {activeTab === 'notas' && (
               <div className="space-y-6 animate-in slide-in-from-bottom duration-500 overflow-y-auto pr-2 scroll-sm h-full pb-20">
                  <div className="flex justify-between items-center px-4">
-                    <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Registros Académicos</h3>
-                    <button onClick={() => { setEditingNote(null); setShowNoteModal(true); }} className="btn-primary flex items-center gap-2 px-8 py-3 rounded-2xl font-cinzel text-[11px] font-bold uppercase shadow-lg">
-                      {getIcon('plus', "w-5 h-5")} Iniciar Apunte
+                    <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Apuntes Académicos</h3>
+                    <button onClick={() => { setEditingNote(null); setShowNoteModal(true); }} className="btn-primary flex items-center gap-2 px-8 py-2.5 rounded-xl font-cinzel text-[10px] font-bold uppercase shadow-lg">
+                      {getIcon('plus', "w-4 h-4")} Iniciar Apunte (+3 Mérito)
                     </button>
                  </div>
                  
                  <div className="grid grid-cols-1 gap-6">
-                    {subject.notes.map(n => (
-                      <div key={n.id} onClick={() => { setEditingNote(n); setShowNoteModal(true); }} className="glass-card p-10 rounded-[3rem] hover:shadow-2xl transition-all border-l-8 border-l-[#D4AF37] group cursor-pointer relative overflow-hidden bg-white/60">
-                        <div className="flex justify-between items-start mb-6">
-                           <h4 className="font-cinzel text-2xl text-[#4A233E] font-bold uppercase tracking-tight">{n.title}</h4>
-                           <span className="text-xs text-[#8B5E75] font-black uppercase font-inter">{new Date(n.date).toLocaleDateString()}</span>
-                        </div>
-                        <p className="font-garamond text-[#4A233E] leading-relaxed text-2xl line-clamp-3 italic opacity-90">{n.content}</p>
+                    {subject.notes.length === 0 ? (
+                      <div className="text-center py-20 bg-white/40 rounded-[3rem] border-2 border-dashed border-[#F8C8DC]">
+                         <p className="font-garamond italic text-3xl opacity-40">Las páginas aguardan tus revelaciones de clase.</p>
                       </div>
-                    ))}
+                    ) : (
+                      subject.notes.map(n => (
+                        <div key={n.id} onClick={() => { setEditingNote(n); setShowNoteModal(true); }} className="glass-card p-10 rounded-[3rem] hover:shadow-2xl transition-all border-l-8 border-l-[#D4AF37] group cursor-pointer relative overflow-hidden bg-white/60">
+                          <div className="flex justify-between items-start mb-6">
+                             <h4 className="font-cinzel text-2xl text-[#4A233E] font-bold uppercase tracking-tight">{n.title}</h4>
+                             <span className="text-xs text-[#8B5E75] font-black uppercase font-inter">{new Date(n.date).toLocaleDateString()}</span>
+                          </div>
+                          <p className="font-garamond text-[#4A233E] leading-relaxed text-2xl line-clamp-3 italic opacity-90">{n.content}</p>
+                        </div>
+                      ))
+                    )}
                  </div>
               </div>
             )}
 
             {activeTab === 'lab' && (
               <div className="flex-1 flex flex-col h-full min-h-0 glass-card rounded-[4rem] overflow-hidden shadow-2xl border-2 border-[#D4AF37]/40 bg-white/10 animate-in slide-in-from-bottom duration-500">
-                {/* Sincronización */}
-                <div className="bg-[#E35B8F] px-10 py-5 flex items-center justify-between text-white shadow-sm shrink-0">
+                {/* Ribbon de Sincronización RAG */}
+                <div className="bg-[#E35B8F] px-10 py-4 flex items-center justify-between text-white shadow-sm shrink-0">
                   <div className="flex items-center gap-6 overflow-hidden">
-                    <span className="font-marcellus text-sm font-black uppercase tracking-[0.3em] shrink-0">Vínculo RAG:</span>
+                    <span className="font-marcellus text-sm font-black uppercase tracking-[0.25em] shrink-0">Vínculo:</span>
                     <div className="flex gap-3 overflow-x-auto no-scrollbar py-1">
                       {subject.materials.map(m => (
                         <button 
                           key={m.id} 
                           onClick={() => toggleContext(m.id)}
-                          className={`px-5 py-2 rounded-full text-[11px] font-bold whitespace-nowrap border transition-all ${selectedContextIds.includes(m.id) ? 'bg-[#D4AF37] border-[#D4AF37] text-white shadow-lg' : 'bg-white/20 border-white/40'}`}
+                          className={`px-5 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap border transition-all ${selectedContextIds.includes(m.id) ? 'bg-[#D4AF37] border-[#D4AF37] text-white shadow-lg' : 'bg-white/20 border-white/40'}`}
                         >
                           📄 {m.name}
                         </button>
@@ -470,7 +519,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                         <button 
                           key={n.id} 
                           onClick={() => toggleContext(n.id)}
-                          className={`px-5 py-2 rounded-full text-[11px] font-bold whitespace-nowrap border transition-all ${selectedContextIds.includes(n.id) ? 'bg-[#4A233E] border-[#4A233E] text-white shadow-lg' : 'bg-white/20 border-white/40'}`}
+                          className={`px-5 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap border transition-all ${selectedContextIds.includes(n.id) ? 'bg-[#4A233E] border-[#4A233E] text-white shadow-lg' : 'bg-white/20 border-white/40'}`}
                         >
                           📝 {n.title}
                         </button>
@@ -482,7 +531,15 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                   </div>
                 </div>
 
-                {/* Chat */}
+                {/* Título Oráculo */}
+                <div className="bg-[#4A233E] p-6 text-white flex justify-between items-center shadow-xl border-b border-[#D4AF37]/40 shrink-0">
+                  <div className="flex items-center gap-4">
+                    {getIcon('brain', "w-8 h-8 text-[#D4AF37]")}
+                    <span className="font-marcellus text-lg tracking-[0.35em] font-black uppercase">Oráculo Académico Maestro</span>
+                  </div>
+                </div>
+                  
+                {/* Ventana de Diálogo Expandida */}
                 <div className="flex-1 p-10 overflow-y-auto space-y-12 bg-[#FFF9FB]/70 relative z-10 font-garamond">
                   {chatHistory.length === 0 && (
                     <div className="h-full flex flex-col items-center justify-center text-center px-16 opacity-60">
@@ -496,7 +553,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                     
                   {chatHistory.map((chat, idx) => (
                     <div key={idx} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-6 duration-700`}>
-                      <div className={`max-w-[85%] p-10 rounded-[4rem] shadow-2xl ${chat.role === 'user' ? 'bg-[#E35B8F] text-white rounded-tr-none' : 'bg-white/95 border border-[#F8C8DC] text-[#4A233E] rounded-tl-none text-2xl leading-relaxed font-garamond'}`}>
+                      <div className={`max-w-[85%] p-10 rounded-[4rem] shadow-2xl ${chat.role === 'user' ? 'bg-[#E35B8F] text-white rounded-tr-none' : 'bg-white/95 border border-[#F8C8DC] text-[#4A233E] rounded-tl-none text-2xl md:text-3xl leading-relaxed font-garamond'}`}>
                         {chat.text.split('\n').map((line, lidx) => (
                           <p key={lidx} className={line.startsWith('📌') || line.startsWith('📖') || line.startsWith('💡') || line.startsWith('📚') || line.startsWith('❓') ? 'font-black font-marcellus text-[#E35B8F] mt-8 mb-4 tracking-[0.25em] text-[15px] uppercase border-b border-[#F8C8DC] pb-1 inline-block' : 'mb-3'}>
                             {line}
@@ -517,8 +574,8 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                   <div ref={chatEndRef} />
                 </div>
 
-                {/* Input */}
-                <div className="p-12 bg-white/95 border-t border-[#F8C8DC] shadow-inner shrink-0">
+                {/* Input Maestro Expandido */}
+                <div className="p-10 bg-white/95 border-t border-[#F8C8DC] shadow-inner shrink-0">
                   <form onSubmit={handleIaQuery} className="flex gap-8 items-center max-w-7xl mx-auto">
                     <input 
                       ref={queryInputRef} 
@@ -526,43 +583,12 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                       placeholder="Invoca la sabiduría del Oráculo..." 
                       disabled={loadingIa} 
                       onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleIaQuery(e as any); } }} 
-                      className="flex-1 bg-white border-4 border-[#F8C8DC]/50 rounded-[3rem] px-14 py-7 text-3xl font-garamond focus:border-[#E35B8F] outline-none shadow-inner transition-all disabled:opacity-50 text-[#4A233E]" 
+                      className="flex-1 bg-white border-4 border-[#F8C8DC]/50 rounded-[3rem] px-14 py-7 text-2xl md:text-3xl font-garamond focus:border-[#E35B8F] outline-none shadow-inner transition-all disabled:opacity-50 text-[#4A233E]" 
                     />
                     <button type="submit" disabled={loadingIa} className={`w-24 h-24 rounded-[3rem] flex items-center justify-center shadow-2xl transition-all ${loadingIa ? 'bg-[#D4AF37]/50 grayscale cursor-not-allowed' : 'bg-[#E35B8F] hover:scale-105 active:scale-90 hover:shadow-[#E35B8F]/40'}`}>
                       {loadingIa ? <div className="w-10 h-10 border-6 border-white/30 border-t-white rounded-full animate-spin" /> : getIcon('chat', 'w-12 h-12 text-white')}
                     </button>
                   </form>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'plan' && (
-              <div className="glass-card p-12 rounded-[4rem] border-[#F8C8DC] shadow-xl animate-in slide-in-from-bottom duration-500 overflow-y-auto pr-2 h-full pb-20">
-                <div className="flex justify-between items-center mb-10">
-                  <h3 className="font-cinzel text-2xl text-[#4A233E] font-bold uppercase tracking-widest">Coordenadas Temporales (Clases)</h3>
-                  <button onClick={() => setShowScheduleModal(true)} className="bg-[#D4AF37] text-white p-4 rounded-2xl hover:scale-110 shadow-lg transition-all">
-                    {getIcon('plus', "w-6 h-6")}
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {subject.schedules.length === 0 ? (
-                    <p className="col-span-full text-center py-20 italic opacity-40 font-garamond text-3xl">Las coordenadas de esta cátedra aún no han sido trazadas.</p>
-                  ) : (
-                    subject.schedules.map(s => (
-                      <div key={s.id} className="bg-white/70 p-8 rounded-[2.5rem] flex items-center justify-between border-2 border-[#F8C8DC]/30 shadow-sm hover:border-[#D4AF37] transition-all group">
-                         <div className="flex items-center gap-6">
-                            <div className="text-[#E35B8F] bg-[#E35B8F]/10 p-4 rounded-2xl">{getIcon('calendar', "w-8 h-8")}</div>
-                            <div>
-                              <p className="text-sm font-bold text-[#8B5E75] uppercase tracking-widest">{s.day}</p>
-                              <p className="text-2xl text-[#4A233E] font-black font-inter">{s.startTime} — {s.endTime}</p>
-                            </div>
-                         </div>
-                         <button onClick={() => onUpdate({...subject, schedules: subject.schedules.filter(sched => sched.id !== s.id)})} className="text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
-                           {getIcon('trash', 'w-6 h-6')}
-                         </button>
-                      </div>
-                    ))
-                  )}
                 </div>
               </div>
             )}
