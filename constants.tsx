@@ -24,7 +24,14 @@ import {
   Lock,
   User,
   ShieldCheck,
-  Eye
+  Eye,
+  Sun,
+  Target,
+  Wind,
+  BatteryLow,
+  CloudLightning,
+  Camera,
+  Unlock
 } from 'lucide-react';
 
 export const COLORS = {
@@ -75,6 +82,13 @@ export const getIcon = (name: string, className?: string) => {
     case 'profile': return <User className={className} />;
     case 'security': return <ShieldCheck className={className} />;
     case 'social': return <Eye className={className} />;
+    case 'sun': return <Sun className={className} />;
+    case 'target': return <Target className={className} />;
+    case 'wind': return <Wind className={className} />;
+    case 'low-battery': return <BatteryLow className={className} />;
+    case 'storm': return <CloudLightning className={className} />;
+    case 'camera': return <Camera className={className} />;
+    case 'unlock': return <Unlock className={className} />;
     default: return null;
   }
 };

@@ -12,6 +12,13 @@ interface FocusModuleProps {
 
 type AmbientType = 'none' | 'rain' | 'fire' | 'monastic';
 
+const SOUND_URLS: Record<AmbientType, string> = {
+  none: '',
+  rain: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_3497d51965.mp3?filename=rain-sound-1188.mp3',
+  fire: 'https://cdn.pixabay.com/download/audio/2022/10/30/audio_5132205018.mp3?filename=fire-sound-123.mp3',
+  monastic: 'https://cdn.pixabay.com/download/audio/2021/11/25/audio_145d8b7654.mp3?filename=monks-chanting-123.mp3'
+};
+
 const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, onAddEssence, isMobile }) => {
   const [isActive, setIsActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -26,8 +33,27 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
     wasInterrupted: false
   });
 
-  // Fix: Using ReturnType<typeof setInterval> instead of NodeJS.Timeout to avoid missing namespace error in browser environment
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Audio Engine
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.loop = true;
+    }
+
+    if (ambient !== 'none' && isActive) {
+      audioRef.current.src = SOUND_URLS[ambient];
+      audioRef.current.play().catch(e => console.log("User interaction required for audio"));
+    } else {
+      audioRef.current.pause();
+    }
+
+    return () => {
+      audioRef.current?.pause();
+    };
+  }, [ambient, isActive]);
 
   useEffect(() => {
     if (isActive && timeLeft > 0) {
@@ -74,14 +100,12 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
     const minutesStudied = Math.floor((totalTime - timeLeft) / 60);
     let essenceEarned = minutesStudied;
     
-    // Pomodoro Bonus
     if (!reflectionData.wasInterrupted && timeLeft === 0) {
       essenceEarned += 5;
     }
 
     onAddEssence(essenceEarned);
 
-    // Save harvest to subject notes if present
     if (reflectionData.harvest && selectedSubjectId) {
       const subject = subjects.find(s => s.id === selectedSubjectId);
       if (subject) {
@@ -98,7 +122,6 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
       }
     }
 
-    // Reset view
     setShowReflection(false);
     setIsActive(false);
     setTimeLeft(totalTime);
@@ -114,7 +137,6 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
 
   return (
     <div className="h-full flex flex-col items-center justify-center relative px-4 md:px-0">
-      {/* ProgressBar of Matter */}
       <div className="absolute top-0 left-0 w-full h-1 bg-[#F8C8DC]/20 z-20">
         <div 
           className="h-full bg-gradient-to-r from-[#E35B8F] to-[#D4AF37] transition-all duration-1000"
@@ -130,7 +152,6 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
           <div className="h-0.5 w-16 bg-[#D4AF37] mx-auto opacity-30" />
         </header>
 
-        {/* Main Timer Display */}
         <div className="relative group">
           <div className="absolute inset-0 bg-gradient-to-br from-[#E35B8F]/5 to-[#D4AF37]/5 rounded-full blur-3xl opacity-50 group-hover:opacity-100 transition-opacity duration-1000" />
           <div className="glass-card w-64 h-64 md:w-80 md:h-80 rounded-full flex flex-col items-center justify-center border-2 border-[#F8C8DC]/40 shadow-2xl relative z-10">
@@ -157,7 +178,6 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
           </div>
         </div>
 
-        {/* Configuration */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
           <div className="glass-card p-6 rounded-[2rem] border-[#F8C8DC]/30">
             <p className="text-[10px] uppercase font-black text-[#8B5E75] tracking-widest mb-4">Intención de Estudio</p>
@@ -198,7 +218,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
                   className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all ${ambient === snd.id ? 'bg-[#D4AF37] text-white border-[#D4AF37]' : 'text-[#8B5E75] border-[#F8C8DC] hover:bg-white/60'}`}
                 >
                   {getIcon(snd.icon, "w-5 h-5")}
-                  <span className="text-[8px] uppercase font-bold">{snd.label}</span>
+                  <span className="text-[8px] uppercase font-bold text-center">{snd.label}</span>
                 </button>
               ))}
             </div>
@@ -210,7 +230,6 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
         </div>
       </div>
 
-      {/* Reflection Modal */}
       {showReflection && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-md p-6">
           <div className="glass-card w-full max-w-lg p-8 md:p-10 rounded-[3rem] shadow-2xl animate-in zoom-in duration-500 overflow-y-auto max-h-[90vh]">

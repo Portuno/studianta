@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { NavView, Subject, Module, Transaction } from './types';
+import { NavView, Subject, Module, Transaction, JournalEntry, CustomCalendarEvent } from './types';
 import { INITIAL_MODULES } from './constants';
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
@@ -8,6 +8,7 @@ import SubjectsModule from './components/SubjectsModule';
 import CalendarModule from './components/CalendarModule';
 import FinanceModule from './components/FinanceModule';
 import FocusModule from './components/FocusModule';
+import DiaryModule from './components/DiaryModule';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<NavView>(NavView.DASHBOARD);
@@ -29,6 +30,18 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('studianta_transactions');
     return saved ? JSON.parse(saved) : [];
   });
+  const [monthlyBudget, setMonthlyBudget] = useState<number>(() => {
+    const saved = localStorage.getItem('studianta_budget');
+    return saved ? parseFloat(saved) : 0;
+  });
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(() => {
+    const saved = localStorage.getItem('studianta_journal');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [customEvents, setCustomEvents] = useState<CustomCalendarEvent[]>(() => {
+    const saved = localStorage.getItem('studianta_calendar_custom');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -41,7 +54,10 @@ const App: React.FC = () => {
     localStorage.setItem('studianta_modules', JSON.stringify(modules));
     localStorage.setItem('studianta_essence', essence.toString());
     localStorage.setItem('studianta_transactions', JSON.stringify(transactions));
-  }, [subjects, modules, essence, transactions]);
+    localStorage.setItem('studianta_budget', monthlyBudget.toString());
+    localStorage.setItem('studianta_journal', JSON.stringify(journalEntries));
+    localStorage.setItem('studianta_calendar_custom', JSON.stringify(customEvents));
+  }, [subjects, modules, essence, transactions, monthlyBudget, journalEntries, customEvents]);
 
   const toggleModule = (moduleId: string) => {
     const mod = modules.find(m => m.id === moduleId);
@@ -74,7 +90,6 @@ const App: React.FC = () => {
   };
 
   const updateSubject = (updated: Subject) => {
-    // Reward for completion
     const old = subjects.find(s => s.id === updated.id);
     if (old && old.status !== 'Aprobada' && updated.status === 'Aprobada') {
       setEssence(prev => prev + 50);
@@ -93,11 +108,40 @@ const App: React.FC = () => {
       case NavView.SUBJECTS:
         return <SubjectsModule subjects={subjects} onAdd={addSubject} onDelete={deleteSubject} onUpdate={updateSubject} isMobile={isMobile} onMaterialUpload={rewardMaterialUpload} />;
       case NavView.CALENDAR:
-        return <CalendarModule subjects={subjects} transactions={transactions} isMobile={isMobile} />;
+        return (
+          <CalendarModule 
+            subjects={subjects} 
+            transactions={transactions} 
+            journalEntries={journalEntries} 
+            customEvents={customEvents}
+            onAddCustomEvent={(e) => setCustomEvents([...customEvents, e])}
+            onDeleteCustomEvent={(id) => setCustomEvents(customEvents.filter(ev => ev.id !== id))}
+            isMobile={isMobile} 
+          />
+        );
       case NavView.FINANCE:
-        return <FinanceModule transactions={transactions} onAdd={(t) => setTransactions([...transactions, t])} isMobile={isMobile} />;
+        return (
+          <FinanceModule 
+            transactions={transactions} 
+            budget={monthlyBudget}
+            onUpdateBudget={setMonthlyBudget}
+            onAdd={(t) => setTransactions([...transactions, t])} 
+            onDelete={(id) => setTransactions(transactions.filter(t => t.id !== id))}
+            isMobile={isMobile} 
+          />
+        );
       case NavView.FOCUS:
         return <FocusModule subjects={subjects} onUpdateSubject={updateSubject} onAddEssence={(amt) => setEssence(prev => prev + amt)} isMobile={isMobile} />;
+      case NavView.DIARY:
+        return (
+          <DiaryModule 
+            entries={journalEntries} 
+            onAddEntry={(entry) => setJournalEntries([entry, ...journalEntries])} 
+            onDeleteEntry={(id) => setJournalEntries(journalEntries.filter(e => e.id !== id))}
+            onUpdateEntry={(entry) => setJournalEntries(journalEntries.map(e => e.id === entry.id ? entry : e))}
+            isMobile={isMobile} 
+          />
+        );
       case NavView.PROFILE:
         return (
           <div className="flex flex-col items-center justify-center h-full text-center px-6 animate-in fade-in zoom-in duration-700">

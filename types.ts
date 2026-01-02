@@ -69,6 +69,28 @@ export interface Transaction {
   description: string;
 }
 
+export type MoodType = 'Radiante' | 'Enfocada' | 'Equilibrada' | 'Agotada' | 'Estresada';
+
+export interface JournalEntry {
+  id: string;
+  date: string;
+  mood: MoodType;
+  content: string;
+  photo?: string; // base64
+  isLocked: boolean;
+  sentiment?: number;
+}
+
+export interface CustomCalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  date: string; // ISO
+  time?: string;
+  color: string;
+  priority: 'low' | 'high';
+}
+
 export enum NavView {
   DASHBOARD = 'Dashboard',
   SUBJECTS = 'Asignaturas',
