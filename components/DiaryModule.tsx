@@ -787,11 +787,11 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
 
         {/* History Area - Persists on Tablet */}
         <div className="md:col-span-5 lg:col-span-4 flex flex-col overflow-hidden h-[400px] md:h-full">
-          <div className="glass-card flex-1 rounded-[2rem] lg:rounded-[3rem] p-4 lg:p-6 flex flex-col border-[#D4AF37]/20 shadow-xl bg-white/40" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")' }}>
-            <h3 className="font-marcellus text-lg lg:text-xl text-[#4A233E] mb-4 lg:mb-5 uppercase tracking-widest font-bold border-b border-[#D4AF37]/30 pb-3">Historias Pasadas</h3>
+          <div className="glass-card flex-1 rounded-[2rem] lg:rounded-[3rem] p-4 lg:p-6 flex flex-col border-[#D4AF37]/20 shadow-xl bg-white/40 overflow-hidden" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")' }}>
+            <h3 className="font-marcellus text-lg lg:text-xl text-[#4A233E] mb-4 lg:mb-5 uppercase tracking-widest font-bold border-b border-[#D4AF37]/30 pb-3 flex-shrink-0">Historias Pasadas</h3>
             
             {/* Buscador Desktop */}
-            <div className="mb-4 bg-white/90 backdrop-blur-sm rounded-xl p-2 border border-[#D4AF37]/20 shadow-sm">
+            <div className="mb-4 bg-white/90 backdrop-blur-sm rounded-xl p-2 border border-[#D4AF37]/20 shadow-sm flex-shrink-0">
               <div className="relative">
                 <input
                   type="text"
@@ -815,7 +815,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
               )}
             </div>
             
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2 min-h-0 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
               {filteredEntries.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-sm text-[#8B5E75] font-garamond italic">No se encontraron entradas que coincidan con tu búsqueda.</p>

@@ -11,21 +11,11 @@ interface FocusModuleProps {
   isMobile: boolean;
 }
 
-type AmbientType = 'none' | 'rain' | 'fire' | 'monastic';
-
-const SOUND_URLS: Record<AmbientType, string> = {
-  none: '',
-  rain: 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_3497d51965.mp3?filename=rain-sound-1188.mp3',
-  fire: 'https://cdn.pixabay.com/download/audio/2022/10/30/audio_5132205018.mp3?filename=fire-sound-123.mp3',
-  monastic: 'https://cdn.pixabay.com/download/audio/2021/11/25/audio_145d8b7654.mp3?filename=monks-chanting-123.mp3'
-};
-
 const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, onAddEssence, onAddCalendarEvent, isMobile }) => {
   const [isActive, setIsActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [totalTime, setTotalTime] = useState(25 * 60);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjects[0]?.id || '');
-  const [ambient, setAmbient] = useState<AmbientType>('none');
   const [showReflection, setShowReflection] = useState(false);
   const [reflectionData, setReflectionData] = useState({
     motivation: 5,
@@ -38,25 +28,6 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
   const [sanctuaryMode, setSanctuaryMode] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.loop = true;
-    }
-
-    if (ambient !== 'none' && isActive) {
-      audioRef.current.src = SOUND_URLS[ambient];
-      audioRef.current.play().catch(e => console.log("User interaction required for audio"));
-    } else {
-      audioRef.current.pause();
-    }
-
-    return () => {
-      audioRef.current?.pause();
-    };
-  }, [ambient, isActive]);
 
   useEffect(() => {
     if (isActive && timeLeft > 0) {
@@ -156,29 +127,9 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
     setReflectionData({ motivation: 5, harvest: '', reason: '', wasInterrupted: false });
   };
 
-  const ambientSounds = [
-    { id: 'none', label: 'Silencio', icon: 'volume' },
-    { id: 'rain', label: 'Lluvia', icon: 'rain' },
-    { id: 'fire', label: 'Chimenea', icon: 'fire' },
-    { id: 'monastic', label: 'Monacal', icon: 'moon' },
-  ];
-
-  // Efectos visuales según el sonido ambiente
-  const getAmbientAura = () => {
-    switch (ambient) {
-      case 'rain':
-        return 'bg-gradient-to-b from-blue-200/20 via-blue-300/10 to-transparent';
-      case 'monastic':
-        return 'bg-gradient-radial from-yellow-200/30 via-yellow-100/20 to-transparent';
-      case 'fire':
-        return 'bg-gradient-to-b from-orange-200/20 via-red-200/10 to-transparent';
-      default:
-        return '';
-    }
-  };
 
   return (
-    <div className={`h-full flex flex-col items-center justify-center relative px-4 py-8 md:py-0 transition-all duration-1000 ${getAmbientAura()}`}>
+    <div className="h-full flex flex-col items-center justify-center relative px-4 py-8 md:py-0 transition-all duration-1000 overflow-hidden">
       {/* Partículas de fondo para modo Santuario */}
       {sanctuaryMode && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -208,7 +159,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
         </div>
       )}
 
-      <div className={`max-w-4xl w-full flex flex-col items-center gap-8 lg:gap-12 animate-fade-in transition-all duration-500 ${sanctuaryMode ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`max-w-4xl w-full flex flex-col items-center gap-8 lg:gap-12 animate-fade-in transition-all duration-500 ${sanctuaryMode ? 'opacity-0 pointer-events-none' : 'opacity-100'} overflow-visible`}>
         <header className="text-center">
           <h1 className="font-cinzel text-xl md:text-2xl lg:text-3xl text-[#8B5E75] tracking-[0.4em] uppercase opacity-60 mb-2">
             El Reloj de Arena
@@ -274,7 +225,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl lg:max-w-3xl">
+        <div className="w-full max-w-2xl lg:max-w-3xl">
           <div className="glass-card p-6 lg:p-8 rounded-[2.5rem] border-[#F8C8DC]/30 shadow-sm">
             <p className="text-[10px] lg:text-[11px] uppercase font-black text-[#8B5E75] tracking-widest mb-5 border-b border-[#F8C8DC]/30 pb-2">Vínculo Académico</p>
             <div className="space-y-5">
@@ -308,22 +259,6 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
                   Personalizado
                 </button>
               </div>
-            </div>
-          </div>
-
-          <div className="glass-card p-6 lg:p-8 rounded-[2.5rem] border-[#F8C8DC]/30 shadow-sm">
-            <p className="text-[10px] lg:text-[11px] uppercase font-black text-[#8B5E75] tracking-widest mb-5 border-b border-[#F8C8DC]/30 pb-2">Canalización de Sonido</p>
-            <div className="grid grid-cols-4 gap-3">
-              {ambientSounds.map(snd => (
-                <button
-                  key={snd.id}
-                  onClick={() => setAmbient(snd.id as AmbientType)}
-                  className={`flex flex-col items-center justify-center gap-3 p-3 rounded-xl border-2 transition-all ${ambient === snd.id ? 'bg-[#D4AF37] text-white border-[#D4AF37] shadow-md scale-[1.03]' : 'text-[#8B5E75] border-[#F8C8DC] hover:bg-white/60'}`}
-                >
-                  {getIcon(snd.icon, "w-6 h-6 lg:w-7 lg:h-7")}
-                  <span className="text-[8px] lg:text-[9px] uppercase font-black text-center leading-tight">{snd.label}</span>
-                </button>
-              ))}
             </div>
           </div>
         </div>
