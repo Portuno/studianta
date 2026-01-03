@@ -4,10 +4,20 @@ import { Transaction } from '../types';
 import { getIcon, COLORS } from '../constants';
 import { geminiService } from '../services/geminiService';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import TreasuryChronicles from './TreasuryChronicles';
 import { addSealToPDF } from '../utils/pdfSeal';
 import { processMarkdownToHTML } from '../utils/markdownProcessor';
+import { parseOracleText } from '../utils/oracleTextParser';
+
+// Importación dinámica de html2canvas para evitar problemas con esbuild
+let html2canvas: any;
+const loadHtml2Canvas = async () => {
+  if (!html2canvas) {
+    const module = await import('html2canvas');
+    html2canvas = module.default || module;
+  }
+  return html2canvas;
+};
 
 interface FinanceModuleProps {
   transactions: Transaction[];
@@ -85,49 +95,34 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
       tempDiv.style.position = 'absolute';
       tempDiv.style.left = '-9999px';
       tempDiv.style.width = '210mm'; // Ancho A4
-      tempDiv.style.backgroundColor = '#FFF9FB';
-      tempDiv.style.padding = '20mm';
+      tempDiv.style.backgroundColor = '#FFFFFF';
       tempDiv.style.fontFamily = "'EB Garamond', 'Times New Roman', serif";
-      tempDiv.style.color = '#374151';
-      tempDiv.style.lineHeight = '1.6';
-      tempDiv.style.fontSize = '12pt';
 
       // Procesar el markdown del oráculo
       const processedHTML = processMarkdownToHTML(oracleDiagnosis);
 
-      // Crear el HTML completo del pergamino
+      // Crear el HTML completo del pergamino (sin el recuadro, se agregará en cada página del PDF)
       tempDiv.innerHTML = `
         <div style="
-          background-color: #FFF9FB;
-          min-height: 297mm;
+          background-color: #FFFFFF;
           position: relative;
-          padding: 10mm;
+          padding: 15mm 20mm;
           box-sizing: border-box;
         ">
-          <!-- Marco decorativo -->
-          <div style="
-            position: absolute;
-            top: 10mm;
-            left: 10mm;
-            right: 10mm;
-            bottom: 10mm;
-            border: 0.5mm solid #D4AF37;
-            pointer-events: none;
-          "></div>
-
           <!-- Encabezado -->
           <div style="
             text-align: center;
-            margin-bottom: 20mm;
+            margin-bottom: 25mm;
             position: relative;
+            padding-top: 5mm;
           ">
             <h1 style="
               font-family: 'Marcellus', 'Cinzel', 'Times New Roman', serif;
               color: #4A233E;
-              font-size: 28pt;
+              font-size: 24pt;
               font-weight: 700;
               margin: 0;
-              letter-spacing: 0.1em;
+              letter-spacing: 0.08em;
               text-transform: uppercase;
             ">EL VEREDICTO DEL ORÁCULO</h1>
             
@@ -139,8 +134,8 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
                 position: absolute;
                 top: 0;
                 right: 0;
-                width: 25mm;
-                height: 25mm;
+                width: 22mm;
+                height: 22mm;
                 object-fit: contain;
               "
               onerror="this.style.display='none'"
@@ -151,10 +146,9 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
           <div style="
             color: #374151;
             font-family: 'EB Garamond', 'Times New Roman', serif;
-            font-size: 12pt;
-            line-height: 1.6;
+            font-size: 11.5pt;
+            line-height: 1.8;
             text-align: justify;
-            padding: 0 5mm;
           ">
             ${processedHTML}
           </div>
@@ -166,14 +160,18 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
       // Esperar a que las fuentes y la imagen se carguen
       await new Promise(resolve => setTimeout(resolve, 500));
 
+      // Cargar html2canvas dinámicamente
+      const html2canvasLib = await loadHtml2Canvas();
+      
       // Renderizar el HTML a canvas con html2canvas
-      const canvas = await html2canvas(tempDiv, {
+      // No limitar la altura para que renderice todo el contenido
+      const canvas = await html2canvasLib(tempDiv, {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#FFF9FB',
+        backgroundColor: '#FFFFFF',
         width: 210 * 3.779527559, // Convertir mm a px (1mm = 3.779527559px a 96dpi)
-        height: 297 * 3.779527559,
+        // No especificar height para que renderice todo el contenido
       });
 
       // Limpiar el elemento temporal
@@ -200,25 +198,43 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
       const imgScaledWidth = pdfWidth;
       const imgScaledHeight = imgHeightMm * scale;
 
-      // Calcular cuántas páginas necesitamos
-      const totalPages = Math.ceil(imgScaledHeight / pdfHeight);
+      // Calcular cuántas páginas necesitamos basado en el área útil
+      const usableHeightMm = pdfHeight - 20; // Altura útil dentro del recuadro
+      const totalPages = Math.ceil(imgScaledHeight / usableHeightMm);
 
       // Agregar el sello en la primera página
       await addSealToPDF(pdf);
 
-      // Dividir la imagen en páginas
-      let sourceY = 0;
-      const pageHeightPx = pdfHeight / scale / pxToMm;
+      // Dividir la imagen en páginas respetando el área del recuadro dorado
+      // El área útil ya está calculada arriba
+      const usableHeightPx = Math.floor(usableHeightMm / (pxToMm * scale));
       
-      for (let i = 0; i < totalPages; i++) {
-        if (i > 0) {
+      let sourceY = 0;
+      let pageIndex = 0;
+      
+      while (sourceY < imgHeight && pageIndex < totalPages) {
+        if (pageIndex > 0) {
           pdf.addPage();
         }
 
         // Calcular la altura de la porción para esta página
         const remainingHeight = imgHeight - sourceY;
-        const currentPageHeightPx = Math.min(pageHeightPx, remainingHeight);
-        const currentPageHeightMm = currentPageHeightPx * pxToMm * scale;
+        let currentPageHeightPx = Math.min(usableHeightPx, remainingHeight);
+        
+        // Ajustar para evitar cortes muy pequeños al final (menos de 50px)
+        if (remainingHeight - currentPageHeightPx < 50 && remainingHeight - currentPageHeightPx > 0) {
+          // Si queda muy poco, incluir todo en esta página para evitar páginas casi vacías
+          currentPageHeightPx = remainingHeight;
+        }
+        
+        if (currentPageHeightPx <= 0) {
+          break;
+        }
+        
+        // Calcular altura en mm - usar altura completa del área útil excepto en la última página si es más pequeña
+        const currentPageHeightMm = (pageIndex === totalPages - 1 && remainingHeight <= usableHeightPx)
+          ? (currentPageHeightPx * pxToMm * scale)
+          : usableHeightMm;
 
         // Crear un canvas temporal para esta página
         const pageCanvas = document.createElement('canvas');
@@ -226,42 +242,61 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
         pageCanvas.height = currentPageHeightPx;
         const pageCtx = pageCanvas.getContext('2d');
         
-        if (pageCtx) {
-          // Copiar la porción correspondiente de la imagen original
+        if (!pageCtx) {
+          console.error('No se pudo obtener el contexto del canvas');
+          break;
+        }
+
+        // Rellenar el canvas con fondo blanco primero
+        pageCtx.fillStyle = '#FFFFFF';
+        pageCtx.fillRect(0, 0, imgWidth, currentPageHeightPx);
+        
+        // Copiar la porción correspondiente de la imagen original
+        try {
           pageCtx.drawImage(
             canvas,
-            0, sourceY, imgWidth, currentPageHeightPx,  // source
-            0, 0, imgWidth, currentPageHeightPx          // destination
+            0, sourceY, imgWidth, currentPageHeightPx,  // source (x, y, width, height)
+            0, 0, imgWidth, currentPageHeightPx          // destination (x, y, width, height)
           );
           
-          const pageImgData = pageCanvas.toDataURL('image/png');
-          pdf.addImage(pageImgData, 'PNG', 0, 0, imgScaledWidth, currentPageHeightMm);
+          // Convertir a PNG
+          const pageImgData = pageCanvas.toDataURL('image/png', 1.0);
+          
+          // Agregar la imagen al PDF, posicionada dentro del recuadro (10mm desde arriba)
+          if (pageImgData && pageImgData.startsWith('data:image/png')) {
+            pdf.addImage(pageImgData, 'PNG', 0, 10, imgScaledWidth, currentPageHeightMm);
+          } else {
+            throw new Error('DataURL inválido');
+          }
+        } catch (drawError) {
+          console.error(`Error al procesar página ${pageIndex + 1}:`, drawError);
+          break;
         }
 
         sourceY += currentPageHeightPx;
+        pageIndex++;
       }
 
-      // Agregar numeración de páginas
+      // Agregar numeración de páginas y marco decorativo en cada página
       const pageCount = pdf.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         pdf.setPage(i);
-        pdf.setFontSize(10);
-        pdf.setTextColor(100, 100, 100);
-        pdf.text(
-          `- Página ${i} -`,
-          pdfWidth / 2,
-          pdfHeight - 10,
-          { align: 'center' }
-        );
-      }
-
-      // Agregar marco decorativo en cada página
-      for (let i = 1; i <= pageCount; i++) {
-        pdf.setPage(i);
+        
+        // Marco decorativo dorado (se dibuja en cada página, siempre completo)
         pdf.setDrawColor(212, 175, 55); // #D4AF37
         pdf.setLineWidth(0.5);
-        // Marco a 10mm de los bordes
         pdf.rect(10, 10, pdfWidth - 20, pdfHeight - 20);
+        
+        // Numeración de página (footer, abajo a la derecha)
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(
+          `Página ${i}`,
+          pdfWidth - 15,
+          pdfHeight - 10,
+          { align: 'right' }
+        );
       }
 
       pdf.save('veredicto-oraculo.pdf');
@@ -416,19 +451,18 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
               <div className="h-1 w-20 bg-[#D4AF37] mx-auto rounded-full" />
             </div>
 
-            {/* Contenido con scroll interno */}
+            {/* Contenido con scroll interno - Pergamino Digital */}
             <div className="flex-1 overflow-y-auto px-8 py-6 relative">
               {/* Watermark sutil */}
               <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none overflow-hidden">
                 {getIcon('scale', 'w-[30rem] h-[30rem]')}
               </div>
               
-              <div className="relative z-10 text-[#4A233E] font-garamond text-lg md:text-xl leading-[1.8] text-justify space-y-6">
-                {oracleDiagnosis.split('\n').map((line, i) => (
-                  <p key={i}>
-                    {highlightAmounts(line, i)}
-                  </p>
-                ))}
+              {/* Contenedor del Pergamino */}
+              <div className="relative z-10 bg-[#FFF9FB] rounded-lg border-2 border-[#D4AF37]/30 p-6 md:p-8 shadow-inner">
+                <div className="space-y-4">
+                  {parseOracleText(oracleDiagnosis)}
+                </div>
               </div>
             </div>
 

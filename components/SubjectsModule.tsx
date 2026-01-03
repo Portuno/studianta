@@ -6,6 +6,17 @@ import { geminiService } from '../services/geminiService';
 import { jsPDF } from 'jspdf';
 import OracleTextRenderer from './OracleTextRenderer';
 import { addSealToPDF } from '../utils/pdfSeal';
+import { processMarkdownToHTML } from '../utils/markdownProcessor';
+
+// Importación dinámica de html2canvas para evitar problemas con esbuild
+let html2canvas: any;
+const loadHtml2Canvas = async () => {
+  if (!html2canvas) {
+    const module = await import('html2canvas');
+    html2canvas = module.default || module;
+  }
+  return html2canvas;
+};
 
 interface SubjectsModuleProps {
   subjects: Subject[];
@@ -325,86 +336,257 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
   const handleDownloadChat = async () => {
     if (chatHistory.length === 0) return;
 
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
+    try {
+      // Crear un elemento HTML temporal oculto con el contenido estilizado
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '210mm'; // Ancho A4
+      tempDiv.style.backgroundColor = '#FFFFFF';
+      tempDiv.style.fontFamily = "'EB Garamond', 'Times New Roman', serif";
 
-    // Agregar sello en la primera página
-    await addSealToPDF(doc);
+      // Generar el HTML del chat con estilos
+      const chatHTML = chatHistory.map((chat) => {
+        const processedText = processMarkdownToHTML(chat.text);
+        const roleColor = chat.role === 'user' ? '#E35B8F' : '#D4AF37';
+        const roleLabel = chat.role === 'user' ? 'Tú' : 'Oráculo';
+        
+        return `
+          <div style="margin-bottom: 24px;">
+            <div style="
+              color: ${roleColor};
+              font-family: 'Marcellus', 'Cinzel', serif;
+              font-size: 13pt;
+              font-weight: 600;
+              margin-bottom: 10px;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            ">${roleLabel}:</div>
+            <div style="
+              color: #374151;
+              font-family: 'EB Garamond', 'Times New Roman', serif;
+              font-size: 11pt;
+              line-height: 1.7;
+              text-align: justify;
+              padding-left: 12px;
+            ">${processedText}</div>
+          </div>
+        `;
+      }).join('');
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    let yPos = margin;
-    const lineHeight = 7;
-    
-    // Colores
-    const plumColor = [74, 35, 62]; // #4A233E
-    const goldColor = [212, 175, 55]; // #D4AF37
-    const pinkColor = [227, 91, 143]; // #E35B8F
+      // Crear el HTML completo del pergamino (sin el recuadro, se agregará en cada página del PDF)
+      tempDiv.innerHTML = `
+        <div style="
+          background-color: #FFFFFF;
+          position: relative;
+          padding: 15mm 20mm;
+          box-sizing: border-box;
+        ">
+          <!-- Encabezado (solo en primera página) -->
+          <div id="header-section" style="
+            margin-bottom: 25mm;
+            position: relative;
+            padding-top: 5mm;
+          ">
+            <h1 style="
+              font-family: 'Marcellus', 'Cinzel', 'Times New Roman', serif;
+              color: #4A233E;
+              font-size: 24pt;
+              font-weight: 700;
+              margin: 0 0 8px 0;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+            ">ORÁCULO DE ESTUDIO</h1>
+            
+            <h2 style="
+              font-family: 'Marcellus', 'Cinzel', 'Times New Roman', serif;
+              color: #4A233E;
+              font-size: 18pt;
+              font-weight: 500;
+              margin: 0;
+              letter-spacing: 0.04em;
+            ">${subject.name.toUpperCase()}</h2>
+            
+            <!-- Sello en esquina superior derecha -->
+            <img 
+              src="/seal.png" 
+              alt="Sello de Studianta"
+              style="
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 22mm;
+                height: 22mm;
+                object-fit: contain;
+              "
+              onerror="this.style.display='none'"
+            />
+          </div>
 
-    // Título
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
-    doc.setTextColor(plumColor[0], plumColor[1], plumColor[2]);
-    doc.text('Oráculo de Estudio', pageWidth / 2, yPos, { align: 'center' });
-    yPos += lineHeight * 1.5;
+          <!-- Cuerpo del chat -->
+          <div style="
+            color: #374151;
+            font-family: 'EB Garamond', 'Times New Roman', serif;
+            font-size: 11pt;
+            line-height: 1.7;
+          ">
+            ${chatHTML}
+          </div>
+        </div>
+      `;
 
-    doc.setFontSize(16);
-    doc.text(subject.name, pageWidth / 2, yPos, { align: 'center' });
-    yPos += lineHeight * 2;
+      document.body.appendChild(tempDiv);
 
-    // Línea decorativa
-    doc.setDrawColor(goldColor[0], goldColor[1], goldColor[2]);
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += lineHeight * 2;
+      // Esperar a que las fuentes y la imagen se carguen
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Contenido del chat
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(0, 0, 0);
-
-    chatHistory.forEach((chat, idx) => {
-      if (yPos > pageHeight - margin - 20) {
-        doc.addPage();
-        yPos = margin;
-      }
-
-      // Encabezado del mensaje
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      if (chat.role === 'user') {
-        doc.setTextColor(pinkColor[0], pinkColor[1], pinkColor[2]);
-        doc.text('Tú:', margin, yPos);
-      } else {
-        doc.setTextColor(goldColor[0], goldColor[1], goldColor[2]);
-        doc.text('Oráculo:', margin, yPos);
-      }
-      yPos += lineHeight * 1.2;
-
-      // Texto del mensaje
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.setTextColor(0, 0, 0);
-      const lines = doc.splitTextToSize(chat.text, pageWidth - margin * 2);
+      // Cargar html2canvas dinámicamente
+      const html2canvasLib = await loadHtml2Canvas();
       
-      lines.forEach((line: string) => {
-        if (yPos > pageHeight - margin - 10) {
-          doc.addPage();
-          yPos = margin;
-        }
-        doc.text(line, margin, yPos);
-        yPos += lineHeight;
+      // Renderizar el HTML a canvas con html2canvas
+      // No limitar la altura para que renderice todo el contenido
+      const canvas = await html2canvasLib(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#FFFFFF',
+        width: 210 * 3.779527559, // Convertir mm a px (1mm = 3.779527559px a 96dpi)
+        // No especificar height para que renderice todo el contenido
       });
 
-      yPos += lineHeight;
-    });
+      // Limpiar el elemento temporal
+      document.body.removeChild(tempDiv);
 
-    doc.save(`Chat_Oráculo_${subject.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
-    setChatDownloaded(true);
+      // Crear el PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      
+      // Convertir píxeles a mm (96 DPI: 1px = 0.264583mm)
+      const pxToMm = 0.264583;
+      const imgWidthMm = imgWidth * pxToMm;
+      const imgHeightMm = imgHeight * pxToMm;
+      
+      // Calcular escala para que la imagen quepa en el ancho del PDF
+      const scale = pdfWidth / imgWidthMm;
+      const imgScaledWidth = pdfWidth;
+      const imgScaledHeight = imgHeightMm * scale;
+
+      // Calcular cuántas páginas necesitamos basado en el área útil
+      const usableHeightMm = pdfHeight - 20; // Altura útil dentro del recuadro
+      const totalPages = Math.ceil(imgScaledHeight / usableHeightMm);
+
+      // Agregar el sello en la primera página
+      await addSealToPDF(pdf);
+
+      // Dividir la imagen en páginas respetando el área del recuadro dorado
+      // El área útil ya está calculada arriba
+      const usableHeightPx = Math.floor(usableHeightMm / (pxToMm * scale));
+      
+      let sourceY = 0;
+      let pageIndex = 0;
+      
+      while (sourceY < imgHeight && pageIndex < totalPages) {
+        if (pageIndex > 0) {
+          pdf.addPage();
+        }
+
+        // Calcular la altura de la porción para esta página
+        const remainingHeight = imgHeight - sourceY;
+        let currentPageHeightPx = Math.min(usableHeightPx, remainingHeight);
+        
+        // Ajustar para evitar cortes muy pequeños al final
+        if (remainingHeight - currentPageHeightPx < 50 && remainingHeight - currentPageHeightPx > 0) {
+          // Si queda muy poco, incluir todo en esta página
+          currentPageHeightPx = remainingHeight;
+        }
+        
+        if (currentPageHeightPx <= 0) {
+          break;
+        }
+        
+        // Calcular altura en mm - usar altura completa del área útil excepto en la última página
+        const currentPageHeightMm = (pageIndex === totalPages - 1 && remainingHeight <= usableHeightPx)
+          ? (currentPageHeightPx * pxToMm * scale)
+          : usableHeightMm;
+
+        // Crear un canvas temporal para esta página
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = imgWidth;
+        pageCanvas.height = currentPageHeightPx;
+        const pageCtx = pageCanvas.getContext('2d');
+        
+        if (!pageCtx) {
+          console.error('No se pudo obtener el contexto del canvas');
+          break;
+        }
+
+        // Rellenar el canvas con fondo blanco primero
+        pageCtx.fillStyle = '#FFFFFF';
+        pageCtx.fillRect(0, 0, imgWidth, currentPageHeightPx);
+        
+        // Copiar la porción correspondiente de la imagen original
+        try {
+          pageCtx.drawImage(
+            canvas,
+            0, sourceY, imgWidth, currentPageHeightPx,  // source (x, y, width, height)
+            0, 0, imgWidth, currentPageHeightPx          // destination (x, y, width, height)
+          );
+          
+          // Convertir a PNG
+          const pageImgData = pageCanvas.toDataURL('image/png', 1.0);
+          
+          // Agregar la imagen al PDF, posicionada dentro del recuadro (10mm desde arriba)
+          if (pageImgData && pageImgData.startsWith('data:image/png')) {
+            pdf.addImage(pageImgData, 'PNG', 0, 10, imgScaledWidth, currentPageHeightMm);
+          } else {
+            throw new Error('DataURL inválido');
+          }
+        } catch (drawError) {
+          console.error(`Error al procesar página ${pageIndex + 1}:`, drawError);
+          break;
+        }
+
+        sourceY += currentPageHeightPx;
+        pageIndex++;
+      }
+
+      // Agregar numeración de páginas y marco decorativo en cada página
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        
+        // Marco decorativo dorado (se dibuja en cada página, siempre completo)
+        pdf.setDrawColor(212, 175, 55); // #D4AF37
+        pdf.setLineWidth(0.5);
+        pdf.rect(10, 10, pdfWidth - 20, pdfHeight - 20);
+        
+        // Numeración de página (footer, abajo a la derecha)
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(
+          `Página ${i}`,
+          pdfWidth - 15,
+          pdfHeight - 10,
+          { align: 'right' }
+        );
+      }
+
+      pdf.save(`Chat_Oráculo_${subject.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+      setChatDownloaded(true);
+    } catch (error) {
+      console.error('Error al generar el PDF del chat:', error);
+      alert('Error al generar el PDF. Por favor, intenta nuevamente.');
+    }
   };
 
   const handleCloseWithCheck = () => {
@@ -607,6 +789,21 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
       });
     }
     
+    // Agregar numeración de páginas en el footer, abajo a la derecha
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        `Página ${i}`,
+        pageWidth - 15,
+        pageHeight - 10,
+        { align: 'right' }
+      );
+    }
+
     // Guardar el PDF
     doc.save(`Dossier_${subject.name.replace(/\s+/g, '_')}.pdf`);
   };
