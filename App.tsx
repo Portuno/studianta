@@ -176,7 +176,24 @@ const App: React.FC = () => {
   const loadAllData = async (userId: string) => {
     try {
       // Cargar perfil primero (necesario para esencia)
-      const profile = await supabaseService.getProfile(userId);
+      let profile = await supabaseService.getProfile(userId);
+      
+      // Si no existe perfil, crearlo automáticamente (útil para usuarios de Google Auth)
+      if (!profile) {
+        try {
+          // Obtener información del usuario desde auth
+          const user = await supabaseService.getCurrentUser();
+          const email = user?.email || '';
+          const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || '';
+          
+          // Crear perfil con valores por defecto
+          profile = await supabaseService.createProfile(userId, email, fullName);
+        } catch (createError) {
+          console.error('Error creating profile:', createError);
+          // Continuar sin perfil si falla la creación
+        }
+      }
+      
       if (profile) {
         setEssence(profile.essence);
         setUserProfile(profile);

@@ -98,6 +98,29 @@ export class SupabaseService {
     return data;
   }
 
+  async signInWithGoogle() {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Supabase no está configurado. Por favor, configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu archivo .env');
+    }
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data;
+  }
+
   async signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
