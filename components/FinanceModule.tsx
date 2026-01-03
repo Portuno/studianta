@@ -4,7 +4,10 @@ import { Transaction } from '../types';
 import { getIcon, COLORS } from '../constants';
 import { geminiService } from '../services/geminiService';
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import TreasuryChronicles from './TreasuryChronicles';
+import { addSealToPDF } from '../utils/pdfSeal';
+import { processMarkdownToHTML } from '../utils/markdownProcessor';
 
 interface FinanceModuleProps {
   transactions: Transaction[];
@@ -74,92 +77,198 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
     return result;
   };
 
-  // Función para generar PDF del oráculo
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
+  // Función para generar PDF del oráculo - Pergamino Académico de alta fidelidad
+  const handleDownloadPDF = async () => {
+    try {
+      // Crear un elemento HTML temporal oculto con el contenido estilizado
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '210mm'; // Ancho A4
+      tempDiv.style.backgroundColor = '#FFF9FB';
+      tempDiv.style.padding = '20mm';
+      tempDiv.style.fontFamily = "'EB Garamond', 'Times New Roman', serif";
+      tempDiv.style.color = '#374151';
+      tempDiv.style.lineHeight = '1.6';
+      tempDiv.style.fontSize = '12pt';
 
-    // Estilo Rose-Academic
-    doc.setFont('helvetica');
-    doc.setTextColor(74, 35, 62); // #4A233E
-    
-    // Título
-    doc.setFontSize(24);
-    doc.setFont('helvetica', 'bold');
-    doc.text('El Veredicto de la Balanza', 105, 30, { align: 'center' });
-    
-    // Línea decorativa
-    doc.setDrawColor(212, 175, 55); // #D4AF37
-    doc.setLineWidth(0.5);
-    doc.line(60, 35, 150, 35);
-    
-    // Texto del oráculo con resaltado de montos
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    let yPos = 50;
-    const pageWidth = 170;
-    const margin = 20;
-    
-    const paragraphs = oracleDiagnosis.split('\n');
-    
-    paragraphs.forEach((paragraph) => {
-      if (paragraph.trim() === '') {
-        yPos += 5;
-        return;
-      }
-      
-      // Procesar cada párrafo línea por línea
-      const lines = doc.splitTextToSize(paragraph, pageWidth);
-      
-      lines.forEach((line: string) => {
-        const amountRegex = /\$[\d,]+(?:\.\d{2})?/g;
-        let xPos = margin;
-        let lastIndex = 0;
-        let match;
-        
-        // Procesar la línea buscando montos
-        while ((match = amountRegex.exec(line)) !== null) {
-          // Texto antes del monto
-          if (match.index > lastIndex) {
-            const textBefore = line.substring(lastIndex, match.index);
-            doc.setTextColor(74, 35, 62);
-            doc.setFont('helvetica', 'normal');
-            doc.text(textBefore, xPos, yPos);
-            xPos += doc.getTextWidth(textBefore);
-          }
-          
-          // Monto resaltado
-          doc.setTextColor(212, 175, 55); // #D4AF37
-          doc.setFont('helvetica', 'bold');
-          doc.text(match[0], xPos, yPos);
-          xPos += doc.getTextWidth(match[0]);
-          
-          lastIndex = match.index + match[0].length;
-        }
-        
-        // Texto restante después del último monto
-        if (lastIndex < line.length) {
-          doc.setTextColor(74, 35, 62);
-          doc.setFont('helvetica', 'normal');
-          doc.text(line.substring(lastIndex), xPos, yPos);
-        }
-        
-        yPos += 7;
-        
-        // Nueva página si es necesario
-        if (yPos > 270) {
-          doc.addPage();
-          yPos = 20;
-        }
+      // Procesar el markdown del oráculo
+      const processedHTML = processMarkdownToHTML(oracleDiagnosis);
+
+      // Crear el HTML completo del pergamino
+      tempDiv.innerHTML = `
+        <div style="
+          background-color: #FFF9FB;
+          min-height: 297mm;
+          position: relative;
+          padding: 10mm;
+          box-sizing: border-box;
+        ">
+          <!-- Marco decorativo -->
+          <div style="
+            position: absolute;
+            top: 10mm;
+            left: 10mm;
+            right: 10mm;
+            bottom: 10mm;
+            border: 0.5mm solid #D4AF37;
+            pointer-events: none;
+          "></div>
+
+          <!-- Encabezado -->
+          <div style="
+            text-align: center;
+            margin-bottom: 20mm;
+            position: relative;
+          ">
+            <h1 style="
+              font-family: 'Marcellus', 'Cinzel', 'Times New Roman', serif;
+              color: #4A233E;
+              font-size: 28pt;
+              font-weight: 700;
+              margin: 0;
+              letter-spacing: 0.1em;
+              text-transform: uppercase;
+            ">EL VEREDICTO DEL ORÁCULO</h1>
+            
+            <!-- Sello en esquina superior derecha -->
+            <img 
+              src="/seal.png" 
+              alt="Sello de Studianta"
+              style="
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 25mm;
+                height: 25mm;
+                object-fit: contain;
+              "
+              onerror="this.style.display='none'"
+            />
+          </div>
+
+          <!-- Cuerpo del texto -->
+          <div style="
+            color: #374151;
+            font-family: 'EB Garamond', 'Times New Roman', serif;
+            font-size: 12pt;
+            line-height: 1.6;
+            text-align: justify;
+            padding: 0 5mm;
+          ">
+            ${processedHTML}
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Esperar a que las fuentes y la imagen se carguen
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Renderizar el HTML a canvas con html2canvas
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#FFF9FB',
+        width: 210 * 3.779527559, // Convertir mm a px (1mm = 3.779527559px a 96dpi)
+        height: 297 * 3.779527559,
       });
+
+      // Limpiar el elemento temporal
+      document.body.removeChild(tempDiv);
+
+      // Crear el PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      // Convertir píxeles a mm (96 DPI: 1px = 0.264583mm)
+      const pxToMm = 0.264583;
+      const imgWidthMm = imgWidth * pxToMm;
+      const imgHeightMm = imgHeight * pxToMm;
+      const scale = pdfWidth / imgWidthMm;
+      const ratio = scale;
+      const imgScaledWidth = pdfWidth;
+      const imgScaledHeight = imgHeightMm * scale;
+
+      // Calcular cuántas páginas necesitamos
+      const totalPages = Math.ceil(imgScaledHeight / pdfHeight);
+
+      // Agregar el sello en la primera página
+      await addSealToPDF(pdf);
+
+      // Dividir la imagen en páginas
+      let sourceY = 0;
+      const pageHeightPx = pdfHeight / scale / pxToMm;
       
-      yPos += 3; // Espacio entre párrafos
-    });
-    
-    doc.save('veredicto-balanza.pdf');
+      for (let i = 0; i < totalPages; i++) {
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        // Calcular la altura de la porción para esta página
+        const remainingHeight = imgHeight - sourceY;
+        const currentPageHeightPx = Math.min(pageHeightPx, remainingHeight);
+        const currentPageHeightMm = currentPageHeightPx * pxToMm * scale;
+
+        // Crear un canvas temporal para esta página
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = imgWidth;
+        pageCanvas.height = currentPageHeightPx;
+        const pageCtx = pageCanvas.getContext('2d');
+        
+        if (pageCtx) {
+          // Copiar la porción correspondiente de la imagen original
+          pageCtx.drawImage(
+            canvas,
+            0, sourceY, imgWidth, currentPageHeightPx,  // source
+            0, 0, imgWidth, currentPageHeightPx          // destination
+          );
+          
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          pdf.addImage(pageImgData, 'PNG', 0, 0, imgScaledWidth, currentPageHeightMm);
+        }
+
+        sourceY += currentPageHeightPx;
+      }
+
+      // Agregar numeración de páginas
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(
+          `- Página ${i} -`,
+          pdfWidth / 2,
+          pdfHeight - 10,
+          { align: 'center' }
+        );
+      }
+
+      // Agregar marco decorativo en cada página
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setDrawColor(212, 175, 55); // #D4AF37
+        pdf.setLineWidth(0.5);
+        // Marco a 10mm de los bordes
+        pdf.rect(10, 10, pdfWidth - 20, pdfHeight - 20);
+      }
+
+      pdf.save('veredicto-oraculo.pdf');
+    } catch (error) {
+      console.error('Error al generar el PDF:', error);
+      alert('Error al generar el PDF. Por favor, intenta nuevamente.');
+    }
   };
 
   const handleConsultOracle = async () => {
@@ -299,8 +408,8 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
       )}
 
       {oracleDiagnosis && rightPanelTab === 'oracle' && !loadingOracle && (
-        <div className="fixed inset-0 z-[400] bg-[#FFF0F5]/95 backdrop-blur-2xl flex items-center justify-center p-6">
-          <div className="max-w-4xl w-full max-h-[85vh] flex flex-col glass-card rounded-[3rem] border-[#F8C8DC] shadow-2xl bg-white/80 overflow-hidden">
+        <div className="fixed inset-0 z-[400] bg-[#FFF0F5]/95 backdrop-blur-2xl flex items-center justify-center p-6" onClick={() => { setRightPanelTab('history'); setOracleDiagnosis(''); }}>
+          <div className="max-w-4xl w-full max-h-[85vh] flex flex-col glass-card rounded-[3rem] border-[#F8C8DC] shadow-2xl bg-white/80 overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {/* Header del Modal */}
             <div className="flex-shrink-0 text-center pt-8 pb-6 px-8 border-b border-[#F8C8DC]/50">
               <h2 className="font-marcellus text-2xl md:text-4xl font-black text-[#4A233E] mb-3 uppercase tracking-[0.3em]">El Veredicto de la Balanza</h2>

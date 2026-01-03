@@ -139,8 +139,8 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Modal de Login Mobile */}
         {showLoginModal && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fade-in">
-            <div className="glass-card rounded-3xl p-6 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowLoginModal(false)}>
+            <div className="glass-card rounded-3xl p-6 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-6">
                 <div>
                   <h2 className="font-cinzel text-xl text-[#4A233E] mb-1">Iniciar Sesión</h2>
@@ -306,8 +306,8 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Modal de Login */}
       {showLoginModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fade-in">
-          <div className="glass-card rounded-3xl p-8 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowLoginModal(false)}>
+          <div className="glass-card rounded-3xl p-8 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="font-cinzel text-2xl text-[#4A233E] mb-1">Iniciar Sesión</h2>

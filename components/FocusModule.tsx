@@ -409,8 +409,8 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
 
       {/* Modal para tiempo personalizado */}
       {showCustomTimeModal && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-xl p-4">
-          <div className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl border-2 border-[#D4AF37]/40">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-xl p-4" onClick={() => { setShowCustomTimeModal(false); setCustomMinutes(''); }}>
+          <div className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl border-2 border-[#D4AF37]/40" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold uppercase tracking-widest">Tiempo Personalizado</h2>
             <div className="space-y-4">
               <input
@@ -442,8 +442,8 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
       )}
 
       {showReflection && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-6">
-          <div className="glass-card w-full max-w-lg lg:max-w-xl p-8 lg:p-12 rounded-[3.5rem] shadow-[0_30px_60px_rgba(0,0,0,0.3)] animate-in zoom-in duration-500 overflow-y-auto max-h-[90vh] no-scrollbar">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-6" onClick={() => setShowReflection(false)}>
+          <div className="glass-card w-full max-w-lg lg:max-w-xl p-8 lg:p-12 rounded-[3.5rem] shadow-[0_30px_60px_rgba(0,0,0,0.3)] animate-in zoom-in duration-500 overflow-y-auto max-h-[90vh] no-scrollbar" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-cinzel text-2xl lg:text-3xl text-[#4A233E] mb-3 font-black text-center uppercase tracking-widest">
               {reflectionData.wasInterrupted ? "Sesión Interrumpida" : "Sesión Completada"}
             </h2>

@@ -4,6 +4,8 @@ import { Subject, SubjectStatus, Milestone, Note, StudyMaterial, Schedule } from
 import { getIcon, COLORS } from '../constants';
 import { geminiService } from '../services/geminiService';
 import { jsPDF } from 'jspdf';
+import OracleTextRenderer from './OracleTextRenderer';
+import { addSealToPDF } from '../utils/pdfSeal';
 
 interface SubjectsModuleProps {
   subjects: Subject[];
@@ -121,8 +123,8 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
       )}
 
       {subjectToDelete && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4">
-          <div className="glass-card max-w-sm w-full p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] text-center shadow-2xl">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4" onClick={() => setSubjectToDelete(null)}>
+          <div className="glass-card max-w-sm w-full p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
              <h2 className="font-cinzel text-xl text-[#4A233E] mb-4 font-bold uppercase tracking-widest">¿Borrar Cátedra?</h2>
              <p className="text-sm text-[#8B5E75] mb-8 font-garamond italic">Se perderán todos los registros de "{subjectToDelete.name}".</p>
              <div className="flex flex-col gap-3">
@@ -134,8 +136,8 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
       )}
 
       {showCelebration && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#E35B8F]/30 backdrop-blur-md p-4">
-          <div className="glass-card max-w-sm w-full p-8 rounded-[2rem] md:rounded-[3rem] text-center shadow-2xl">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#E35B8F]/30 backdrop-blur-md p-4" onClick={() => setShowCelebration(false)}>
+          <div className="glass-card max-w-sm w-full p-8 rounded-[2rem] md:rounded-[3rem] text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
              <h2 className="font-cinzel text-3xl text-[#4A233E] mb-2 font-bold uppercase tracking-widest">¡TRIUNFO!</h2>
              <div className="mb-8">
                <label className="block text-[10px] uppercase font-bold text-[#8B5E75] mb-2 font-inter">Nota Obtenida</label>
@@ -147,8 +149,8 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4">
-          <form onSubmit={handleAdd} className="glass-card w-full max-w-md p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl animate-fade-in">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4" onClick={() => setShowAddModal(false)}>
+          <form onSubmit={handleAdd} className="glass-card w-full max-w-md p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-cinzel text-lg md:text-xl text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">REGISTRAR CÁTEDRA</h2>
             <div className="space-y-4 font-inter">
               <input required name="name" type="text" placeholder="Nombre de la Cátedra" className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-4 text-sm focus:outline-none" />
@@ -180,6 +182,8 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
   const [loadingIa, setLoadingIa] = useState(false);
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ia', text: string}[]>([]);
   const [selectedContextIds, setSelectedContextIds] = useState<string[]>([]);
+  const [chatDownloaded, setChatDownloaded] = useState(false);
+  const [showChatWarning, setShowChatWarning] = useState(false);
   
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -202,6 +206,13 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
   useEffect(() => {
     if (activeTab === 'lab') scrollToBottom();
   }, [chatHistory, activeTab]);
+
+  // Resetear estado de descarga cuando se cambia de tab o se limpia el chat
+  useEffect(() => {
+    if (chatHistory.length === 0) {
+      setChatDownloaded(false);
+    }
+  }, [chatHistory.length]);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -297,6 +308,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
     if (queryInputRef.current) queryInputRef.current.value = '';
     setChatHistory(prev => [...prev, { role: 'user', text: query }]);
     setLoadingIa(true);
+    setChatDownloaded(false); // Nuevo mensaje, no descargado aún
     
     const selectedMaterials = subject.materials.filter(m => selectedContextIds.includes(m.id));
     const contextStr = `
@@ -310,8 +322,105 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
     setLoadingIa(false);
   };
 
-  const downloadDossier = () => {
+  const handleDownloadChat = async () => {
+    if (chatHistory.length === 0) return;
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Agregar sello en la primera página
+    await addSealToPDF(doc);
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    let yPos = margin;
+    const lineHeight = 7;
+    
+    // Colores
+    const plumColor = [74, 35, 62]; // #4A233E
+    const goldColor = [212, 175, 55]; // #D4AF37
+    const pinkColor = [227, 91, 143]; // #E35B8F
+
+    // Título
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(plumColor[0], plumColor[1], plumColor[2]);
+    doc.text('Oráculo de Estudio', pageWidth / 2, yPos, { align: 'center' });
+    yPos += lineHeight * 1.5;
+
+    doc.setFontSize(16);
+    doc.text(subject.name, pageWidth / 2, yPos, { align: 'center' });
+    yPos += lineHeight * 2;
+
+    // Línea decorativa
+    doc.setDrawColor(goldColor[0], goldColor[1], goldColor[2]);
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += lineHeight * 2;
+
+    // Contenido del chat
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+
+    chatHistory.forEach((chat, idx) => {
+      if (yPos > pageHeight - margin - 20) {
+        doc.addPage();
+        yPos = margin;
+      }
+
+      // Encabezado del mensaje
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      if (chat.role === 'user') {
+        doc.setTextColor(pinkColor[0], pinkColor[1], pinkColor[2]);
+        doc.text('Tú:', margin, yPos);
+      } else {
+        doc.setTextColor(goldColor[0], goldColor[1], goldColor[2]);
+        doc.text('Oráculo:', margin, yPos);
+      }
+      yPos += lineHeight * 1.2;
+
+      // Texto del mensaje
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
+      const lines = doc.splitTextToSize(chat.text, pageWidth - margin * 2);
+      
+      lines.forEach((line: string) => {
+        if (yPos > pageHeight - margin - 10) {
+          doc.addPage();
+          yPos = margin;
+        }
+        doc.text(line, margin, yPos);
+        yPos += lineHeight;
+      });
+
+      yPos += lineHeight;
+    });
+
+    doc.save(`Chat_Oráculo_${subject.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+    setChatDownloaded(true);
+  };
+
+  const handleCloseWithCheck = () => {
+    if (chatHistory.length > 0 && !chatDownloaded) {
+      setShowChatWarning(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const downloadDossier = async () => {
     const doc = new jsPDF();
+    
+    // Agregar sello en la primera página
+    await addSealToPDF(doc);
+    
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 20;
@@ -515,7 +624,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
       <header className="bg-white/70 border-b border-[#F8C8DC] p-4 md:p-6 shrink-0 backdrop-blur-md z-30">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
-            <button onClick={onClose} className="p-2 text-[#8B5E75] hover:bg-[#FFD1DC] rounded-full">
+            <button onClick={handleCloseWithCheck} className="p-2 text-[#8B5E75] hover:bg-[#FFD1DC] rounded-full">
                <div className="rotate-180">{getIcon('chevron', 'w-6 h-6')}</div>
             </button>
             <div className="overflow-hidden">
@@ -807,6 +916,16 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                     </button>
                   ))}
                 </div>
+                {chatHistory.length > 0 && (
+                  <button
+                    onClick={handleDownloadChat}
+                    className="shrink-0 px-3 py-1.5 bg-[#D4AF37] hover:bg-[#C19D2E] rounded-xl text-white text-[8px] font-bold uppercase tracking-widest flex items-center gap-1.5 transition-all"
+                    title="Descargar chat"
+                  >
+                    {getIcon('download', 'w-3 h-3')}
+                    Descargar
+                  </button>
+                )}
               </div>
             </div>
 
@@ -824,8 +943,14 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                 
               {chatHistory.map((chat, idx) => (
                 <div key={idx} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[90%] p-6 rounded-[2rem] shadow-md ${chat.role === 'user' ? 'bg-[#E35B8F] text-white rounded-tr-none' : 'bg-white border border-[#F8C8DC] text-[#4A233E] rounded-tl-none text-xl md:text-2xl font-garamond'}`}>
-                    {chat.text}
+                  <div className={`max-w-[90%] p-6 rounded-[2rem] shadow-md ${chat.role === 'user' ? 'bg-[#E35B8F] text-white rounded-tr-none' : 'bg-white/95 border border-[#F8C8DC] text-[#4A233E] rounded-tl-none'}`}>
+                    {chat.role === 'user' ? (
+                      <p className="font-garamond text-lg md:text-xl leading-relaxed">{chat.text}</p>
+                    ) : (
+                      <div className="oracle-response">
+                        <OracleTextRenderer text={chat.text} />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -915,13 +1040,13 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
 
       {/* Internal Full-Screen Modals for Mobile */}
       {showMilestoneModal && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4" onClick={() => setShowMilestoneModal(false)}>
           <form onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             onUpdate({...subject, milestones: [...subject.milestones, {id: Math.random().toString(36), title: fd.get('title') as string, date: fd.get('date') as string, type: fd.get('type') as any}]});
             setShowMilestoneModal(false);
-          }} className="glass-card w-full max-w-sm p-8 rounded-[2rem] shadow-2xl font-inter">
+          }} className="glass-card w-full max-w-sm p-8 rounded-[2rem] shadow-2xl font-inter" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">Nuevo Hito</h2>
             <div className="space-y-4">
               <input required name="title" placeholder="Título..." className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-4 outline-none text-sm" />
@@ -939,13 +1064,13 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
       )}
 
       {showScheduleModal && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4" onClick={() => setShowScheduleModal(false)}>
           <form onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             onUpdate({...subject, schedules: [...subject.schedules, {id: Math.random().toString(36), day: fd.get('day') as string, startTime: fd.get('start') as string, endTime: fd.get('end') as string}]});
             setShowScheduleModal(false);
-          }} className="glass-card w-full max-w-sm p-8 rounded-[2rem] shadow-2xl font-inter">
+          }} className="glass-card w-full max-w-sm p-8 rounded-[2rem] shadow-2xl font-inter" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">Horario</h2>
             <div className="space-y-4">
               <select name="day" className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-4 outline-none text-sm">
@@ -1002,8 +1127,8 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
       )}
 
       {noteToDelete && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4">
-          <div className="glass-card max-w-sm w-full p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] text-center shadow-2xl">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4" onClick={() => setNoteToDelete(null)}>
+          <div className="glass-card max-w-sm w-full p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-cinzel text-xl text-[#4A233E] mb-4 font-bold uppercase tracking-widest">¿Eliminar Apunte?</h2>
             <p className="text-sm text-[#8B5E75] mb-8 font-garamond italic">Se perderá permanentemente "{noteToDelete.title}".</p>
             <div className="flex flex-col gap-3">
@@ -1027,9 +1152,50 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
         </div>
       )}
 
+      {showChatWarning && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4" onClick={() => setShowChatWarning(false)}>
+          <div className="glass-card max-w-md w-full p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-cinzel text-xl text-[#4A233E] mb-4 font-bold uppercase tracking-widest">Chat sin Descargar</h2>
+            <p className="text-sm text-[#8B5E75] mb-8 font-garamond italic">
+              Tienes un chat activo que no ha sido descargado. Si sales ahora, se perderá permanentemente.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => {
+                  handleDownloadChat();
+                  setShowChatWarning(false);
+                  setTimeout(() => onClose(), 500);
+                }} 
+                className="bg-[#D4AF37] text-white w-full py-4 rounded-2xl font-cinzel text-xs font-bold uppercase shadow-lg hover:bg-[#C19D2E] transition-all flex items-center justify-center gap-2"
+              >
+                {getIcon('download', 'w-4 h-4')}
+                Descargar y Salir
+              </button>
+              <button 
+                onClick={() => {
+                  setChatHistory([]);
+                  setChatDownloaded(false);
+                  setShowChatWarning(false);
+                  onClose();
+                }} 
+                className="bg-red-500 text-white w-full py-4 rounded-2xl font-cinzel text-xs font-bold uppercase shadow-lg hover:bg-red-600 transition-all"
+              >
+                Salir sin Guardar
+              </button>
+              <button 
+                onClick={() => setShowChatWarning(false)} 
+                className="text-[#8B5E75] w-full py-3 rounded-2xl font-inter text-xs font-bold uppercase hover:bg-white/50 transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPdfModal && selectedPdf && (
-        <div className="fixed inset-0 z-[500] flex flex-col bg-[#4A233E]/95 backdrop-blur-lg">
-          <div className="bg-white/90 border-b border-[#F8C8DC] p-4 flex justify-between items-center shrink-0">
+        <div className="fixed inset-0 z-[500] flex flex-col bg-[#4A233E]/95 backdrop-blur-lg" onClick={() => { setShowPdfModal(false); setSelectedPdf(null); }}>
+          <div className="bg-white/90 border-b border-[#F8C8DC] p-4 flex justify-between items-center shrink-0" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-cinzel text-lg text-[#4A233E] font-bold uppercase">{selectedPdf.name}</h2>
             <div className="flex items-center gap-3">
               <button onClick={() => handleDownloadMaterial(selectedPdf)} className="px-4 py-2 bg-[#D4AF37] text-white rounded-xl text-[10px] font-bold uppercase">
@@ -1040,7 +1206,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
               </button>
             </div>
           </div>
-          <div className="flex-1 overflow-auto p-4 bg-white">
+          <div className="flex-1 overflow-auto p-4 bg-white" onClick={(e) => e.stopPropagation()}>
             {selectedPdf.type === 'PDF' && selectedPdf.content ? (
               <iframe 
                 src={selectedPdf.content} 
@@ -1204,8 +1370,8 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/90 backdrop-blur-lg p-4 transition-all duration-500">
-      <div className="glass-card w-full max-w-5xl h-[90vh] flex flex-col rounded-[2rem] md:rounded-[3rem] animate-fade-in border-2 border-[#D4AF37] overflow-hidden">
+    <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/90 backdrop-blur-lg p-4 transition-all duration-500" onClick={onClose}>
+      <div className="glass-card w-full max-w-5xl h-[90vh] flex flex-col rounded-[2rem] md:rounded-[3rem] animate-fade-in border-2 border-[#D4AF37] overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="bg-white/80 border-b border-[#F8C8DC] p-4 flex justify-between items-center shrink-0">
           <input

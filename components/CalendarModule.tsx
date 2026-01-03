@@ -489,8 +489,8 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
 
       {/* Form Modal for Manual Event */}
       {showAddEventModal && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-xl p-4">
-          <form onSubmit={handleAddCustomEvent} className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 font-inter border-2 border-[#D4AF37]/40">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-xl p-4" onClick={() => setShowAddEventModal(false)}>
+          <form onSubmit={handleAddCustomEvent} className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 font-inter border-2 border-[#D4AF37]/40" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold tracking-[0.2em] uppercase">Agregar al Calendario</h2>
             <div className="space-y-4">
               <input 

@@ -658,8 +658,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
 
         {/* Modal de Confirmación de Borrado - Mobile */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="glass-card rounded-2xl p-6 shadow-2xl max-w-md w-full">
+          <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(null)}>
+            <div className="glass-card rounded-2xl p-6 shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
               <h3 className="font-cinzel text-xl text-[#4A233E] mb-4">Confirmar Eliminación</h3>
               <p className="font-garamond text-[#8B5E75] mb-6 text-sm">
                 ¿Estás seguro de que deseas eliminar esta entrada? Esta acción no se puede deshacer.
@@ -895,8 +895,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
 
       {/* Modal de Confirmación de Borrado - Desktop */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl max-w-md w-full">
+        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(null)}>
+          <div className="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-cinzel text-xl lg:text-2xl text-[#4A233E] mb-4">Confirmar Eliminación</h3>
             <p className="font-garamond text-[#8B5E75] mb-6">
               ¿Estás seguro de que deseas eliminar esta entrada? Esta acción no se puede deshacer.
@@ -1001,8 +1001,8 @@ const PinInputModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl max-w-md w-full">
+    <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onCancel}>
+      <div className="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
         <div className="text-center mb-6">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#4A233E]/10 flex items-center justify-center">
             {getIcon('lock', 'w-8 h-8 text-[#D4AF37]')}
