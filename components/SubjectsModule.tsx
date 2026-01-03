@@ -557,7 +557,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
       </nav>
 
       {/* Detail Content Area */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-sm max-w-7xl mx-auto w-full pb-24">
+      <main className={`flex-1 overflow-hidden max-w-7xl mx-auto w-full ${activeTab === 'lab' ? 'p-0' : 'overflow-y-auto p-4 md:p-8 scroll-sm pb-24'}`}>
         
         {activeTab === 'info' && (
           <div className="space-y-6 animate-fade-in">
@@ -790,19 +790,19 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
         )}
 
         {activeTab === 'lab' && (
-          <div className="flex flex-col h-[calc(100vh-320px)] glass-card rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-xl border-2 border-[#D4AF37]/40 bg-white/10 relative">
-            {/* RAG Sincronización */}
-            <div className="bg-[#E35B8F] px-4 py-2 flex items-center justify-between text-white shadow-sm shrink-0">
-              <div className="flex items-center gap-4 overflow-hidden">
-                <span className="font-marcellus text-[8px] font-black uppercase tracking-widest shrink-0">Contexto:</span>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* RAG Sincronización - Arriba, bordeando con las tabs */}
+            <div className="bg-[#E35B8F] px-4 py-2.5 flex items-center justify-between text-white shadow-sm shrink-0 border-b border-[#D4AF37]/30">
+              <div className="flex items-center gap-4 overflow-hidden w-full">
+                <span className="font-marcellus text-[9px] font-black uppercase tracking-widest shrink-0">Contexto:</span>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 flex-1">
                   {subject.materials.filter(m => m.category === 'contenido').map(m => (
-                    <button key={m.id} onClick={() => toggleContext(m.id)} className={`px-3 py-1 rounded-full text-[8px] font-bold whitespace-nowrap border transition-all ${selectedContextIds.includes(m.id) ? 'bg-[#D4AF37] border-[#D4AF37]' : 'bg-white/20 border-white/40'}`}>
+                    <button key={m.id} onClick={() => toggleContext(m.id)} className={`px-3 py-1.5 rounded-full text-[8px] font-bold whitespace-nowrap border transition-all ${selectedContextIds.includes(m.id) ? 'bg-[#D4AF37] border-[#D4AF37]' : 'bg-white/20 border-white/40'}`}>
                       📄 {m.name}
                     </button>
                   ))}
                   {subject.notes.map(n => (
-                    <button key={n.id} onClick={() => toggleContext(n.id)} className={`px-3 py-1 rounded-full text-[8px] font-bold whitespace-nowrap border transition-all ${selectedContextIds.includes(n.id) ? 'bg-[#4A233E] border-[#4A233E]' : 'bg-white/20 border-white/40'}`}>
+                    <button key={n.id} onClick={() => toggleContext(n.id)} className={`px-3 py-1.5 rounded-full text-[8px] font-bold whitespace-nowrap border transition-all ${selectedContextIds.includes(n.id) ? 'bg-[#4A233E] border-[#4A233E]' : 'bg-white/20 border-white/40'}`}>
                       📝 {n.title}
                     </button>
                   ))}
@@ -810,8 +810,8 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
               </div>
             </div>
 
-            {/* Chat */}
-            <div className="flex-1 p-4 md:p-8 overflow-y-auto space-y-6 bg-[#FFF9FB]/60 font-garamond">
+            {/* Chat - Ocupa todo el espacio libre con márgenes pequeños */}
+            <div className="flex-1 mx-2 my-3 p-4 md:p-6 overflow-y-auto space-y-6 bg-[#FFF9FB]/60 font-garamond glass-card rounded-[2rem] border-[#F8C8DC]">
               {chatHistory.length === 0 && (
                 <div className="h-full flex flex-col items-center justify-center text-center px-4 opacity-50">
                   <div className="w-16 h-16 rounded-full border border-dashed border-[#D4AF37] flex items-center justify-center text-[#D4AF37] mb-4">
@@ -840,8 +840,8 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
               <div ref={chatEndRef} />
             </div>
 
-            {/* Input */}
-            <div className="p-4 bg-white/95 border-t border-[#F8C8DC] shrink-0">
+            {/* Input - Fijo en la parte baja */}
+            <div className="p-4 bg-white/95 border-t border-[#F8C8DC] shrink-0 mx-2 mb-2 rounded-[1.5rem] shadow-lg">
               <form onSubmit={handleIaQuery} className="flex gap-2 items-center">
                 <input ref={queryInputRef} placeholder="Pregunta al Oráculo..." className="flex-1 bg-white border border-[#F8C8DC] rounded-[1.5rem] px-6 py-3 text-lg font-garamond focus:border-[#E35B8F] outline-none shadow-inner" />
                 <button type="submit" disabled={loadingIa} className="w-12 h-12 bg-[#E35B8F] rounded-2xl flex items-center justify-center shadow-lg active:scale-90">

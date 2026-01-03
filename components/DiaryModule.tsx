@@ -275,14 +275,33 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
 
   // Función para verificar PIN y abrir entrada
   const handleVerifyPin = async () => {
-    if (pinInput.length !== 4) {
-      setPinError('El PIN debe tener 4 dígitos');
-      return;
-    }
+    // Dar tiempo para que React actualice el estado antes de verificar
+    setTimeout(async () => {
+      const currentPin = pinInput.trim();
+      
+      // Validar que el PIN tenga exactamente 4 dígitos
+      if (currentPin.length !== 4 || !/^\d{4}$/.test(currentPin)) {
+        setPinError('El PIN debe tener 4 dígitos');
+        return;
+      }
 
-    if (onVerifyPin) {
-      const isValid = await onVerifyPin(pinInput);
-      if (isValid) {
+      if (onVerifyPin) {
+        const isValid = await onVerifyPin(currentPin);
+        if (isValid) {
+          if (pendingEntryToView) {
+            // Marcar la entrada como desbloqueada en esta sesión
+            setUnlockedEntries(prev => new Set(prev).add(pendingEntryToView.id));
+            setSelectedEntry(pendingEntryToView);
+          }
+          setShowPinModal(false);
+          setPinInput('');
+          setPinError('');
+          setPendingEntryToView(null);
+        } else {
+          setPinError('PIN incorrecto');
+          setPinInput('');
+        }
+      } else if (securityPin && currentPin === securityPin) {
         if (pendingEntryToView) {
           // Marcar la entrada como desbloqueada en esta sesión
           setUnlockedEntries(prev => new Set(prev).add(pendingEntryToView.id));
@@ -296,20 +315,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
         setPinError('PIN incorrecto');
         setPinInput('');
       }
-    } else if (securityPin && pinInput === securityPin) {
-      if (pendingEntryToView) {
-        // Marcar la entrada como desbloqueada en esta sesión
-        setUnlockedEntries(prev => new Set(prev).add(pendingEntryToView.id));
-        setSelectedEntry(pendingEntryToView);
-      }
-      setShowPinModal(false);
-      setPinInput('');
-      setPinError('');
-      setPendingEntryToView(null);
-    } else {
-      setPinError('PIN incorrecto');
-      setPinInput('');
-    }
+    }, 100);
   };
 
   // Función para confirmar borrado
@@ -955,9 +961,9 @@ const PinInputModal: React.FC<{
     const numericValue = value.replace(/\D/g, '');
     if (numericValue.length > 1) return; // Solo un dígito por campo
 
-    const newPin = pinInput.split('');
-    newPin[index] = numericValue;
-    const updatedPin = newPin.join('').slice(0, 4);
+    const currentPinArray = pinInput.split('');
+    currentPinArray[index] = numericValue;
+    const updatedPin = currentPinArray.join('').slice(0, 4);
     setPinInput(updatedPin);
     setPinError('');
 
@@ -969,10 +975,14 @@ const PinInputModal: React.FC<{
     }
 
     // Si se completaron los 4 dígitos, verificar automáticamente
+    // Usar el valor actualizado directamente en lugar de esperar al estado
     if (updatedPin.length === 4) {
       setTimeout(() => {
-        onVerify();
-      }, 100);
+        // Verificar que el PIN tenga exactamente 4 dígitos antes de verificar
+        if (updatedPin.length === 4 && /^\d{4}$/.test(updatedPin)) {
+          onVerify();
+        }
+      }, 150);
     }
   };
 
