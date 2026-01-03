@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Module, NavView } from '../types';
 import { getIcon, COLORS } from '../constants';
 import AuthModule from './AuthModule';
@@ -58,6 +58,19 @@ const Dashboard: React.FC<DashboardProps> = ({
     return modules.find(m => m.id === moduleId)?.active || false;
   };
 
+  // Ordenar módulos: pendientes primero, adquiridos al final
+  const sortedModules = useMemo(() => {
+    const pending = modules.filter(m => !m.active);
+    const acquired = modules.filter(m => m.active);
+    
+    // Si hay pendientes, mostrarlos primero
+    if (pending.length > 0) {
+      return [...pending, ...acquired];
+    }
+    // Si no hay pendientes, mostrar adquiridos pero indicando que fueron adquiridos
+    return acquired;
+  }, [modules]);
+
   if (isMobile) {
     return (
       <>
@@ -86,8 +99,12 @@ const Dashboard: React.FC<DashboardProps> = ({
               {user ? 'Módulos' : 'Módulos Disponibles'}
             </h3>
             <div className="grid grid-cols-2 gap-4 pb-12">
-              {modules.map(mod => {
+              {sortedModules.map((mod, index) => {
                 const isActive = mod.active;
+                const isPending = !isActive;
+                const pendingCount = sortedModules.filter(m => !m.active).length;
+                const isFirstAcquired = isActive && index === pendingCount;
+                
                 return (
                   <div 
                     key={mod.id} 
@@ -106,6 +123,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                     {!isActive && (
                       <div className="mt-2 bg-[#D4AF37] text-white px-3 py-1 rounded-full text-[8px] font-black flex items-center gap-1 shadow-sm">
                         {mod.cost} {getIcon('sparkles', 'w-2 h-2')}
+                      </div>
+                    )}
+                    {isActive && pendingCount === 0 && isFirstAcquired && (
+                      <div className="mt-2 bg-[#D4AF37]/20 text-[#D4AF37] px-3 py-1 rounded-full text-[8px] font-black flex items-center gap-1 border border-[#D4AF37]/30">
+                        Adquirido
                       </div>
                     )}
                   </div>
@@ -210,31 +232,73 @@ const Dashboard: React.FC<DashboardProps> = ({
               {user ? 'Investigaciones' : 'Módulos Disponibles'}
             </h3>
             <div className="grid gap-4 lg:gap-6">
-              {modules.filter(m => !m.active).map(mod => (
-                <div key={mod.id} className="glass-card p-6 lg:p-8 rounded-[2rem] lg:rounded-[3rem] flex flex-col sm:flex-row items-center justify-between group hover:shadow-2xl transition-all duration-500 border-[#F8C8DC]/50 gap-4">
-                  <div className="flex items-center gap-4 lg:gap-6">
-                    <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-[1.5rem] lg:rounded-[2rem] bg-white border border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] group-hover:scale-105 transition-transform">
-                      {getIcon(mod.icon, "w-8 h-8 lg:w-10 lg:h-10")}
+              {sortedModules.map((mod, index) => {
+                const isActive = mod.active;
+                const pendingCount = sortedModules.filter(m => !m.active).length;
+                const isFirstAcquired = isActive && index === pendingCount;
+                
+                // Separador visual cuando empiezan los adquiridos
+                const showSeparator = isFirstAcquired && pendingCount > 0;
+                
+                return (
+                  <React.Fragment key={mod.id}>
+                    {showSeparator && (
+                      <div className="col-span-full my-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent"></div>
+                          <span className="text-[10px] font-cinzel font-black text-[#D4AF37] uppercase tracking-widest">Adquiridos</span>
+                          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent"></div>
+                        </div>
+                      </div>
+                    )}
+                    <div className={`glass-card p-6 lg:p-8 rounded-[2rem] lg:rounded-[3rem] flex flex-col sm:flex-row items-center justify-between group hover:shadow-2xl transition-all duration-500 gap-4 ${
+                      isActive ? 'border-2 border-[#D4AF37]/30' : 'border-[#F8C8DC]/50'
+                    }`}>
+                      <div className="flex items-center gap-4 lg:gap-6">
+                        <div className={`w-16 h-16 lg:w-20 lg:h-20 rounded-[1.5rem] lg:rounded-[2rem] flex items-center justify-center group-hover:scale-105 transition-transform ${
+                          isActive ? 'bg-[#E35B8F]/10 text-[#E35B8F] border border-[#E35B8F]/20' : 'bg-white border border-[#F8C8DC] text-[#8B5E75]'
+                        }`}>
+                          {getIcon(mod.icon, "w-8 h-8 lg:w-10 lg:h-10")}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-cinzel text-xl lg:text-2xl text-[#4A233E] font-black">{mod.name.toUpperCase()}</h4>
+                            {isActive && pendingCount === 0 && (
+                              <span className="bg-[#D4AF37]/20 text-[#D4AF37] px-2 py-1 rounded-full text-[9px] font-black uppercase border border-[#D4AF37]/30">
+                                Adquirido
+                              </span>
+                            )}
+                          </div>
+                          <p className="hidden sm:block text-sm lg:text-base text-[#8B5E75] font-garamond italic mt-1 max-w-sm">{mod.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex sm:flex-col items-center sm:items-end gap-4">
+                        {!isActive ? (
+                          <>
+                            <div className="flex items-center gap-2 text-[#D4AF37] font-cinzel font-black text-xl lg:text-2xl">
+                              <span>{mod.cost}</span>
+                              {getIcon('sparkles', "w-5 h-5 lg:w-6 lg:h-6")}
+                            </div>
+                            <button 
+                              onClick={() => onActivate(mod.id)}
+                              className="btn-primary px-6 lg:px-10 py-3 lg:py-4 rounded-xl lg:rounded-2xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-xl"
+                            >
+                              Transmutar
+                            </button>
+                          </>
+                        ) : (
+                          <button 
+                            onClick={() => setActiveView(MODULE_TO_VIEW[mod.id] || NavView.DASHBOARD)}
+                            className="btn-primary px-6 lg:px-10 py-3 lg:py-4 rounded-xl lg:rounded-2xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-xl bg-[#D4AF37]/20 text-[#D4AF37] border-2 border-[#D4AF37]/30 hover:bg-[#D4AF37]/30"
+                          >
+                            Abrir
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-cinzel text-xl lg:text-2xl text-[#4A233E] font-black">{mod.name.toUpperCase()}</h4>
-                      <p className="hidden sm:block text-sm lg:text-base text-[#8B5E75] font-garamond italic mt-1 max-w-sm">{mod.description}</p>
-                    </div>
-                  </div>
-                  <div className="flex sm:flex-col items-center sm:items-end gap-4">
-                    <div className="flex items-center gap-2 text-[#D4AF37] font-cinzel font-black text-xl lg:text-2xl">
-                      <span>{mod.cost}</span>
-                      {getIcon('sparkles', "w-5 h-5 lg:w-6 lg:h-6")}
-                    </div>
-                    <button 
-                      onClick={() => onActivate(mod.id)}
-                      className="btn-primary px-6 lg:px-10 py-3 lg:py-4 rounded-xl lg:rounded-2xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-xl"
-                    >
-                      Transmutar
-                    </button>
-                  </div>
-                </div>
-              ))}
+                  </React.Fragment>
+                );
+              })}
             </div>
           </section>
         </div>

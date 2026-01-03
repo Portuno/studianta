@@ -9,6 +9,9 @@ interface DiaryModuleProps {
   onDeleteEntry: (id: string) => void;
   onUpdateEntry: (entry: JournalEntry) => void;
   isMobile: boolean;
+  securityModuleActive?: boolean;
+  securityPin?: string;
+  onVerifyPin?: (pin: string) => Promise<boolean>;
 }
 
 // Componente para iconos de ánimos con degradados
@@ -194,7 +197,16 @@ const SealButton: React.FC<SealButtonProps> = ({ onClick, label = "Sellar Cróni
   );
 };
 
-const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDeleteEntry, onUpdateEntry, isMobile }) => {
+const DiaryModule: React.FC<DiaryModuleProps> = ({ 
+  entries, 
+  onAddEntry, 
+  onDeleteEntry, 
+  onUpdateEntry, 
+  isMobile,
+  securityModuleActive = false,
+  securityPin,
+  onVerifyPin
+}) => {
   const [activeMood, setActiveMood] = useState<MoodType | null>(null);
   const [content, setContent] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
@@ -204,6 +216,12 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
   const [photoRotation, setPhotoRotation] = useState(0);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pendingEntryToView, setPendingEntryToView] = useState<JournalEntry | null>(null);
+  const [unlockedEntries, setUnlockedEntries] = useState<Set<string>>(new Set()); // IDs de entradas desbloqueadas en esta sesión
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const randomPrompt = useMemo(() => PROMPTS[Math.floor(Math.random() * PROMPTS.length)], []);
@@ -214,6 +232,11 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
     
     const query = searchQuery.toLowerCase().trim();
     return entries.filter(entry => {
+      // Si hay búsqueda activa, excluir entradas bloqueadas por PIN
+      if (entry.isLocked && securityModuleActive) {
+        return false;
+      }
+      
       // Búsqueda en contenido
       const contentMatch = entry.content.toLowerCase().includes(query);
       // Búsqueda en ánimo
@@ -228,7 +251,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
       
       return contentMatch || moodMatch || dateMatch;
     });
-  }, [entries, searchQuery]);
+  }, [entries, searchQuery, securityModuleActive]);
   
   // Generar rotación aleatoria para fotos Polaroid
   useEffect(() => {
@@ -238,8 +261,76 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
   }, [photo]);
 
   // Función para ver entrada completa
-  const handleViewEntry = (entry: JournalEntry) => {
-    setSelectedEntry(entry);
+  const handleViewEntry = async (entry: JournalEntry) => {
+    // Si la entrada está bloqueada y el módulo de seguridad está activo, pedir PIN
+    if (entry.isLocked && securityModuleActive && onVerifyPin) {
+      setPendingEntryToView(entry);
+      setShowPinModal(true);
+      setPinInput('');
+      setPinError('');
+    } else {
+      setSelectedEntry(entry);
+    }
+  };
+
+  // Función para verificar PIN y abrir entrada
+  const handleVerifyPin = async () => {
+    if (pinInput.length !== 4) {
+      setPinError('El PIN debe tener 4 dígitos');
+      return;
+    }
+
+    if (onVerifyPin) {
+      const isValid = await onVerifyPin(pinInput);
+      if (isValid) {
+        if (pendingEntryToView) {
+          // Marcar la entrada como desbloqueada en esta sesión
+          setUnlockedEntries(prev => new Set(prev).add(pendingEntryToView.id));
+          setSelectedEntry(pendingEntryToView);
+        }
+        setShowPinModal(false);
+        setPinInput('');
+        setPinError('');
+        setPendingEntryToView(null);
+      } else {
+        setPinError('PIN incorrecto');
+        setPinInput('');
+      }
+    } else if (securityPin && pinInput === securityPin) {
+      if (pendingEntryToView) {
+        // Marcar la entrada como desbloqueada en esta sesión
+        setUnlockedEntries(prev => new Set(prev).add(pendingEntryToView.id));
+        setSelectedEntry(pendingEntryToView);
+      }
+      setShowPinModal(false);
+      setPinInput('');
+      setPinError('');
+      setPendingEntryToView(null);
+    } else {
+      setPinError('PIN incorrecto');
+      setPinInput('');
+    }
+  };
+
+  // Función para confirmar borrado
+  const handleDeleteClick = (entryId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(entryId);
+  };
+
+  const handleConfirmDelete = (entryId: string) => {
+    onDeleteEntry(entryId);
+    setShowDeleteConfirm(null);
+  };
+
+  // Función determinista para calcular rotación basada en el ID de la entrada
+  const getEntryPhotoRotation = (entryId: string): number => {
+    // Usar el ID para generar un número determinista entre -2 y 2
+    let hash = 0;
+    for (let i = 0; i < entryId.length; i++) {
+      hash = entryId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return ((hash % 400) / 100) - 2; // Entre -2 y 2
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,7 +372,9 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
   // Componente Modal de Pantalla Completa
   const EntryModal: React.FC<{ entry: JournalEntry; onClose: () => void }> = ({ entry, onClose }) => {
     const mood = MOODS.find(m => m.type === entry.mood);
-    const entryPhotoRotation = useMemo(() => Math.random() * 4 - 2, [entry.id]);
+    const entryPhotoRotation = getEntryPhotoRotation(entry.id);
+    // Verificar si la entrada está desbloqueada (ya sea porque no está bloqueada o porque fue desbloqueada en esta sesión)
+    const isUnlocked = !entry.isLocked || unlockedEntries.has(entry.id);
     
     return (
       <div 
@@ -321,24 +414,38 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
 
           {/* Contenido del Modal */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {entry.photo && (
-              <div className="flex justify-center">
-                <div 
-                  className="w-full max-w-md p-4 bg-white"
-                  style={{ 
-                    transform: `rotate(${entryPhotoRotation}deg)`,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.2), 0 0 0 12px white, 0 0 0 14px rgba(248,200,220,0.2)'
-                  }}
-                >
-                  <img src={entry.photo} alt="Memoria" className="w-full h-auto object-cover" />
+            {entry.isLocked && securityModuleActive && !isUnlocked ? (
+              <div className="flex flex-col items-center justify-center h-full min-h-[300px]">
+                <div className="w-24 h-24 rounded-full bg-[#4A233E]/10 flex items-center justify-center mb-6">
+                  {getIcon('lock', 'w-12 h-12 text-[#D4AF37]')}
                 </div>
+                <p className="text-xl font-cinzel text-[#4A233E] mb-2">Contenido Protegido</p>
+                <p className="text-sm font-garamond text-[#8B5E75] italic">
+                  Esta entrada está protegida. Debes ingresar el PIN para ver su contenido.
+                </p>
               </div>
+            ) : (
+              <>
+                {entry.photo && (
+                  <div className="flex justify-center">
+                    <div 
+                      className="w-full max-w-md p-4 bg-white"
+                      style={{ 
+                        transform: `rotate(${entryPhotoRotation}deg)`,
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.2), 0 0 0 12px white, 0 0 0 14px rgba(248,200,220,0.2)'
+                      }}
+                    >
+                      <img src={entry.photo} alt="Memoria" className="w-full h-auto object-cover" />
+                    </div>
+                  </div>
+                )}
+                <div className="prose max-w-none">
+                  <p className="text-xl text-[#4A233E] font-garamond leading-relaxed italic first-letter:text-4xl first-letter:font-marcellus first-letter:mr-2">
+                    {entry.content}
+                  </p>
+                </div>
+              </>
             )}
-            <div className="prose max-w-none">
-              <p className="text-xl text-[#4A233E] font-garamond leading-relaxed italic first-letter:text-4xl first-letter:font-marcellus first-letter:mr-2">
-                {entry.content}
-              </p>
-            </div>
           </div>
         </div>
       </div>
@@ -445,7 +552,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
                 {getIcon('chevron', 'w-4 h-4')}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar pb-10 max-h-full" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/old-map.png")', backgroundColor: '#FFF9FB' }}>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-10 min-h-0" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/old-map.png")', backgroundColor: '#FFF9FB', WebkitOverflowScrolling: 'touch' }}>
               {/* Buscador */}
               <div className="sticky top-0 z-10 mb-4 bg-white/90 backdrop-blur-sm rounded-2xl p-3 border border-[#D4AF37]/20 shadow-sm">
                 <div className="relative">
@@ -477,7 +584,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
               ) : (
                 filteredEntries.map(entry => {
                 const mood = MOODS.find(m => m.type === entry.mood);
-                const entryPhotoRotation = useMemo(() => Math.random() * 4 - 2, [entry.id]);
+                const entryPhotoRotation = getEntryPhotoRotation(entry.id);
                 return (
                   <div 
                     key={entry.id} 
@@ -489,7 +596,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
                       clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
                     }}
                   >
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start mb-4 relative z-20">
                        <div className="flex items-center gap-4">
                           <div className="p-2.5 rounded-xl bg-[#FFF0F5] text-[#D4AF37] shadow-inner border border-[#F8C8DC]">
                             {mood && <MoodIcon type={mood.type} className="w-4 h-4" />}
@@ -502,11 +609,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
                           </div>
                        </div>
                        <button 
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           onDeleteEntry(entry.id);
-                         }} 
-                         className="text-[#8B5E75]/40 hover:text-red-400 transition-colors p-2"
+                         onClick={(e) => handleDeleteClick(entry.id, e)} 
+                         className="text-[#8B5E75]/40 hover:text-red-400 transition-colors p-2 relative z-30"
                        >
                          {getIcon('trash', 'w-4 h-4')}
                        </button>
@@ -524,7 +628,16 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
                         </div>
                       </div>
                     )}
-                    <p className="text-[17px] text-[#4A233E] font-garamond leading-relaxed italic opacity-90 first-letter:text-3xl first-letter:font-marcellus first-letter:mr-1 line-clamp-3">{entry.content}</p>
+                    {entry.isLocked && securityModuleActive ? (
+                      <div className="text-center py-4">
+                        <div className="inline-flex items-center gap-2 text-[#8B5E75] font-garamond italic text-sm">
+                          {getIcon('lock', 'w-5 h-5')}
+                          <span>Contenido protegido - Toca para desbloquear</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[17px] text-[#4A233E] font-garamond leading-relaxed italic opacity-90 first-letter:text-3xl first-letter:font-marcellus first-letter:mr-1 line-clamp-3">{entry.content}</p>
+                    )}
                   </div>
                 );
               }))}
@@ -535,6 +648,49 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
         {/* Modal de Entrada Completa */}
         {selectedEntry && (
           <EntryModal entry={selectedEntry} onClose={() => setSelectedEntry(null)} />
+        )}
+
+        {/* Modal de Confirmación de Borrado - Mobile */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="glass-card rounded-2xl p-6 shadow-2xl max-w-md w-full">
+              <h3 className="font-cinzel text-xl text-[#4A233E] mb-4">Confirmar Eliminación</h3>
+              <p className="font-garamond text-[#8B5E75] mb-6 text-sm">
+                ¿Estás seguro de que deseas eliminar esta entrada? Esta acción no se puede deshacer.
+              </p>
+              <div className="flex gap-4 justify-end">
+                <button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="px-6 py-3 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest border-2 border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5] transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => handleConfirmDelete(showDeleteConfirm)}
+                  className="px-6 py-3 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de PIN - Mobile */}
+        {showPinModal && (
+          <PinInputModal
+            onVerify={handleVerifyPin}
+            onCancel={() => {
+              setShowPinModal(false);
+              setPinInput('');
+              setPinError('');
+              setPendingEntryToView(null);
+            }}
+            pinInput={pinInput}
+            setPinInput={setPinInput}
+            pinError={pinError}
+            setPinError={setPinError}
+          />
         )}
       </div>
     );
@@ -652,7 +808,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
               )}
             </div>
             
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2 scroll-sm no-scrollbar min-h-0">
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               {filteredEntries.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-sm text-[#8B5E75] font-garamond italic">No se encontraron entradas que coincidan con tu búsqueda.</p>
@@ -660,7 +816,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
               ) : (
                 filteredEntries.map(entry => {
                 const mood = MOODS.find(m => m.type === entry.mood);
-                const entryPhotoRotation = useMemo(() => Math.random() * 4 - 2, [entry.id]);
+                const entryPhotoRotation = getEntryPhotoRotation(entry.id);
                 return (
                   <div 
                     key={entry.id}
@@ -672,8 +828,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
                       clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))'
                     }}
                   >
-                    {entry.isLocked && <div className="absolute inset-0 bg-[#4A233E]/10 backdrop-blur-[4px] z-10 flex items-center justify-center text-[#D4AF37] shadow-inner">{getIcon('lock', 'w-8 h-8')}</div>}
-                    <div className="flex justify-between items-start mb-3">
+                    {entry.isLocked && <div className="absolute inset-0 bg-[#4A233E]/10 backdrop-blur-[4px] z-10 flex items-center justify-center text-[#D4AF37] shadow-inner pointer-events-none">{getIcon('lock', 'w-8 h-8')}</div>}
+                    <div className="flex justify-between items-start mb-3 relative z-20">
                       <div className="flex items-center gap-3">
                          <div className="p-2 rounded-xl border border-[#F8C8DC] shadow-inner" style={{ backgroundColor: `${mood?.color}15`, color: mood?.color }}>
                            {mood && <MoodIcon type={mood.type} className="w-4 h-4" />}
@@ -688,9 +844,9 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          onDeleteEntry(entry.id);
+                          handleDeleteClick(entry.id, e);
                         }} 
-                        className="text-[#8B5E75]/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-2"
+                        className="text-[#8B5E75]/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-2 relative z-30"
                       >
                         {getIcon('trash', 'w-3 h-3')}
                       </button>
@@ -708,7 +864,16 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
                         </div>
                       </div>
                     )}
-                    <p className="text-sm lg:text-base text-[#4A233E] font-garamond italic line-clamp-3 leading-relaxed opacity-80">{entry.content}</p>
+                    {entry.isLocked && securityModuleActive ? (
+                      <div className="text-center py-2">
+                        <div className="inline-flex items-center gap-2 text-[#8B5E75] font-garamond italic text-xs">
+                          {getIcon('lock', 'w-4 h-4')}
+                          <span>Contenido protegido</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm lg:text-base text-[#4A233E] font-garamond italic line-clamp-3 leading-relaxed opacity-80">{entry.content}</p>
+                    )}
                   </div>
                 );
               }))}
@@ -721,6 +886,185 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({ entries, onAddEntry, onDelete
       {selectedEntry && (
         <EntryModal entry={selectedEntry} onClose={() => setSelectedEntry(null)} />
       )}
+
+      {/* Modal de Confirmación de Borrado - Desktop */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl max-w-md w-full">
+            <h3 className="font-cinzel text-xl lg:text-2xl text-[#4A233E] mb-4">Confirmar Eliminación</h3>
+            <p className="font-garamond text-[#8B5E75] mb-6">
+              ¿Estás seguro de que deseas eliminar esta entrada? Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-4 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="px-6 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest border-2 border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5] transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleConfirmDelete(showDeleteConfirm)}
+                className="px-6 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de PIN - Desktop */}
+      {showPinModal && (
+        <PinInputModal
+          onVerify={handleVerifyPin}
+          onCancel={() => {
+            setShowPinModal(false);
+            setPinInput('');
+            setPinError('');
+            setPendingEntryToView(null);
+          }}
+          pinInput={pinInput}
+          setPinInput={setPinInput}
+          pinError={pinError}
+          setPinError={setPinError}
+        />
+      )}
+    </div>
+  );
+};
+
+// Componente Modal de PIN con auto-focus
+const PinInputModal: React.FC<{
+  onVerify: () => void;
+  onCancel: () => void;
+  pinInput: string;
+  setPinInput: (pin: string) => void;
+  pinError: string;
+  setPinError: (error: string) => void;
+}> = ({ onVerify, onCancel, pinInput, setPinInput, pinError, setPinError }) => {
+  const pinRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+
+  // Auto-focus en el primer campo cuando se abre el modal
+  useEffect(() => {
+    if (pinRefs[0].current) {
+      pinRefs[0].current.focus();
+    }
+  }, []);
+
+  const handlePinChange = (index: number, value: string) => {
+    const numericValue = value.replace(/\D/g, '');
+    if (numericValue.length > 1) return; // Solo un dígito por campo
+
+    const newPin = pinInput.split('');
+    newPin[index] = numericValue;
+    const updatedPin = newPin.join('').slice(0, 4);
+    setPinInput(updatedPin);
+    setPinError('');
+
+    // Auto-focus al siguiente campo si hay un valor
+    if (numericValue && index < 3 && pinRefs[index + 1].current) {
+      setTimeout(() => {
+        pinRefs[index + 1].current?.focus();
+      }, 10);
+    }
+
+    // Si se completaron los 4 dígitos, verificar automáticamente
+    if (updatedPin.length === 4) {
+      setTimeout(() => {
+        onVerify();
+      }, 100);
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !pinInput[index] && index > 0) {
+      // Si el campo está vacío y presionas backspace, ir al anterior
+      pinRefs[index - 1].current?.focus();
+    }
+  };
+
+  const handleNumberClick = (num: string) => {
+    const currentIndex = pinInput.length;
+    if (currentIndex < 4) {
+      handlePinChange(currentIndex, num);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl max-w-md w-full">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#4A233E]/10 flex items-center justify-center">
+            {getIcon('lock', 'w-8 h-8 text-[#D4AF37]')}
+          </div>
+          <h3 className="font-cinzel text-xl lg:text-2xl text-[#4A233E] mb-2">Entrada Protegida</h3>
+          <p className="font-garamond text-[#8B5E75] text-sm">
+            Ingresa tu PIN de 4 dígitos para acceder
+          </p>
+        </div>
+        
+        <div className="mb-6">
+          <div className="flex gap-3 justify-center">
+            {[0, 1, 2, 3].map((index) => (
+              <input
+                key={index}
+                ref={pinRefs[index]}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={pinInput[index] || ''}
+                onChange={(e) => handlePinChange(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                className={`w-14 h-14 lg:w-16 lg:h-16 rounded-xl border-2 text-center text-2xl font-cinzel font-black transition-all focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 ${
+                  pinInput.length > index
+                    ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#4A233E]'
+                    : 'border-[#F8C8DC] bg-white/40 text-[#8B5E75]/30'
+                }`}
+              />
+            ))}
+          </div>
+          {pinError && (
+            <p className="text-red-500 text-sm text-center mt-4 font-garamond">{pinError}</p>
+          )}
+        </div>
+
+        {/* Teclado numérico */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+            <button
+              key={num}
+              onClick={() => handleNumberClick(num.toString())}
+              className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel text-xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
+            >
+              {num}
+            </button>
+          ))}
+          <button
+            onClick={onCancel}
+            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-sm font-black hover:bg-[#FFF0F5] transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => handleNumberClick('0')}
+            className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel text-xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
+          >
+            0
+          </button>
+          <button
+            onClick={() => {
+              setPinInput(pinInput.slice(0, -1));
+              setPinError('');
+              const lastIndex = Math.max(0, pinInput.length - 1);
+              pinRefs[lastIndex].current?.focus();
+            }}
+            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-sm font-black hover:bg-[#FFF0F5] transition-all"
+          >
+            ←
+          </button>
+        </div>
+
+      </div>
     </div>
   );
 };

@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Transaction } from '../types';
 import { getIcon, COLORS } from '../constants';
 import { geminiService } from '../services/geminiService';
+import { jsPDF } from 'jspdf';
+import TreasuryChronicles from './TreasuryChronicles';
 
 interface FinanceModuleProps {
   transactions: Transaction[];
@@ -43,6 +45,123 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
   
   const isCritical = balance < 0;
 
+  // Función para resaltar montos de dinero en el texto
+  const highlightAmounts = (text: string, lineIndex: number) => {
+    const amountRegex = /\$[\d,]+(?:\.\d{2})?/g;
+    const parts: string[] = [];
+    const matches: RegExpMatchArray[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = amountRegex.exec(text)) !== null) {
+      parts.push(text.substring(lastIndex, match.index));
+      matches.push(match);
+      lastIndex = match.index + match[0].length;
+    }
+    parts.push(text.substring(lastIndex));
+
+    const result: (string | JSX.Element)[] = [];
+    parts.forEach((part, index) => {
+      result.push(part);
+      if (matches[index]) {
+        result.push(
+          <span key={`amount-${lineIndex}-${index}`} className="text-[#D4AF37] font-bold">
+            {matches[index][0]}
+          </span>
+        );
+      }
+    });
+    return result;
+  };
+
+  // Función para generar PDF del oráculo
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Estilo Rose-Academic
+    doc.setFont('helvetica');
+    doc.setTextColor(74, 35, 62); // #4A233E
+    
+    // Título
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('El Veredicto de la Balanza', 105, 30, { align: 'center' });
+    
+    // Línea decorativa
+    doc.setDrawColor(212, 175, 55); // #D4AF37
+    doc.setLineWidth(0.5);
+    doc.line(60, 35, 150, 35);
+    
+    // Texto del oráculo con resaltado de montos
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    let yPos = 50;
+    const pageWidth = 170;
+    const margin = 20;
+    
+    const paragraphs = oracleDiagnosis.split('\n');
+    
+    paragraphs.forEach((paragraph) => {
+      if (paragraph.trim() === '') {
+        yPos += 5;
+        return;
+      }
+      
+      // Procesar cada párrafo línea por línea
+      const lines = doc.splitTextToSize(paragraph, pageWidth);
+      
+      lines.forEach((line: string) => {
+        const amountRegex = /\$[\d,]+(?:\.\d{2})?/g;
+        let xPos = margin;
+        let lastIndex = 0;
+        let match;
+        
+        // Procesar la línea buscando montos
+        while ((match = amountRegex.exec(line)) !== null) {
+          // Texto antes del monto
+          if (match.index > lastIndex) {
+            const textBefore = line.substring(lastIndex, match.index);
+            doc.setTextColor(74, 35, 62);
+            doc.setFont('helvetica', 'normal');
+            doc.text(textBefore, xPos, yPos);
+            xPos += doc.getTextWidth(textBefore);
+          }
+          
+          // Monto resaltado
+          doc.setTextColor(212, 175, 55); // #D4AF37
+          doc.setFont('helvetica', 'bold');
+          doc.text(match[0], xPos, yPos);
+          xPos += doc.getTextWidth(match[0]);
+          
+          lastIndex = match.index + match[0].length;
+        }
+        
+        // Texto restante después del último monto
+        if (lastIndex < line.length) {
+          doc.setTextColor(74, 35, 62);
+          doc.setFont('helvetica', 'normal');
+          doc.text(line.substring(lastIndex), xPos, yPos);
+        }
+        
+        yPos += 7;
+        
+        // Nueva página si es necesario
+        if (yPos > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+      });
+      
+      yPos += 3; // Espacio entre párrafos
+    });
+    
+    doc.save('veredicto-balanza.pdf');
+  };
+
   const handleConsultOracle = async () => {
     setRightPanelTab('oracle');
     setLoadingOracle(true);
@@ -79,129 +198,94 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
   };
 
   return (
-    <div className="min-h-screen flex flex-col pb-24 overflow-y-auto no-scrollbar font-inter bg-[#FFF0F5]">
+    <div className="h-screen flex flex-col overflow-hidden font-inter bg-[#FFF0F5]">
       {/* Header Compacto */}
-      <header className="pt-8 pb-4 px-4 sticky top-0 z-20 bg-[#FFF0F5]/80 backdrop-blur-md border-b border-[#F8C8DC]/30">
+      <header className="pt-4 pb-2 px-4 flex-shrink-0 bg-[#FFF0F5]/80 backdrop-blur-md border-b border-[#F8C8DC]/30">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="font-marcellus text-2xl md:text-4xl font-black text-[#4A233E] tracking-widest uppercase">Balanza de Latón</h1>
+          <div className="flex justify-between items-center mb-3">
+            <h1 className="font-marcellus text-lg md:text-2xl font-black text-[#4A233E] tracking-widest uppercase">Balanza de Latón</h1>
             <button 
               onClick={handleConsultOracle}
-              className="w-10 h-10 md:w-12 md:h-12 bg-[#4A233E] text-[#D4AF37] rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-all hover:scale-105"
+              className="px-4 py-2 bg-[#4A233E] text-[#D4AF37] rounded-xl font-marcellus text-xs font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all hover:bg-[#321829] flex items-center gap-2"
             >
-              {getIcon('sparkles', 'w-5 h-5 md:w-6 md:h-6')}
+              {getIcon('sparkles', 'w-4 h-4')}
+              Consultar Oráculo
             </button>
           </div>
 
           {/* Dashboard de Balance Compacto */}
-          <div className="grid grid-cols-2 gap-4 max-w-3xl">
-            <div className="glass-card p-5 rounded-[1.75rem] border-[#F8C8DC] shadow-sm">
-              <p className="text-[9px] md:text-[11px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-2 opacity-60">Presupuesto</p>
+          <div className="grid grid-cols-2 gap-2 max-w-xl">
+            <div className="glass-card p-3 rounded-[1.25rem] border-[#F8C8DC] shadow-sm">
+              <p className="text-[7px] md:text-[9px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-0.5 opacity-60">Presupuesto</p>
               {showBudgetInput ? (
                 <div className="flex items-center gap-2">
                   <input 
                     type="number" value={tempBudget} onChange={(e) => setTempBudget(e.target.value)}
-                    className="w-full bg-transparent border-b-2 border-[#E35B8F] text-xl font-marcellus text-[#4A233E] outline-none"
+                    className="w-full bg-transparent border-b-2 border-[#E35B8F] text-base font-marcellus text-[#4A233E] outline-none"
                     autoFocus
                   />
-                  <button onClick={handleSaveBudget} className="p-2 bg-[#E35B8F] text-white rounded-lg shadow-sm">{getIcon('check', 'w-4 h-4')}</button>
+                  <button onClick={handleSaveBudget} className="p-1.5 bg-[#E35B8F] text-white rounded-lg shadow-sm">{getIcon('check', 'w-3 h-3')}</button>
                 </div>
               ) : (
                 <div className="flex items-center justify-between cursor-pointer group" onClick={() => setShowBudgetInput(true)}>
-                  <h2 className="font-marcellus text-2xl md:text-4xl font-black text-[#4A233E] tracking-tighter">${budget}</h2>
+                  <h2 className="font-marcellus text-lg md:text-2xl font-black text-[#4A233E] tracking-tighter">${budget}</h2>
                   {getIcon('pen', 'w-3 h-3 text-[#8B5E75] opacity-0 group-hover:opacity-40 transition-opacity')}
                 </div>
               )}
             </div>
-            <div className={`glass-card p-5 rounded-[1.75rem] border-2 shadow-sm ${isCritical ? 'border-red-400 bg-red-50' : 'border-[#D4AF37]/30'}`}>
-              <p className="text-[9px] md:text-[11px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-2 opacity-60">Capital Residual</p>
-              <h2 className={`font-marcellus text-2xl md:text-4xl font-black tracking-tighter ${isCritical ? 'text-red-500' : 'text-[#4A233E]'}`}>${balance}</h2>
+            <div className={`glass-card p-3 rounded-[1.25rem] border-2 shadow-sm ${isCritical ? 'border-red-400 bg-red-50' : 'border-[#D4AF37]/30'}`}>
+              <p className="text-[7px] md:text-[9px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-0.5 opacity-60">Capital Residual</p>
+              <h2 className={`font-marcellus text-lg md:text-2xl font-black tracking-tighter ${isCritical ? 'text-red-500' : 'text-[#4A233E]'}`}>${balance}</h2>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="px-4 max-w-7xl mx-auto w-full pt-8">
-        {/* Layout Condicional: En Desktop es un grid de 2 columnas paralelas */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <main className="flex-1 px-4 max-w-7xl mx-auto w-full pt-3 overflow-hidden">
+        {/* Layout Grid de 2 columnas */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
           
-          {/* LADO IZQUIERDO: La Forja Económica (Formulario) */}
-          <section className="glass-card p-8 md:p-12 rounded-[3.5rem] border-[#F8C8DC] shadow-2xl bg-white/70 h-fit">
-            <h3 className="font-marcellus text-lg md:text-xl font-black text-[#4A233E] mb-8 text-center tracking-[0.3em] uppercase border-b border-[#F8C8DC] pb-4">Registrar Operación</h3>
+          {/* LADO IZQUIERDO: Registrar Operación */}
+          <section className="glass-card p-4 md:p-6 rounded-[2.5rem] border-[#F8C8DC] shadow-2xl bg-white/70 overflow-y-auto no-scrollbar">
+            <h3 className="font-marcellus text-sm md:text-base font-black text-[#4A233E] mb-4 text-center tracking-[0.3em] uppercase border-b border-[#F8C8DC] pb-2">Registrar Operación</h3>
             
-            <div className="flex bg-[#FDEEF4] p-1.5 rounded-2xl border border-[#F8C8DC] mb-8 shadow-inner">
-               <button onClick={() => setTransType('Gasto')} className={`flex-1 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all ${transType === 'Gasto' ? 'bg-[#E35B8F] text-white shadow-md scale-[1.02]' : 'text-[#8B5E75] hover:bg-white/40'}`}>Gasto</button>
-               <button onClick={() => setTransType('Ingreso')} className={`flex-1 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-[0.2em] transition-all ${transType === 'Ingreso' ? 'bg-[#D4AF37] text-white shadow-md scale-[1.02]' : 'text-[#8B5E75] hover:bg-white/40'}`}>Ingreso</button>
+            <div className="flex bg-[#FDEEF4] p-1 rounded-xl border border-[#F8C8DC] mb-4 shadow-inner">
+               <button onClick={() => setTransType('Gasto')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] transition-all ${transType === 'Gasto' ? 'bg-[#E35B8F] text-white shadow-md scale-[1.02]' : 'text-[#8B5E75] hover:bg-white/40'}`}>Gasto</button>
+               <button onClick={() => setTransType('Ingreso')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] transition-all ${transType === 'Ingreso' ? 'bg-[#D4AF37] text-white shadow-md scale-[1.02]' : 'text-[#8B5E75] hover:bg-white/40'}`}>Ingreso</button>
             </div>
 
-            <form onSubmit={handleAddTransaction} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Concepto de la Transacción</label>
-                <input required name="description" type="text" placeholder="Ej: Inscripción Congreso, Apuntes Bioética..." className="w-full bg-white/80 border border-[#F8C8DC] rounded-2xl px-6 py-4 text-sm text-[#4A233E] font-bold outline-none focus:border-[#E35B8F] transition-all" />
+            <form onSubmit={handleAddTransaction} className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Concepto de la Transacción</label>
+                <input required name="description" type="text" placeholder="Ej: Inscripción Congreso, Apuntes Bioética..." className="w-full bg-white/80 border border-[#F8C8DC] rounded-xl px-4 py-2.5 text-xs text-[#4A233E] font-bold outline-none focus:border-[#E35B8F] transition-all" />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Monto de Operación</label>
-                  <input required name="amount" type="number" step="0.01" placeholder="0.00" className="w-full bg-white/80 border border-[#F8C8DC] rounded-2xl px-6 py-4 text-sm text-[#4A233E] font-black outline-none focus:border-[#E35B8F] transition-all" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[8px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Monto de Operación</label>
+                  <input required name="amount" type="number" step="0.01" placeholder="0.00" className="w-full bg-white/80 border border-[#F8C8DC] rounded-xl px-4 py-2.5 text-xs text-[#4A233E] font-black outline-none focus:border-[#E35B8F] transition-all" />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Esfera de Gasto</label>
-                  <select name="category" className="w-full bg-white/80 border border-[#F8C8DC] rounded-2xl px-4 py-4 text-sm font-bold text-[#4A233E] outline-none focus:border-[#E35B8F] transition-all">
+                <div className="space-y-1.5">
+                  <label className="text-[8px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Esfera de Gasto</label>
+                  <select name="category" className="w-full bg-white/80 border border-[#F8C8DC] rounded-xl px-3 py-2.5 text-xs font-bold text-[#4A233E] outline-none focus:border-[#E35B8F] transition-all">
                     {(transType === 'Gasto' ? GASTO_CATEGORIES : INGRESO_CATEGORIES).map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Fecha del Sello</label>
-                <input name="date" type="date" className="w-full bg-white/80 border border-[#F8C8DC] rounded-2xl px-6 py-4 text-sm text-[#4A233E] font-bold outline-none focus:border-[#E35B8F]" defaultValue={new Date().toISOString().split('T')[0]} />
+              <div className="space-y-1.5">
+                <label className="text-[8px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Fecha del Sello</label>
+                <input name="date" type="date" className="w-full bg-white/80 border border-[#F8C8DC] rounded-xl px-4 py-2.5 text-xs text-[#4A233E] font-bold outline-none focus:border-[#E35B8F]" defaultValue={new Date().toISOString().split('T')[0]} />
               </div>
 
-              <button type="submit" className={`w-full py-5 rounded-[2rem] font-marcellus text-xs font-black uppercase tracking-[0.3em] text-white shadow-xl transition-all active:scale-95 hover:brightness-105 mt-4 ${transType === 'Gasto' ? 'bg-[#E35B8F]' : 'bg-[#D4AF37]'}`}>
+              <button type="submit" className={`w-full py-3 rounded-[1.5rem] font-marcellus text-[10px] font-black uppercase tracking-[0.3em] text-white shadow-xl transition-all active:scale-95 hover:brightness-105 mt-3 ${transType === 'Gasto' ? 'bg-[#E35B8F]' : 'bg-[#D4AF37]'}`}>
                 Sellar Operación Financiera
               </button>
             </form>
           </section>
 
-          {/* LADO DERECHO: Historial (Crónicas) */}
-          <section className="flex flex-col gap-6">
-            <div className="flex justify-between items-center px-4">
-              <h3 className="text-[11px] md:text-sm font-marcellus font-black uppercase tracking-[0.4em] text-[#4A233E]">Crónicas de la Tesorería</h3>
-              <button onClick={() => setRightPanelTab('history')} className="text-[9px] md:text-[10px] font-black text-[#E35B8F] uppercase tracking-widest hover:underline hover:opacity-80 transition-all">Acceder al Archivo</button>
-            </div>
-            
-            <div className="space-y-4 pr-2">
-              {transactions.length === 0 ? (
-                <div className="py-24 text-center glass-card rounded-[3rem] border-dashed border-2 border-[#F8C8DC]/60">
-                  <div className="opacity-20 flex flex-col items-center">
-                    {getIcon('scale', 'w-16 h-16 mb-4')}
-                    <p className="font-garamond italic text-2xl px-12">"La balanza aguarda el primer peso de tu gestión académica."</p>
-                  </div>
-                </div>
-              ) : (
-                transactions.slice(0, 10).map(t => (
-                  <div key={t.id} className="glass-card p-5 md:p-6 rounded-[2.5rem] flex items-center justify-between border-[#F8C8DC]/40 bg-white/40 hover:bg-white/70 transition-all shadow-sm group">
-                    <div className="flex items-center gap-5">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md transition-transform group-hover:rotate-6 ${t.type === 'Ingreso' ? 'bg-[#D4AF37]' : 'bg-[#E35B8F]'}`}>
-                        {getIcon(t.type === 'Ingreso' ? 'plus' : 'trash', 'w-5 h-5')}
-                      </div>
-                      <div>
-                        <p className="text-[14px] md:text-[16px] font-bold text-[#4A233E] leading-tight tracking-tight">{t.description}</p>
-                        <p className="text-[9px] md:text-[10px] text-[#8B5E75] uppercase font-black opacity-60 tracking-[0.2em] mt-1">{t.category} • {new Date(t.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</p>
-                      </div>
-                    </div>
-                    <div className="text-right flex flex-col items-end gap-1">
-                      <p className={`font-marcellus text-lg md:text-2xl font-black ${t.type === 'Ingreso' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                        {t.type === 'Ingreso' ? '+' : '-'}${t.amount}
-                      </p>
-                      <button onClick={() => onDelete(t.id)} className="text-[9px] text-red-300 uppercase font-black tracking-widest opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500">Anular</button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
+          {/* LADO DERECHO: Crónicas de la Tesorería */}
+          <TreasuryChronicles transactions={transactions} onDelete={onDelete} />
 
         </div>
       </main>
@@ -215,34 +299,50 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
       )}
 
       {oracleDiagnosis && rightPanelTab === 'oracle' && !loadingOracle && (
-        <div className="fixed inset-0 z-[400] bg-[#FFF0F5] overflow-y-auto p-10 animate-in fade-in slide-in-from-bottom-10 duration-500 flex flex-col items-center">
-           <div className="max-w-4xl w-full relative pt-12">
-             <button onClick={() => setRightPanelTab('history')} className="absolute top-0 right-0 text-[#4A233E] p-6 hover:scale-125 transition-all active:rotate-90">
-                {getIcon('trash', 'w-10 h-10 rotate-45 opacity-40')}
-             </button>
-             
-             <div className="text-center mb-16">
-               <h2 className="font-marcellus text-3xl md:text-5xl font-black text-[#4A233E] mb-4 uppercase tracking-[0.3em]">El Veredicto de la Balanza</h2>
-               <div className="h-1 w-24 bg-[#D4AF37] mx-auto rounded-full" />
-             </div>
+        <div className="fixed inset-0 z-[400] bg-[#FFF0F5]/95 backdrop-blur-2xl flex items-center justify-center p-6">
+          <div className="max-w-4xl w-full max-h-[85vh] flex flex-col glass-card rounded-[3rem] border-[#F8C8DC] shadow-2xl bg-white/80 overflow-hidden">
+            {/* Header del Modal */}
+            <div className="flex-shrink-0 text-center pt-8 pb-6 px-8 border-b border-[#F8C8DC]/50">
+              <h2 className="font-marcellus text-2xl md:text-4xl font-black text-[#4A233E] mb-3 uppercase tracking-[0.3em]">El Veredicto de la Balanza</h2>
+              <div className="h-1 w-20 bg-[#D4AF37] mx-auto rounded-full" />
+            </div>
 
-             <div className="glass-card p-10 md:p-16 rounded-[4rem] border-[#D4AF37]/30 shadow-2xl bg-white/80 relative">
-               {/* Watermark sutil */}
-               <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none overflow-hidden">
-                  {getIcon('scale', 'w-[40rem] h-[40rem]')}
-               </div>
-               
-               <div className="prose prose-plum max-w-none text-[#4A233E] font-garamond italic text-2xl md:text-3xl leading-relaxed space-y-8 text-justify relative z-10">
-                 {oracleDiagnosis.split('\n').map((line, i) => (
-                   <p key={i}>{line}</p>
-                 ))}
-               </div>
-             </div>
+            {/* Contenido con scroll interno */}
+            <div className="flex-1 overflow-y-auto px-8 py-6 relative">
+              {/* Watermark sutil */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none overflow-hidden">
+                {getIcon('scale', 'w-[30rem] h-[30rem]')}
+              </div>
+              
+              <div className="relative z-10 text-[#4A233E] font-garamond text-lg md:text-xl leading-[1.8] text-justify space-y-6">
+                {oracleDiagnosis.split('\n').map((line, i) => (
+                  <p key={i}>
+                    {highlightAmounts(line, i)}
+                  </p>
+                ))}
+              </div>
+            </div>
 
-             <button onClick={() => setRightPanelTab('history')} className="mt-16 w-full py-6 bg-[#4A233E] text-[#D4AF37] rounded-[2.5rem] font-marcellus text-sm font-black uppercase tracking-[0.5em] shadow-2xl transition-all hover:bg-[#321829] hover:shadow-pink-200/50">
+            {/* Footer Fijo */}
+            <div className="flex-shrink-0 flex gap-4 p-6 border-t border-[#F8C8DC]/50 bg-white/60 backdrop-blur-sm">
+              <button 
+                onClick={handleDownloadPDF}
+                className="flex-1 py-4 glass-card rounded-[2rem] border-[#F8C8DC] text-[#4A233E] font-marcellus text-sm font-black uppercase tracking-[0.3em] shadow-lg hover:bg-white/80 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                {getIcon('download', 'w-5 h-5')}
+                Descargar Pergamino
+              </button>
+              <button 
+                onClick={() => {
+                  setRightPanelTab('history');
+                  setOracleDiagnosis('');
+                }}
+                className="flex-1 py-4 bg-[#4A233E] text-[#D4AF37] rounded-[2rem] font-marcellus text-sm font-black uppercase tracking-[0.3em] shadow-2xl transition-all hover:bg-[#321829] active:scale-95"
+              >
                 Sellar Veredicto y Volver
-             </button>
-           </div>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

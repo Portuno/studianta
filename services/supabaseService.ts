@@ -886,54 +886,100 @@ export class SupabaseService {
   // ============ SECURITY CONFIG ============
 
   async getSecurityConfig(userId: string): Promise<SecurityConfig | null> {
-    const { data, error } = await supabase
-      .from('security_config')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('security_config')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') return null; // No config found
-      throw error;
+      if (error) {
+        // PGRST116 = No rows returned (404)
+        // 42P01 = Table doesn't exist
+        // PGRST301 = Table not found in schema cache
+        if (error.code === 'PGRST116' || error.code === '42P01' || error.code === 'PGRST301' || error.message?.includes('schema cache')) {
+          return null; // No config found or table doesn't exist
+        }
+        // Solo mostrar warning si no es un error esperado
+        if (!error.message?.includes('schema cache') && !error.message?.includes('Could not find the table')) {
+          console.warn('Error fetching security config:', error.message);
+        }
+        return null;
+      }
+      return data;
+    } catch (error: any) {
+      // Manejar errores de red o otros errores inesperados
+      if (error?.code === 'PGRST116' || error?.code === '42P01' || error?.code === 'PGRST301' || error?.status === 404 || error?.message?.includes('schema cache') || error?.message?.includes('Could not find the table')) {
+        return null;
+      }
+      // Solo mostrar warning si no es un error esperado
+      if (!error?.message?.includes('schema cache') && !error?.message?.includes('Could not find the table')) {
+        console.warn('Unexpected error fetching security config:', error);
+      }
+      return null;
     }
-    return data;
   }
 
   async createSecurityConfig(userId: string, config: Partial<SecurityConfig>): Promise<SecurityConfig> {
-    const { data, error } = await supabase
-      .from('security_config')
-      .insert({
-        user_id: userId,
-        security_pin: config.security_pin,
-        biometrics_enabled: config.biometrics_enabled || false,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  }
-
-  async updateSecurityConfig(userId: string, updates: Partial<SecurityConfig>): Promise<SecurityConfig> {
-    const dbUpdates: any = {};
-    if (updates.security_pin !== undefined) dbUpdates.security_pin = updates.security_pin;
-    if (updates.biometrics_enabled !== undefined) dbUpdates.biometrics_enabled = updates.biometrics_enabled;
-
-    // Verificar si existe
-    const existing = await this.getSecurityConfig(userId);
-    
-    if (existing) {
+    try {
       const { data, error } = await supabase
         .from('security_config')
-        .update(dbUpdates)
-        .eq('user_id', userId)
+        .insert({
+          user_id: userId,
+          security_pin: config.security_pin,
+          biometrics_enabled: config.biometrics_enabled || false,
+        })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Si la tabla no existe, lanzar un error más descriptivo
+        if (error.code === '42P01') {
+          throw new Error('La tabla security_config no existe. Por favor, ejecuta el script SQL 09_security_config.sql en Supabase.');
+        }
+        throw error;
+      }
       return data;
-    } else {
-      return this.createSecurityConfig(userId, updates);
+    } catch (error: any) {
+      if (error?.code === '42P01' || error?.message?.includes('security_config')) {
+        throw new Error('La tabla security_config no existe. Por favor, ejecuta el script SQL 09_security_config.sql en Supabase.');
+      }
+      throw error;
+    }
+  }
+
+  async updateSecurityConfig(userId: string, updates: Partial<SecurityConfig>): Promise<SecurityConfig> {
+    try {
+      const dbUpdates: any = {};
+      if (updates.security_pin !== undefined) dbUpdates.security_pin = updates.security_pin;
+      if (updates.biometrics_enabled !== undefined) dbUpdates.biometrics_enabled = updates.biometrics_enabled;
+
+      // Verificar si existe
+      const existing = await this.getSecurityConfig(userId);
+      
+      if (existing) {
+        const { data, error } = await supabase
+          .from('security_config')
+          .update(dbUpdates)
+          .eq('user_id', userId)
+          .select()
+          .single();
+
+        if (error) {
+          if (error.code === '42P01') {
+            throw new Error('La tabla security_config no existe. Por favor, ejecuta el script SQL 09_security_config.sql en Supabase.');
+          }
+          throw error;
+        }
+        return data;
+      } else {
+        return this.createSecurityConfig(userId, updates);
+      }
+    } catch (error: any) {
+      if (error?.code === '42P01' || error?.message?.includes('security_config')) {
+        throw new Error('La tabla security_config no existe. Por favor, ejecuta el script SQL 09_security_config.sql en Supabase.');
+      }
+      throw error;
     }
   }
 

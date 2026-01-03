@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavView, Subject, Module, Transaction, JournalEntry, CustomCalendarEvent } from './types';
-import { INITIAL_MODULES } from './constants';
+import { INITIAL_MODULES, getIcon } from './constants';
 import { supabaseService, supabase, UserProfile } from './services/supabaseService';
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
@@ -26,6 +26,7 @@ const App: React.FC = () => {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [customEvents, setCustomEvents] = useState<CustomCalendarEvent[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [securityPin, setSecurityPin] = useState<string | null>(null);
 
   // Ref para rastrear si los datos ya se cargaron (evita recargas duplicadas)
   const dataLoadedRef = useRef(false);
@@ -181,6 +182,12 @@ const App: React.FC = () => {
         setUserProfile(profile);
       }
 
+      // Cargar configuración de seguridad (silenciosamente, puede no existir)
+      const securityConfig = await supabaseService.getSecurityConfig(userId);
+      if (securityConfig?.security_pin) {
+        setSecurityPin(securityConfig.security_pin);
+      }
+
       // Cargar todo lo demás en paralelo para ser más rápido
       // Usar Promise.allSettled para que si una tabla no existe, las demás sigan funcionando
       const results = await Promise.allSettled([
@@ -298,6 +305,8 @@ const App: React.FC = () => {
   };
 
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showPinSetupModal, setShowPinSetupModal] = useState(false);
+  const [pendingModuleId, setPendingModuleId] = useState<string | null>(null);
 
   const toggleModule = async (moduleId: string) => {
     // Si no hay usuario, mostrar modal de login
@@ -308,6 +317,14 @@ const App: React.FC = () => {
     
     const mod = modules.find(m => m.id === moduleId);
     if (!mod) return;
+    
+    // Si es el módulo de seguridad y no está activo, pedir PIN primero
+    if (moduleId === 'security' && !mod.active && essence >= mod.cost) {
+      setPendingModuleId(moduleId);
+      setShowPinSetupModal(true);
+      return;
+    }
+    
     if (!mod.active && essence >= mod.cost) {
       const newEssence = essence - mod.cost;
       setEssence(newEssence);
@@ -320,6 +337,51 @@ const App: React.FC = () => {
       } catch (error) {
         console.error('Error updating module:', error);
       }
+    }
+  };
+
+  const handlePinSetup = async (pin: string) => {
+    if (!user || !pendingModuleId) return;
+    
+    const trimmedPin = pin.trim();
+    if (trimmedPin.length !== 4 || !/^\d{4}$/.test(trimmedPin)) {
+      alert('El PIN debe tener exactamente 4 dígitos numéricos');
+      return;
+    }
+
+    const mod = modules.find(m => m.id === pendingModuleId);
+    if (!mod || mod.active || essence < mod.cost) return;
+
+    try {
+      // Guardar PIN en la configuración de seguridad
+      await supabaseService.updateSecurityConfig(user.id, { security_pin: trimmedPin });
+      setSecurityPin(trimmedPin);
+      
+      // Activar el módulo
+      const newEssence = essence - mod.cost;
+      setEssence(newEssence);
+      const updatedModules = modules.map(m => m.id === pendingModuleId ? { ...m, active: true } : m);
+      setModules(updatedModules);
+      
+      await supabaseService.updateEssence(user.id, newEssence);
+      await supabaseService.updateModule(user.id, pendingModuleId, { active: true });
+      
+      setShowPinSetupModal(false);
+      setPendingModuleId(null);
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Error al configurar la seguridad. Intenta nuevamente.';
+      console.error('Error setting up security:', error);
+      alert(errorMessage);
+    }
+  };
+
+  const verifyPin = async (pin: string): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      return await supabaseService.verifySecurityPin(user.id, pin);
+    } catch (error) {
+      console.error('Error verifying PIN:', error);
+      return false;
     }
   };
 
@@ -565,12 +627,16 @@ const App: React.FC = () => {
           isMobile={isMobile} 
         />;
       case NavView.DIARY:
+        const securityModule = modules.find(m => m.id === 'security');
         return <DiaryModule 
           entries={journalEntries} 
           onAddEntry={handleAddJournalEntry} 
           onDeleteEntry={handleDeleteJournalEntry}
           onUpdateEntry={handleUpdateJournalEntry}
-          isMobile={isMobile} 
+          isMobile={isMobile}
+          securityModuleActive={securityModule?.active || false}
+          securityPin={securityPin || undefined}
+          onVerifyPin={verifyPin}
         />;
       case NavView.PROFILE:
         return <ProfileModule 
@@ -627,6 +693,290 @@ const App: React.FC = () => {
           userProfile={userProfile}
         />
       )}
+
+      {/* Modal de Configuración de PIN */}
+      {showPinSetupModal && (
+        <PinSetupModal
+          onSetup={handlePinSetup}
+          onCancel={() => {
+            setShowPinSetupModal(false);
+            setPendingModuleId(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+// Componente Modal de Configuración de PIN con auto-focus
+const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => void }> = ({ onSetup, onCancel }) => {
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [error, setError] = useState('');
+  const [isConfirming, setIsConfirming] = useState(false);
+  
+  const pinRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+  const confirmPinRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+
+  // Auto-focus en el primer campo cuando se abre el modal
+  useEffect(() => {
+    if (pinRefs[0].current && !isConfirming) {
+      pinRefs[0].current.focus();
+    } else if (confirmPinRefs[0].current && isConfirming) {
+      confirmPinRefs[0].current.focus();
+    }
+  }, [isConfirming]);
+
+  // Cuando se completa el PIN, pasar a confirmación
+  useEffect(() => {
+    if (pin.length === 4 && !isConfirming) {
+      setIsConfirming(true);
+      setTimeout(() => {
+        confirmPinRefs[0].current?.focus();
+      }, 100);
+    }
+  }, [pin.length]);
+
+  const handlePinChange = (index: number, value: string, isConfirm: boolean = false) => {
+    const numericValue = value.replace(/\D/g, '');
+    if (numericValue.length > 1) return;
+
+    if (isConfirm) {
+      const newPin = confirmPin.split('');
+      newPin[index] = numericValue;
+      const updatedPin = newPin.join('').slice(0, 4);
+      setConfirmPin(updatedPin);
+      setError('');
+
+      if (numericValue && index < 3 && confirmPinRefs[index + 1].current) {
+        setTimeout(() => {
+          confirmPinRefs[index + 1].current?.focus();
+        }, 10);
+      }
+
+      if (updatedPin.length === 4) {
+        // Esperar un momento para que React actualice el estado antes de validar
+        // Pasar tanto el PIN de confirmación como el PIN original
+        setTimeout(() => {
+          handleSubmit(updatedPin, pin);
+        }, 150);
+      }
+    } else {
+      const newPin = pin.split('');
+      newPin[index] = numericValue;
+      const updatedPin = newPin.join('').slice(0, 4);
+      setPin(updatedPin);
+      setError('');
+
+      if (numericValue && index < 3 && pinRefs[index + 1].current) {
+        setTimeout(() => {
+          pinRefs[index + 1].current?.focus();
+        }, 10);
+      }
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>, isConfirm: boolean = false) => {
+    const currentPin = isConfirm ? confirmPin : pin;
+    const refs = isConfirm ? confirmPinRefs : pinRefs;
+    
+    if (e.key === 'Backspace' && !currentPin[index] && index > 0) {
+      refs[index - 1].current?.focus();
+    }
+  };
+
+  const handleNumberClick = (num: string) => {
+    if (isConfirming) {
+      const currentIndex = confirmPin.length;
+      if (currentIndex < 4) {
+        handlePinChange(currentIndex, num, true);
+      }
+    } else {
+      const currentIndex = pin.length;
+      if (currentIndex < 4) {
+        handlePinChange(currentIndex, num, false);
+      }
+    }
+  };
+
+  const handleSubmit = (submittedConfirmPin?: string, submittedPin?: string) => {
+    // Usar los valores pasados directamente o el estado como fallback
+    const currentPin = (submittedPin || pin).trim();
+    const finalConfirmPin = (submittedConfirmPin || confirmPin).trim();
+    
+    // Validar que el PIN tenga exactamente 4 dígitos
+    if (currentPin.length !== 4 || !/^\d{4}$/.test(currentPin)) {
+      setError('El PIN debe tener exactamente 4 dígitos numéricos');
+      return;
+    }
+    
+    // Validar que la confirmación tenga exactamente 4 dígitos
+    if (finalConfirmPin.length !== 4 || !/^\d{4}$/.test(finalConfirmPin)) {
+      setError('La confirmación del PIN debe tener exactamente 4 dígitos numéricos');
+      return;
+    }
+    
+    // Validar que ambos PINs coincidan
+    if (currentPin !== finalConfirmPin) {
+      setError('Los PINs no coinciden');
+      setConfirmPin('');
+      setIsConfirming(false);
+      setTimeout(() => {
+        pinRefs[0].current?.focus();
+      }, 50);
+      return;
+    }
+    
+    setError('');
+    onSetup(currentPin);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl max-w-md w-full">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#4A233E]/10 flex items-center justify-center">
+            {getIcon('lock', 'w-8 h-8 text-[#D4AF37]')}
+          </div>
+          <h3 className="font-cinzel text-xl lg:text-2xl text-[#4A233E] mb-2">Configurar PIN de Seguridad</h3>
+          <p className="font-garamond text-[#8B5E75] text-sm">
+            {isConfirming ? 'Confirma tu PIN' : 'Establece un PIN de 4 dígitos para proteger tus entradas bloqueadas'}
+          </p>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          {!isConfirming ? (
+            <div>
+              <label className="block text-sm font-cinzel text-[#4A233E] mb-2">PIN</label>
+              <div className="flex gap-3 justify-center">
+                {[0, 1, 2, 3].map((index) => (
+                  <input
+                    key={index}
+                    ref={pinRefs[index]}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={pin[index] || ''}
+                    onChange={(e) => handlePinChange(index, e.target.value, false)}
+                    onKeyDown={(e) => handleKeyDown(index, e, false)}
+                    className={`w-14 h-14 lg:w-16 lg:h-16 rounded-xl border-2 text-center text-2xl font-cinzel font-black transition-all focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 ${
+                      pin.length > index
+                        ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#4A233E]'
+                        : 'border-[#F8C8DC] bg-white/40 text-[#8B5E75]/30'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-cinzel text-[#4A233E] mb-2">Confirmar PIN</label>
+              <div className="flex gap-3 justify-center">
+                {[0, 1, 2, 3].map((index) => (
+                  <input
+                    key={index}
+                    ref={confirmPinRefs[index]}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={confirmPin[index] || ''}
+                    onChange={(e) => handlePinChange(index, e.target.value, true)}
+                    onKeyDown={(e) => handleKeyDown(index, e, true)}
+                    className={`w-14 h-14 lg:w-16 lg:h-16 rounded-xl border-2 text-center text-2xl font-cinzel font-black transition-all focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 ${
+                      confirmPin.length > index
+                        ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#4A233E]'
+                        : 'border-[#F8C8DC] bg-white/40 text-[#8B5E75]/30'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <p className="text-red-500 text-sm text-center font-garamond">{error}</p>
+          )}
+        </div>
+
+        {/* Teclado numérico */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+            <button
+              key={num}
+              onClick={() => handleNumberClick(num.toString())}
+              className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel text-xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
+            >
+              {num}
+            </button>
+          ))}
+          <button
+            onClick={onCancel}
+            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-sm font-black hover:bg-[#FFF0F5] transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => handleNumberClick('0')}
+            className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel text-xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
+          >
+            0
+          </button>
+          <button
+            onClick={() => {
+              if (isConfirming) {
+                setConfirmPin(confirmPin.slice(0, -1));
+                const lastIndex = Math.max(0, confirmPin.length - 1);
+                confirmPinRefs[lastIndex].current?.focus();
+              } else {
+                setPin(pin.slice(0, -1));
+                const lastIndex = Math.max(0, pin.length - 1);
+                pinRefs[lastIndex].current?.focus();
+              }
+              setError('');
+            }}
+            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-sm font-black hover:bg-[#FFF0F5] transition-all"
+          >
+            ←
+          </button>
+        </div>
+
+        <div className="flex gap-4">
+          {isConfirming && (
+            <button
+              onClick={() => {
+                setIsConfirming(false);
+                setConfirmPin('');
+                pinRefs[0].current?.focus();
+              }}
+              className="flex-1 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest border-2 border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5] transition-all"
+            >
+              Atrás
+            </button>
+          )}
+          <button
+            onClick={onCancel}
+            className="flex-1 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest border-2 border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5] transition-all"
+          >
+            Cancelar
+          </button>
+          {!isConfirming && (
+            <button
+              onClick={() => {
+                if (pin.length === 4) {
+                  setIsConfirming(true);
+                  setTimeout(() => {
+                    confirmPinRefs[0].current?.focus();
+                  }, 100);
+                }
+              }}
+              disabled={pin.length !== 4}
+              className="flex-1 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest bg-[#D4AF37] text-[#4A233E] hover:bg-[#C9A030] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Continuar
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
