@@ -8,6 +8,8 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        // Nota: Para desarrollo local, usa 'vercel dev' para que las funciones serverless funcionen
+        // O configura un proxy manual si prefieres
       },
       plugins: [react()],
       define: {

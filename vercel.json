@@ -1,0 +1,14 @@
+{
+  "functions": {
+    "api/gemini.ts": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/gemini",
+      "destination": "/api/gemini"
+    }
+  ]
+}
+
