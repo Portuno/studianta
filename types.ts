@@ -21,14 +21,18 @@ export interface Note {
   title: string;
   content: string;
   date: string;
+  importantFragments?: string[]; // Fragmentos marcados como importantes
+  isSealed?: boolean; // Si la nota fue "sellada" (consagrada al Oráculo)
 }
 
 export interface StudyMaterial {
   id: string;
   name: string;
-  type: 'Syllabus' | 'Apunte' | 'Pizarrón' | 'PDF';
+  type: 'Syllabus' | 'Apunte' | 'Pizarrón' | 'PDF' | 'Word' | 'PPT';
   content?: string; // Could be base64 or text content
   date: string;
+  fileUrl?: string; // URL del archivo en storage
+  category: 'programa' | 'contenido'; // Distingue entre programa y contenido de asignatura
 }
 
 export interface Subject {
@@ -39,6 +43,7 @@ export interface Subject {
   email?: string;
   phone?: string;
   room?: string;
+  aula?: string; // Aula donde está cursando
   status: SubjectStatus;
   absences: number;
   maxAbsences: number;

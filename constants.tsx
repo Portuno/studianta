@@ -31,7 +31,16 @@ import {
   BatteryLow,
   CloudLightning,
   Camera,
-  Unlock
+  Unlock,
+  X,
+  GraduationCap,
+  Building2,
+  FileText,
+  Download,
+  Edit,
+  Eye as EyeIcon,
+  Play,
+  Search
 } from 'lucide-react';
 
 export const COLORS = {
@@ -89,6 +98,16 @@ export const getIcon = (name: string, className?: string) => {
     case 'storm': return <CloudLightning className={className} />;
     case 'camera': return <Camera className={className} />;
     case 'unlock': return <Unlock className={className} />;
+    case 'x': return <X className={className} />;
+    case 'graduation': return <GraduationCap className={className} />;
+    case 'university': return <Building2 className={className} />;
+    case 'close': return <X className={className} />;
+    case 'file': return <FileText className={className} />;
+    case 'download': return <Download className={className} />;
+    case 'edit': return <Edit className={className} />;
+    case 'eye': return <EyeIcon className={className} />;
+    case 'play': return <Play className={className} />;
+    case 'search': return <Search className={className} />;
     default: return null;
   }
 };

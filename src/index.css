@@ -1,0 +1,147 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-rosy-bg: #FFF0F5;
+  --color-rosy-bg-alt: #FDEEF4;
+  --color-plum: #4A233E;
+  --color-mauve: #8B5E75;
+  --color-sophisticated-pink: #E35B8F;
+  --color-gold: #D4AF37;
+  --color-border-pink: #F8C8DC;
+  --color-glass-pink: rgba(255, 245, 250, 0.92);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'EB Garamond', serif;
+  background: linear-gradient(135deg, var(--color-rosy-bg), var(--color-rosy-bg-alt));
+  color: var(--color-plum);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.font-cinzel { 
+  font-family: 'Marcellus', serif; 
+}
+
+.font-inter { 
+  font-family: 'Inter', sans-serif; 
+}
+
+.glass-card {
+  background: var(--color-glass-pink);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid var(--color-border-pink);
+}
+
+.btn-primary {
+  background-color: var(--color-sophisticated-pink);
+  color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-primary:active { 
+  transform: scale(0.92); 
+}
+
+/* Cuaderno de Foco Profundo - Líneas de cuaderno */
+.notebook-lines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 31px,
+    rgba(139, 94, 117, 0.1) 31px,
+    rgba(139, 94, 117, 0.1) 32px
+  );
+}
+
+/* Animación de fade-in */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Animación de flotación para partículas */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-20px) translateX(10px);
+    opacity: 0.6;
+  }
+}
+
+.animate-float {
+  animation: float 10s ease-in-out infinite;
+}
+
+/* Gradiente radial para efectos de aura */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* Atanor Grid (Solo PC) */
+.iso-grid-container {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+.iso-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  gap: 2px;
+  transform: rotateX(60deg) rotateZ(45deg);
+  transform-origin: center;
+}
+
+.iso-cell {
+  width: 100%;
+  aspect-ratio: 1;
+  background: rgba(248, 200, 220, 0.3);
+  border: 0.5px solid rgba(212, 175, 55, 0.2);
+  transition: all 0.4s ease;
+}
+
+.iso-cell.active {
+  background: linear-gradient(to bottom right, #E35B8F, #D4AF37);
+  box-shadow: 0 0 10px rgba(227, 91, 143, 0.8);
+  transform: translateZ(20px);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { 
+  width: 4px; 
+}
+
+::-webkit-scrollbar-thumb { 
+  background: var(--color-border-pink); 
+  border-radius: 10px; 
+}
+
+.no-scrollbar::-webkit-scrollbar { 
+  display: none; 
+}
+
+.no-scrollbar { 
+  -ms-overflow-style: none; 
+  scrollbar-width: none; 
+}
+

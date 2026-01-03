@@ -154,12 +154,14 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
   const handleAddCustomEvent = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const selectedDate = formData.get('date') as string;
+    const timeValue = formData.get('time') as string;
     const newEvent: CustomCalendarEvent = {
       id: Math.random().toString(36).substring(7),
       title: formData.get('title') as string,
       description: formData.get('description') as string,
-      date: anchorDate.toISOString().split('T')[0],
-      time: formData.get('time') as string,
+      date: selectedDate || anchorDate.toISOString().split('T')[0],
+      time: timeValue || undefined,
       color: formData.get('color') as string,
       priority: formData.get('priority') as any || 'low'
     };
@@ -256,9 +258,10 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     const startOfMonth = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1);
     const startDay = startOfMonth.getDay();
     const daysInMonth = new Date(anchorDate.getFullYear(), anchorDate.getMonth() + 1, 0).getDate();
+    const weeksInMonth = Math.ceil((startDay === 0 ? 6 : startDay - 1 + daysInMonth) / 7);
     
     return (
-      <div className="flex-1 grid grid-cols-7 border-t border-[#D4AF37]/10 font-inter">
+      <div className="h-full grid grid-cols-7 border-t border-[#D4AF37]/10 font-inter" style={{ gridTemplateRows: `repeat(${weeksInMonth}, minmax(0, 1fr))` }}>
         {Array.from({ length: 42 }).map((_, i) => {
           const dayNum = i - (startDay === 0 ? 6 : startDay - 1);
           const date = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), dayNum + 1);
@@ -267,27 +270,85 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
           const isOutside = dayNum < 0 || dayNum >= daysInMonth;
           const moodEvent = events.find(e => e.type === 'mood');
           const hasHighPriority = events.some(e => e.priority === 'high');
+          const visibleEvents = events.filter(e => e.type !== 'mood').slice(0, 3);
+          const allEventsText = events.map(e => {
+            const timeStr = e.time ? `${e.time} - ` : '';
+            return `${timeStr}${e.title}${e.subtitle ? ` (${e.subtitle})` : ''}`;
+          }).join('\n');
 
           return (
             <div 
               key={i} 
               onClick={() => { if(!isOutside) { setAnchorDate(date); setView('day'); } }}
-              className={`p-2 border-r border-b border-[#D4AF37]/10 min-h-[90px] md:min-h-[140px] transition-all cursor-pointer group ${isOutside ? 'opacity-10 grayscale bg-black/5' : 'hover:bg-[#FFF0F5]/50'}`}
+              className={`p-2 border-r border-b border-[#D4AF37]/10 transition-all cursor-pointer group relative ${isOutside ? 'opacity-10 grayscale bg-black/5' : 'hover:bg-[#FFF0F5]/50'}`}
+              title={events.length > 0 ? allEventsText : ''}
             >
               <div className="flex justify-between items-start">
                 <span className={`text-[10px] md:text-base font-cinzel transition-all ${isToday ? 'border-2 border-[#D4AF37] ring-2 ring-[#D4AF37]/20 text-[#4A233E] w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,175,55,0.3)] font-black' : 'text-[#8B5E75]'}`}>
                   {date.getDate()}
                 </span>
                 <div className="flex gap-1">
-                  {moodEvent && <div className="text-[#D4AF37] scale-75">{getIcon(moodEvent.moodIcon!, 'w-4 h-4')}</div>}
-                  {hasHighPriority && <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse" />}
+                  {moodEvent && (
+                    <div 
+                      className="text-[#D4AF37] scale-75 cursor-help" 
+                      title={`Estado Vital: ${moodEvent.title}`}
+                    >
+                      {getIcon(moodEvent.moodIcon!, 'w-4 h-4')}
+                    </div>
+                  )}
+                  {hasHighPriority && (
+                    <div 
+                      className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse cursor-help" 
+                      title="Evento de alta prioridad"
+                    />
+                  )}
                 </div>
               </div>
               <div className="mt-2 flex flex-col gap-1">
-                {events.filter(e => e.type !== 'mood').slice(0, 3).map(e => (
-                  <div key={e.id} className="h-1 w-full rounded-full opacity-60" style={{ backgroundColor: e.color }} />
+                {visibleEvents.map(e => (
+                  <div 
+                    key={e.id} 
+                    className="h-1 w-full rounded-full opacity-60 hover:opacity-100 transition-opacity cursor-help relative group/event" 
+                    style={{ backgroundColor: e.color }}
+                    title={`${e.time ? `${e.time} - ` : ''}${e.title}${e.subtitle ? ` (${e.subtitle})` : ''}`}
+                  />
                 ))}
+                {events.length > 3 && (
+                  <div className="text-[8px] text-[#8B5E75] font-bold opacity-60 mt-1">
+                    +{events.length - 3} más
+                  </div>
+                )}
               </div>
+              
+              {/* Tooltip mejorado al hover */}
+              {events.length > 0 && (
+                <div className={`absolute z-[100] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 hidden md:block ${
+                  i % 7 >= 4 ? 'right-full top-0 mr-2' : 'left-full top-0 ml-2'
+                }`}>
+                  <div className="glass-card p-3 rounded-xl shadow-2xl border-2 border-[#D4AF37]/40 min-w-[200px] max-w-[300px] bg-white/95 backdrop-blur-md">
+                    <div className="text-[9px] font-cinzel font-bold text-[#4A233E] mb-2 uppercase border-b border-[#F8C8DC] pb-1">
+                      {date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </div>
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                      {events.map(e => (
+                        <div key={e.id} className="text-[10px] font-inter">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <div 
+                              className="w-2 h-2 rounded-full shrink-0" 
+                              style={{ backgroundColor: e.color }}
+                            />
+                            <span className="font-bold text-[#4A233E]">{e.title}</span>
+                          </div>
+                          <div className="text-[9px] text-[#8B5E75] ml-4">
+                            {e.time && <span>{e.time} • </span>}
+                            {e.subtitle}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -371,16 +432,25 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
           </div>
         </div>
 
-        <div className="flex gap-1.5 bg-white/40 p-1 rounded-xl w-full md:w-auto overflow-x-auto no-scrollbar shadow-inner border border-[#D4AF37]/20">
-          {(['month', 'week', 'day'] as const).map(v => (
-            <button 
-              key={v}
-              onClick={() => setView(v)}
-              className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-cinzel text-[9px] font-black uppercase tracking-[0.15em] transition-all ${view === v ? 'bg-[#E35B8F] text-white shadow-md' : 'text-[#8B5E75] hover:bg-white/40'}`}
-            >
-              {v === 'month' ? 'Mes' : v === 'week' ? 'Semana' : 'Día'}
-            </button>
-          ))}
+        <div className="flex items-center gap-4 w-full md:w-auto justify-center">
+          <button 
+            onClick={() => setShowAddEventModal(true)}
+            className="btn-primary flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-cinzel text-[10px] font-bold uppercase tracking-widest shadow-lg active:scale-95 transition-all"
+          >
+            {getIcon('plus', 'w-4 h-4')} Agregar
+          </button>
+          
+          <div className="flex gap-1.5 bg-white/40 p-1 rounded-xl w-full md:w-auto overflow-x-auto no-scrollbar shadow-inner border border-[#D4AF37]/20">
+            {(['month', 'week', 'day'] as const).map(v => (
+              <button 
+                key={v}
+                onClick={() => setView(v)}
+                className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-cinzel text-[9px] font-black uppercase tracking-[0.15em] transition-all ${view === v ? 'bg-[#E35B8F] text-white shadow-md' : 'text-[#8B5E75] hover:bg-white/40'}`}
+              >
+                {v === 'month' ? 'Mes' : v === 'week' ? 'Semana' : 'Día'}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -388,12 +458,12 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
         {view === 'month' ? (
           <>
             {/* Elegant Table Header for Month */}
-            <div className="grid grid-cols-7 glass-card border-b border-[#D4AF37]/30 py-3 shadow-sm z-10 sticky top-0">
+            <div className="grid grid-cols-7 glass-card border-b border-[#D4AF37]/30 py-3 shadow-sm z-10 shrink-0">
                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => (
                  <div key={d} className="text-center text-[10px] uppercase tracking-[0.2em] font-cinzel font-black text-[#8B5E75]">{d}</div>
                ))}
             </div>
-            <div className="flex-1 overflow-y-auto no-scrollbar">
+            <div className="flex-1 overflow-hidden min-h-0">
               {renderMonthGrid()}
             </div>
           </>
@@ -419,30 +489,71 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
 
       {/* Form Modal for Manual Event */}
       {showAddEventModal && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-md p-4">
-          <form onSubmit={handleAddCustomEvent} className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 font-inter border-[#D4AF37]/40">
-            <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold tracking-[0.2em] uppercase">Inscribir en Astrolabio</h2>
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-xl p-4">
+          <form onSubmit={handleAddCustomEvent} className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 font-inter border-2 border-[#D4AF37]/40">
+            <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold tracking-[0.2em] uppercase">Agregar al Calendario</h2>
             <div className="space-y-4">
-              <input required name="title" type="text" placeholder="Título de la Operación..." className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-3.5 text-sm outline-none font-bold" />
+              <input 
+                required 
+                name="title" 
+                type="text" 
+                placeholder="Nombre del Hito..." 
+                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none font-bold focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+              />
+              <input 
+                required
+                name="date" 
+                type="date" 
+                defaultValue={anchorDate.toISOString().split('T')[0]}
+                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+              />
               <div className="grid grid-cols-2 gap-3">
-                <input name="time" type="time" className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-3.5 text-xs outline-none" />
-                <select name="priority" className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-3.5 text-xs outline-none">
-                  <option value="low">Flujo Ordinario</option>
-                  <option value="high">Inercia Crítica</option>
-                </select>
+                <div>
+                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora (Opcional)</label>
+                  <input 
+                    name="time" 
+                    type="time" 
+                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Prioridad</label>
+                  <select 
+                    name="priority" 
+                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="low">Normal</option>
+                    <option value="high">Crítica</option>
+                  </select>
+                </div>
               </div>
               <div className="flex justify-between p-2">
-                {[COLORS.primary, COLORS.gold, COLORS.mauve, '#48C9B0', '#5DADE2'].map(c => (
-                  <label key={c} className="cursor-pointer">
-                    <input type="radio" name="color" value={c} required className="peer sr-only" defaultChecked={c === COLORS.primary} />
-                    <div className="w-8 h-8 rounded-full border-2 border-white shadow-sm transition-all peer-checked:scale-125 peer-checked:ring-2 peer-checked:ring-[#E35B8F]" style={{ backgroundColor: c }} />
-                  </label>
-                ))}
+                {[COLORS.primary, COLORS.gold, COLORS.mauve, '#48C9B0', '#5DADE2'].map(c => {
+                  const rgb = c.startsWith('#') 
+                    ? {
+                        r: parseInt(c.slice(1, 3), 16),
+                        g: parseInt(c.slice(3, 5), 16),
+                        b: parseInt(c.slice(5, 7), 16)
+                      }
+                    : { r: 0, g: 0, b: 0 };
+                  return (
+                    <label key={c} className="cursor-pointer">
+                      <input type="radio" name="color" value={c} required className="peer sr-only" defaultChecked={c === COLORS.primary} />
+                      <div 
+                        className="w-8 h-8 rounded-full border-2 border-white transition-all peer-checked:scale-125 peer-checked:ring-2 peer-checked:ring-[#D4AF37]" 
+                        style={{ 
+                          backgroundColor: c,
+                          boxShadow: `0 4px 12px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`
+                        }} 
+                      />
+                    </label>
+                  );
+                })}
               </div>
             </div>
             <div className="flex gap-4 mt-8">
               <button type="button" onClick={() => setShowAddEventModal(false)} className="flex-1 py-3 text-[10px] font-black text-[#8B5E75] uppercase tracking-widest">Cerrar</button>
-              <button type="submit" className="flex-[2] btn-primary py-3.5 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-lg">Sellar Tiempo</button>
+              <button type="submit" className="flex-[2] btn-primary py-3.5 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-[0_8px_20px_rgba(227,91,143,0.4)]">Sellar Registro</button>
             </div>
           </form>
         </div>

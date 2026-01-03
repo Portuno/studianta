@@ -1,6 +1,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './src/index.css';
 import App from './App';
 
 // Additional safety check for process
@@ -12,8 +13,8 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
+    // StrictMode deshabilitado temporalmente para evitar doble renderizado en desarrollo
+    // que puede causar recargas molestas al cambiar de pestaña
+    <App />
   );
 }

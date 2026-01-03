@@ -2,6 +2,7 @@
 import React from 'react';
 import { NavView, Module } from '../types';
 import { getIcon, COLORS } from '../constants';
+import { UserProfile } from '../services/supabaseService';
 
 interface NavigationProps {
   activeView: NavView;
@@ -9,9 +10,11 @@ interface NavigationProps {
   essence: number;
   isMobile: boolean;
   modules: Module[];
+  user?: any;
+  userProfile?: UserProfile | null;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, essence, isMobile, modules }) => {
+const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, essence, isMobile, modules, user, userProfile }) => {
   const isLocked = (moduleId: string) => {
     if (!moduleId || moduleId === 'atanor') return false;
     const mod = modules.find(m => m.id === moduleId);
@@ -143,12 +146,38 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
 
         <button 
           onClick={() => setActiveView(NavView.PROFILE)}
-          className="w-full flex items-center justify-center lg:justify-start gap-3 p-2 lg:p-3 rounded-2xl bg-white/60 border border-[#F8C8DC] hover:border-[#E35B8F]/30 transition-all group"
+          className={`w-full flex items-center justify-center lg:justify-start gap-3 p-2 lg:p-3 rounded-2xl transition-all group mb-2 ${
+            activeView === NavView.PROFILE
+              ? 'bg-[#E35B8F] text-white shadow-lg'
+              : 'bg-white/60 border border-[#F8C8DC] hover:border-[#E35B8F]/30'
+          }`}
         >
-          <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-[#E35B8F] to-[#D4AF37] border-2 border-white shadow-md flex-shrink-0" />
+          <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full border-2 border-white shadow-md flex-shrink-0 overflow-hidden ${
+            user && userProfile?.avatar_url ? '' : user ? 'bg-gradient-to-br from-[#E35B8F] to-[#D4AF37]' : 'bg-white/60 border-[#F8C8DC]'
+          }`}>
+            {user && userProfile?.avatar_url ? (
+              <img 
+                src={userProfile.avatar_url} 
+                alt="Avatar" 
+                className="w-full h-full object-cover"
+              />
+            ) : user ? (
+              <div className="w-full h-full flex items-center justify-center">
+                {getIcon('profile', 'w-5 h-5 text-white')}
+              </div>
+            ) : null}
+          </div>
           <div className="hidden lg:block text-left overflow-hidden">
-             <p className="text-[10px] font-bold text-[#4A233E] truncate">Académico</p>
-             <p className="text-[8px] text-[#8B5E75] uppercase font-black tracking-widest opacity-60">Perfil</p>
+             <p className={`text-[10px] font-bold truncate ${activeView === NavView.PROFILE ? 'text-white' : 'text-[#4A233E]'}`}>
+               {user && userProfile?.full_name 
+                 ? userProfile.full_name 
+                 : user 
+                   ? user.email?.split('@')[0] || 'Usuario'
+                   : 'Iniciar Sesión'}
+             </p>
+             <p className={`text-[8px] uppercase font-black tracking-widest ${activeView === NavView.PROFILE ? 'text-white/80' : 'text-[#8B5E75] opacity-60'}`}>
+               {user ? 'Perfil' : 'Iniciar Sesión'}
+             </p>
           </div>
         </button>
       </div>

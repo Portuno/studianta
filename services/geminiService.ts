@@ -5,7 +5,10 @@ export class GeminiService {
   constructor() {}
 
   async queryAcademicOracle(subjectName: string, prompt: string, context: string, studentProfile: any) {
-    const apiKey = (window as any).process?.env?.API_KEY || '';
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY || '';
+    if (!apiKey) {
+      throw new Error('API key is missing. Please provide a valid API key.');
+    }
     const ai = new GoogleGenAI({ apiKey });
     
     try {
@@ -35,7 +38,10 @@ export class GeminiService {
   }
 
   async analyzeFinancialHealth(budget: number, transactions: any[]) {
-    const apiKey = (window as any).process?.env?.API_KEY || '';
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY || '';
+    if (!apiKey) {
+      throw new Error('API key is missing. Please provide a valid API key.');
+    }
     const ai = new GoogleGenAI({ apiKey });
     
     const transactionsContext = transactions.map(t => `${t.date}: ${t.amount} en ${t.category} (${t.description})`).join('\n');
