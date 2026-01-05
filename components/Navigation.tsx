@@ -136,8 +136,12 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
 
       <div className="p-4 lg:p-6 bg-[#FFF9FA]/50 border-t border-[#F8C8DC]/30 space-y-4 lg:space-y-4">
         <button 
-          onClick={() => alert("El Oráculo General está meditando en este momento.")}
-          className="w-full flex items-center justify-center gap-3 py-3.5 px-2 lg:px-4 rounded-2xl bg-[#4A233E] text-[#D4AF37] shadow-lg hover:scale-[1.05] transition-all group"
+          onClick={() => setActiveView(NavView.ORACLE)}
+          className={`w-full flex items-center justify-center gap-3 py-3.5 px-2 lg:px-4 rounded-2xl shadow-lg hover:scale-[1.05] transition-all group ${
+            activeView === NavView.ORACLE
+              ? 'bg-[#E35B8F] text-white'
+              : 'bg-[#4A233E] text-[#D4AF37]'
+          }`}
         >
           {getIcon('brain', 'w-6 h-6 lg:w-5 lg:h-5 transition-transform')}
           <span className="hidden lg:inline font-cinzel text-[10px] font-black uppercase tracking-[0.2em]">Oráculo</span>

@@ -3,6 +3,7 @@ import { NavView, Subject, Module, Transaction, JournalEntry, CustomCalendarEven
 import { INITIAL_MODULES, getIcon } from './constants';
 import { supabaseService, supabase, UserProfile } from './services/supabaseService';
 import { Analytics } from '@vercel/analytics/react';
+import { useInteractionAggregator } from './hooks/useInteractionAggregator';
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
 import SubjectsModule from './components/SubjectsModule';
@@ -14,6 +15,7 @@ import AuthModule from './components/AuthModule';
 import ProfileModule from './components/ProfileModule';
 import BazarArtefactos from './components/BazarArtefactos';
 import FocusFloatingWidget from './components/FocusFloatingWidget';
+import OraculoPage from './components/OraculoPage';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -634,6 +636,17 @@ const App: React.FC = () => {
     }
   };
 
+  // Generar el SPC completo para uso en componentes (DEBE estar al nivel superior, antes de cualquier return)
+  const studentProfileContext = useInteractionAggregator({
+    userProfile,
+    subjects,
+    transactions,
+    journalEntries,
+    customEvents,
+    modules,
+    monthlyBudget,
+  });
+
   // Solo mostrar loading en la carga inicial - nunca después para no interrumpir la UX
   if (initialLoading) {
     return (
@@ -671,6 +684,7 @@ const App: React.FC = () => {
           isMobile={isMobile} 
           onMaterialUpload={handleMaterialUpload}
           onAddEssence={handleAddEssence}
+          studentProfileContext={studentProfileContext}
         />;
       case NavView.CALENDAR:
         return <CalendarModule 
@@ -720,13 +734,31 @@ const App: React.FC = () => {
           user={user} 
           onAuthSuccess={handleAuthSuccess} 
           onSignOut={handleSignOut}
-          isMobile={isMobile} 
+          isMobile={isMobile}
+          subjects={subjects}
+          transactions={transactions}
+          journalEntries={journalEntries}
+          customEvents={customEvents}
+          modules={modules}
+          monthlyBudget={monthlyBudget}
         />;
       case NavView.BAZAR:
         return <BazarArtefactos 
           isMobile={isMobile}
           essence={user ? essence : 500}
           onEssenceChange={setEssence}
+        />;
+      case NavView.ORACLE:
+        return <OraculoPage
+          userProfile={userProfile}
+          subjects={subjects}
+          transactions={transactions}
+          journalEntries={journalEntries}
+          customEvents={customEvents}
+          modules={modules}
+          monthlyBudget={monthlyBudget}
+          isMobile={isMobile}
+          onAddJournalEntry={handleAddJournalEntry}
         />;
       default:
         return <Dashboard modules={modules} onActivate={toggleModule} isMobile={isMobile} setActiveView={setActiveView} />;

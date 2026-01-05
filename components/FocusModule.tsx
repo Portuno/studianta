@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Subject, NavView, CustomCalendarEvent } from '../types';
 import { getIcon, COLORS } from '../constants';
+import { saveFocusSession } from '../utils/focusTracker';
 
 interface FocusModuleProps {
   subjects: Subject[];
@@ -179,6 +180,16 @@ const FocusModule: React.FC<FocusModuleProps> = ({
     const subject = subjects.find(s => s.id === selectedSubjectId);
     const currentDate = new Date().toISOString().split('T')[0];
     const currentTime = new Date().toTimeString().split(' ')[0].substring(0, 5);
+
+    // Guardar sesión de enfoque en localStorage
+    if (minutesStudied > 0) {
+      saveFocusSession({
+        date: new Date().toISOString(),
+        duration_minutes: minutesStudied,
+        subject_id: selectedSubjectId || undefined,
+        completed: !reflectionData.wasInterrupted && timeLeft === 0,
+      });
+    }
 
     if (reflectionData.harvest && subject) {
       const newNote = {

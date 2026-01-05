@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Subject, SubjectStatus, Milestone, Note, StudyMaterial, Schedule } from '../types';
+import { Subject, SubjectStatus, Milestone, Note, StudyMaterial, Schedule, StudentProfileContext } from '../types';
 import { getIcon, COLORS } from '../constants';
 import { geminiService } from '../services/geminiService';
 import { jsPDF } from 'jspdf';
@@ -26,9 +26,10 @@ interface SubjectsModuleProps {
   isMobile: boolean;
   onMaterialUpload: () => void;
   onAddEssence?: (amount: number) => void;
+  studentProfileContext?: StudentProfileContext;
 }
 
-const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDelete, onUpdate, isMobile, onMaterialUpload, onAddEssence }) => {
+const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDelete, onUpdate, isMobile, onMaterialUpload, onAddEssence, studentProfileContext }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -129,6 +130,7 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
             isMobile={isMobile}
             onMaterialUpload={onMaterialUpload}
             onAddEssence={onAddEssence}
+            studentProfileContext={studentProfileContext}
           />
         </div>
       )}
@@ -186,9 +188,10 @@ interface DetailProps {
   isMobile: boolean;
   onMaterialUpload: () => void;
   onAddEssence?: (amount: number) => void;
+  studentProfileContext?: StudentProfileContext;
 }
 
-const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onStatusChange, isMobile, onMaterialUpload, onAddEssence }) => {
+const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onStatusChange, isMobile, onMaterialUpload, onAddEssence, studentProfileContext }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'plan' | 'lab' | 'notas'>('info');
   const [loadingIa, setLoadingIa] = useState(false);
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ia', text: string}[]>([]);
@@ -328,7 +331,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
       Apuntes seleccionados: ${subject.notes.filter(n => selectedContextIds.includes(n.id)).map(n => n.title).join(', ')}
     `;
     
-    const res = await geminiService.queryAcademicOracle(subject.name, query, contextStr, {});
+    const res = await geminiService.queryAcademicOracle(subject.name, query, contextStr, studentProfileContext);
     setChatHistory(prev => [...prev, { role: 'ia', text: res || '' }]);
     setLoadingIa(false);
   };

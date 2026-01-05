@@ -3,12 +3,20 @@ import { supabaseService, UserProfile } from '../services/supabaseService';
 import { getIcon } from '../constants';
 import AuthModule from './AuthModule';
 import { supabase } from '../services/supabaseService';
+import { useInteractionAggregator } from '../hooks/useInteractionAggregator';
+import { Subject, Transaction, JournalEntry, CustomCalendarEvent, Module } from '../types';
 
 interface ProfileModuleProps {
   user: any;
   onAuthSuccess: () => void;
   onSignOut: () => void;
   isMobile: boolean;
+  subjects?: Subject[];
+  transactions?: Transaction[];
+  journalEntries?: JournalEntry[];
+  customEvents?: CustomCalendarEvent[];
+  modules?: Module[];
+  monthlyBudget?: number;
 }
 
 // Función para calcular el progreso del nivel arcano
@@ -32,7 +40,18 @@ const calculateArcaneProgress = (totalEssence: number) => {
   return { progress: 100, currentLevel: 'Arquitecta del Saber Eterno', nextLevel: null };
 };
 
-const ProfileModule: React.FC<ProfileModuleProps> = ({ user, onAuthSuccess, onSignOut, isMobile }) => {
+const ProfileModule: React.FC<ProfileModuleProps> = ({ 
+  user, 
+  onAuthSuccess, 
+  onSignOut, 
+  isMobile,
+  subjects = [],
+  transactions = [],
+  journalEntries = [],
+  customEvents = [],
+  modules = [],
+  monthlyBudget = 0,
+}) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -42,6 +61,36 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({ user, onAuthSuccess, onSi
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [hoveringAvatar, setHoveringAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Generar el SPC completo
+  const spc = useInteractionAggregator({
+    userProfile: profile,
+    subjects,
+    transactions,
+    journalEntries,
+    customEvents,
+    modules,
+    monthlyBudget,
+  });
+
+  // Función para descargar el SPC
+  const handleDownloadSPC = () => {
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 19).replace(/:/g, '-');
+    const filename = `student_profile_context_${dateStr}.json`;
+    
+    const jsonStr = JSON.stringify(spc, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     if (user) {
@@ -202,12 +251,19 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({ user, onAuthSuccess, onSi
               </div>
             </div>
           </div>
-          <div className="mt-6 flex gap-2">
+          <div className="mt-6 flex flex-col gap-2">
             <button
               onClick={() => setEditing(true)}
               className="flex-1 btn-primary py-2 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest"
             >
               Editar
+            </button>
+            <button
+              onClick={handleDownloadSPC}
+              className="flex-1 bg-[#D4AF37]/80 border-2 border-[#D4AF37] text-[#4A233E] py-2 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2"
+            >
+              {getIcon('download', 'w-3 h-3')}
+              Descargar SPC
             </button>
             <button
               onClick={onSignOut}
@@ -454,6 +510,13 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({ user, onAuthSuccess, onSi
                 className="flex-1 btn-primary py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest shadow-lg"
               >
                 Editar Credencial
+              </button>
+              <button
+                onClick={handleDownloadSPC}
+                className="flex-1 bg-[#D4AF37]/80 border-2 border-[#D4AF37] text-[#4A233E] py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest hover:bg-[#D4AF37] transition-colors shadow-lg flex items-center justify-center gap-2"
+              >
+                {getIcon('download', 'w-4 h-4')}
+                Descargar SPC
               </button>
               <button
                 onClick={onSignOut}

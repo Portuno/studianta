@@ -107,5 +107,128 @@ export enum NavView {
   PROFILE = 'Perfil',
   SECURITY = 'Seguridad',
   AI = 'IA',
-  BAZAR = 'Bazar'
+  BAZAR = 'Bazar',
+  ORACLE = 'Oráculo'
+}
+
+// Student Profile Context Interfaces
+export interface FocusSession {
+  date: string; // ISO string
+  duration_minutes: number;
+  subject_id?: string;
+  completed: boolean;
+}
+
+export interface StudentProfileContext {
+  last_sync: string;
+  user_profile: {
+    full_name?: string;
+    email: string;
+    career?: string;
+    institution?: string;
+    arcane_level: string;
+    essence: number;
+    total_essence_earned: number;
+    account_created: string;
+  };
+  financial_state: {
+    budget: number;
+    balance: number;
+    total_spent: number;
+    total_income: number;
+    status: 'saludable' | 'precario' | 'crítico';
+    transactions: Array<{
+      id: string;
+      type: 'Ingreso' | 'Gasto';
+      category: string;
+      amount: number;
+      date: string;
+      description: string;
+    }>;
+    summary: {
+      most_frequent_category?: string;
+      monthly_trend?: 'ascendente' | 'descendente' | 'estable';
+    };
+  };
+  subjects: Array<{
+    id: string;
+    name: string;
+    career: string;
+    status: string;
+    grade?: number;
+    professor?: string;
+    email?: string;
+    aula?: string;
+    term_start?: string;
+    term_end?: string;
+    milestones: Array<{
+      id: string;
+      title: string;
+      date: string;
+      time?: string;
+      type: string;
+    }>;
+    schedules: Array<{
+      id: string;
+      day: string;
+      start_time: string;
+      end_time: string;
+    }>;
+    notes: Array<{
+      id: string;
+      title: string;
+      content: string;
+      date: string;
+      important_fragments?: string[];
+      is_sealed: boolean;
+    }>;
+  }>;
+  academic_summary: {
+    active_subjects_count: number;
+    upcoming_deadlines: number;
+    next_critical_date?: string;
+    total_milestones: number;
+  };
+  calendar: {
+    custom_events: Array<{
+      id: string;
+      title: string;
+      description?: string;
+      date: string;
+      time?: string;
+      color: string;
+      priority: 'low' | 'high';
+    }>;
+    upcoming_events_count: number;
+  };
+  journal: {
+    entries: Array<{
+      id: string;
+      date: string;
+      mood: string;
+      content: string;
+      is_locked: boolean;
+    }>;
+    summary: {
+      total_entries: number;
+      last_entry_days_ago: number;
+      most_common_mood?: string;
+      writing_frequency: 'alta' | 'media' | 'baja';
+      mood_distribution: Record<string, number>;
+    };
+  };
+  focus: {
+    sessions: FocusSession[];
+    summary: {
+      total_hours: number;
+      sessions_this_week: number;
+      consistency_score: number;
+      average_session_duration: number;
+    };
+  };
+  active_modules: Array<{
+    id: string;
+    name: string;
+    active: boolean;
+  }>;
 }
