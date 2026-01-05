@@ -38,15 +38,19 @@ export default defineConfig(({ mode }) => {
         middlewareMode: false,
         // Middleware para ejecutar funciones serverless localmente
         configureServer(server) {
-          server.middlewares.use('/api/gemini', async (req, res, next) => {
-            if (req.method !== 'POST') {
-              res.statusCode = 405;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ error: 'Method not allowed' }));
-              return;
-            }
+          // Insertar el middleware al principio para que se ejecute antes que otros
+          server.middlewares.use((req, res, next) => {
+            // Solo manejar rutas /api/gemini
+            if (req.url?.startsWith('/api/gemini')) {
+              console.log('[Vite Middleware] Petición recibida en', req.url, req.method);
+              
+              if (req.method !== 'POST') {
+                res.statusCode = 405;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: 'Method not allowed' }));
+                return;
+              }
 
-            try {
               // Leer el body de la petición
               let body = '';
               req.on('data', chunk => {
@@ -56,6 +60,8 @@ export default defineConfig(({ mode }) => {
               req.on('end', async () => {
                 let responseSent = false;
                 try {
+                  console.log('[Vite Middleware] Body recibido:', body.substring(0, 100));
+                  
                   // Asegurar que las variables de entorno estén disponibles
                   if (!process.env.GEMINI_API_KEY && serverEnv.GEMINI_API_KEY) {
                     process.env.GEMINI_API_KEY = serverEnv.GEMINI_API_KEY;
@@ -86,9 +92,11 @@ export default defineConfig(({ mode }) => {
                     },
                   };
                   
+                  console.log('[Vite Middleware] Ejecutando handler...');
                   await handler(vercelReq, vercelRes);
                 } catch (error: any) {
-                  console.error('Error ejecutando función serverless:', error);
+                  console.error('[Vite Middleware] Error ejecutando función serverless:', error);
+                  console.error('[Vite Middleware] Stack:', error?.stack);
                   if (!responseSent) {
                     responseSent = true;
                     res.statusCode = 500;
@@ -100,11 +108,9 @@ export default defineConfig(({ mode }) => {
                   }
                 }
               });
-            } catch (error: any) {
-              console.error('Error en middleware:', error);
-              res.statusCode = 500;
-              res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ error: 'Error procesando la petición' }));
+            } else {
+              // Si no es /api/gemini, continuar con el siguiente middleware
+              next();
             }
           });
         },

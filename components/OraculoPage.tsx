@@ -337,9 +337,6 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
           <h1 className="font-cinzel text-2xl md:text-3xl font-black text-[#4A233E] tracking-[0.2em] uppercase mb-2">
             Oráculo Personal
           </h1>
-          <p className="font-garamond text-sm md:text-base text-[#8B5E75] italic">
-            El Oráculo de la Logia Studianta - Consulta tu sabiduría arcana
-          </p>
         </div>
       </header>
 
@@ -440,14 +437,6 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
           {/* Botones de acción */}
           {messages.length > 0 && (
             <div className="flex gap-3 mt-4 justify-end">
-              <button
-                onClick={handleSealVerdict}
-                disabled={!onAddJournalEntry}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#4A233E] font-cinzel text-xs font-black uppercase tracking-widest hover:bg-[#D4AF37]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {getIcon('pen', 'w-4 h-4')}
-                <span>Sellar Veredicto</span>
-              </button>
               <button
                 onClick={handleDownloadParchment}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#4A233E] font-cinzel text-xs font-black uppercase tracking-widest hover:bg-[#D4AF37]/20 transition-all"
