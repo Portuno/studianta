@@ -91,16 +91,27 @@ export default async function handler(req, res) {
     console.error('Gemini API Error:', error);
     
     // Manejo específico de errores de API key
-    if (error?.status === 403 || error?.message?.includes('API key') || error?.message?.includes('leaked') || error?.message?.includes('PERMISSION_DENIED')) {
+    const errorMessage = error?.message || error?.toString() || '';
+    const errorStatus = error?.status || error?.statusCode || error?.code;
+    
+    if (
+      errorStatus === 403 || 
+      errorStatus === 401 ||
+      errorMessage.includes('API key') || 
+      errorMessage.includes('leaked') || 
+      errorMessage.includes('PERMISSION_DENIED') ||
+      errorMessage.includes('invalid') ||
+      errorMessage.includes('unauthorized')
+    ) {
       return res.status(403).json({ 
         error: 'API key inválida o comprometida',
-        message: 'Por favor, genera una nueva API key en Google AI Studio y actualiza GEMINI_API_KEY en Vercel'
+        message: '🔐 ERROR DE SEGURIDAD:\n\nLa API key ha sido invalidada o comprometida.\n\nPor favor, actualiza GEMINI_API_KEY en las variables de entorno de Vercel (no VITE_GEMINI_API_KEY).\n\nPara obtener una nueva clave:\n1. Visita https://aistudio.google.com/apikey\n2. Crea una nueva API key\n3. Agrega GEMINI_API_KEY en Vercel Dashboard → Settings → Environment Variables\n4. Haz un redeploy de tu aplicación'
       });
     }
 
     return res.status(500).json({ 
       error: 'Error al procesar la consulta',
-      message: error?.message || 'Error desconocido'
+      message: errorMessage || 'Error desconocido'
     });
   }
 };
