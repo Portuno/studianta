@@ -174,9 +174,16 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
 
     try {
       // El SPC ya está actualizado automáticamente por el hook
+      // Preparar historial de mensajes (últimos 10 intercambios para mantener contexto sin sobrecargar)
+      const recentHistory = messages.slice(-10).map(msg => ({
+        role: msg.role === 'user' ? 'user' as const : 'oracle' as const,
+        content: msg.content,
+      }));
+
       const response = await geminiService.queryPersonalOracle(
         userMessage.content,
-        studentProfileContext
+        studentProfileContext,
+        recentHistory
       );
 
       const oracleMessage: Message = {

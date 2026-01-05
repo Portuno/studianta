@@ -100,11 +100,13 @@ export class GeminiService {
 
   async queryPersonalOracle(
     prompt: string,
-    studentProfileContext: StudentProfileContext
+    studentProfileContext: StudentProfileContext,
+    messageHistory?: Array<{ role: 'user' | 'oracle'; content: string }>
   ) {
     return this.callServerEndpoint('personal', {
       prompt,
       studentProfileContext,
+      messageHistory: messageHistory || [],
     });
   }
 }

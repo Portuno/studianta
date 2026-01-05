@@ -128,7 +128,7 @@ export default async function handler(req, res) {
 
     if (type === 'personal') {
       // Oráculo Personal
-      const { prompt, studentProfileContext } = params;
+      const { prompt, studentProfileContext, messageHistory = [] } = params;
       
       // Formatear el SPC completo como JSON para el system prompt
       const spcJSON = JSON.stringify(studentProfileContext, null, 2);
@@ -161,11 +161,37 @@ REGLAS VISUALES:
 SPC DE LA ESTUDIANTE:
 ${spcJSON}
 
-INSTRUCCIÓN FINAL: Tu objetivo es que la alumna sienta que tiene el control de su carrera. Hablá como alguien que sabe mucho, que es ordenado y que siempre tiene un plan bajo la manga.`;
+INSTRUCCIÓN FINAL: Tu objetivo es que la alumna sienta que tiene el control de su carrera. Hablá como alguien que sabe mucho, que es ordenado y que siempre tiene un plan bajo la manga. Recuerda el contexto de la conversación anterior para mantener coherencia y continuidad.`;
+
+      // Construir el historial conversacional
+      // Si hay historial, construir el contexto conversacional
+      let contents;
+      
+      if (messageHistory && messageHistory.length > 0) {
+        // Construir array de mensajes para mantener el contexto
+        const historyMessages = [];
+        
+        // Agregar mensajes del historial (mapear 'oracle' a 'model' para Gemini)
+        messageHistory.forEach(msg => {
+          if (msg.role === 'user') {
+            historyMessages.push({ role: 'user', parts: [{ text: msg.content }] });
+          } else if (msg.role === 'oracle') {
+            historyMessages.push({ role: 'model', parts: [{ text: msg.content }] });
+          }
+        });
+        
+        // Agregar el mensaje actual del usuario
+        historyMessages.push({ role: 'user', parts: [{ text: prompt }] });
+        
+        contents = historyMessages;
+      } else {
+        // Sin historial, solo el mensaje actual
+        contents = [{ role: 'user', parts: [{ text: prompt }] }];
+      }
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Consulta de la Buscadora de Luz:\n\n${prompt}`,
+        contents: contents,
         config: {
           systemInstruction: systemPrompt,
           temperature: 0.8,
