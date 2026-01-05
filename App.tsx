@@ -18,6 +18,7 @@ import FocusFloatingWidget from './components/FocusFloatingWidget';
 import OraculoPage from './components/OraculoPage';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
+import Footer from './components/Footer';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -813,9 +814,12 @@ const App: React.FC = () => {
         />
       )}
       
-      <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pb-32' : ''}`}>
-        {renderView()}
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pb-32' : ''}`}>
+          {renderView()}
+        </main>
+        {!isPolicyPage && <Footer setActiveView={setActiveView} isMobile={isMobile} />}
+      </div>
 
       {isMobile && !isPolicyPage && (
         <Navigation 

@@ -266,6 +266,27 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
               <p className="font-garamond text-[#4A233E] mt-2">
                 A través de la aplicación: Perfil → Configuración → Soporte
               </p>
+              <p className="font-garamond text-[#4A233E] mt-4">
+                Studianta es una creación de{' '}
+                <a
+                  href="https://www.versaproducciones.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#E35B8F] hover:text-[#4A233E] font-semibold underline-offset-2 hover:underline transition-colors"
+                >
+                  Versa Producciones
+                </a>
+                . Para más información, visite{' '}
+                <a
+                  href="https://www.versaproducciones.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#E35B8F] hover:text-[#4A233E] font-semibold underline-offset-2 hover:underline transition-colors"
+                >
+                  www.versaproducciones.com
+                </a>
+                .
+              </p>
             </div>
           </section>
         </div>
@@ -274,6 +295,17 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
         <div className="mt-8 text-center">
           <p className="font-garamond text-sm text-[#8B5E75]">
             © {new Date().getFullYear()} Studianta - Sanctuary of Knowledge. Todos los derechos reservados.
+          </p>
+          <p className="font-garamond text-xs text-[#8B5E75] mt-2">
+            Studianta es una creación de{' '}
+            <a
+              href="https://www.versaproducciones.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#4A233E] hover:text-[#E35B8F] font-semibold underline-offset-2 hover:underline transition-colors"
+            >
+              Versa Producciones
+            </a>
           </p>
         </div>
       </div>
