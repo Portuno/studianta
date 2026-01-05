@@ -4,7 +4,7 @@ import { getIcon } from '../constants';
 import AuthModule from './AuthModule';
 import { supabase } from '../services/supabaseService';
 import { useInteractionAggregator } from '../hooks/useInteractionAggregator';
-import { Subject, Transaction, JournalEntry, CustomCalendarEvent, Module } from '../types';
+import { Subject, Transaction, JournalEntry, CustomCalendarEvent, Module, NavView } from '../types';
 
 interface ProfileModuleProps {
   user: any;
@@ -17,6 +17,7 @@ interface ProfileModuleProps {
   customEvents?: CustomCalendarEvent[];
   modules?: Module[];
   monthlyBudget?: number;
+  setActiveView?: (view: any) => void;
 }
 
 // Función para calcular el progreso del nivel arcano
@@ -51,6 +52,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
   customEvents = [],
   modules = [],
   monthlyBudget = 0,
+  setActiveView,
 }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -479,6 +481,31 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Enlaces Legales */}
+        {setActiveView && (
+          <div className="relative z-10 mt-6 pt-6 border-t border-[#F8C8DC]/50">
+            <p className="text-[8px] uppercase font-bold text-[#8B5E75] mb-3 font-inter tracking-[0.3em] text-center">
+              Información Legal
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => setActiveView(NavView.PRIVACY_POLICY)}
+                className="px-4 py-2 bg-white/60 border border-[#F8C8DC] text-[#4A233E] rounded-lg font-garamond text-sm hover:bg-white/80 transition-colors flex items-center justify-center gap-2"
+              >
+                {getIcon('security', 'w-4 h-4')}
+                Política de Privacidad
+              </button>
+              <button
+                onClick={() => setActiveView(NavView.TERMS_OF_SERVICE)}
+                className="px-4 py-2 bg-white/60 border border-[#F8C8DC] text-[#4A233E] rounded-lg font-garamond text-sm hover:bg-white/80 transition-colors flex items-center justify-center gap-2"
+              >
+                {getIcon('file', 'w-4 h-4')}
+                Términos y Condiciones
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Botones de Acción - En la parte inferior */}
         <div className="relative z-10 mt-8 pt-6 border-t border-[#F8C8DC]/50 flex flex-col sm:flex-row gap-4">

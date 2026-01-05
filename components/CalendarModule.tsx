@@ -1,7 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Subject, Transaction, JournalEntry, MoodType, CustomCalendarEvent } from '../types';
 import { getIcon, COLORS } from '../constants';
+import { googleCalendarService } from '../services/googleCalendarService';
+import { supabase } from '../services/supabaseService';
 
 interface CalendarModuleProps {
   subjects: Subject[];
@@ -12,6 +14,7 @@ interface CalendarModuleProps {
   onDeleteCustomEvent: (id: string) => void;
   onUpdateCustomEvent?: (e: CustomCalendarEvent) => void;
   isMobile: boolean;
+  userId?: string;
 }
 
 interface ConvergenceEvent {
@@ -43,13 +46,165 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
   onAddCustomEvent,
   onDeleteCustomEvent,
   onUpdateCustomEvent,
-  isMobile 
+  isMobile,
+  userId
 }) => {
   const [view, setView] = useState<'month' | 'week' | 'day'>(isMobile ? 'day' : 'week');
   const [anchorDate, setAnchorDate] = useState(new Date());
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CustomCalendarEvent | null>(null);
   const [eventToDelete, setEventToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [showConnectivitySection, setShowConnectivitySection] = useState(false);
+
+  // Verificar conexión de Google Calendar al cargar
+  useEffect(() => {
+    if (userId) {
+      const connected = googleCalendarService.isConnected(userId);
+      setIsGoogleConnected(connected);
+      if (connected) {
+        googleCalendarService.loadTokens(userId);
+      }
+    }
+
+    // Manejar callback de OAuth
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+    
+    if (code && state && userId) {
+      handleOAuthCallback(code, state);
+      // Limpiar URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [userId]);
+
+  const handleOAuthCallback = async (code: string, state: string) => {
+    try {
+      const tokens = await googleCalendarService.handleOAuthCallback(code, state);
+      if (userId) {
+        googleCalendarService.saveTokens(userId, tokens);
+        setIsGoogleConnected(true);
+      }
+    } catch (error) {
+      console.error('Error en callback de OAuth:', error);
+      alert('Error al conectar con Google Calendar. Por favor, intenta nuevamente.');
+    }
+  };
+
+  const handleConnectGoogle = async () => {
+    try {
+      await googleCalendarService.initiateOAuth();
+    } catch (error: any) {
+      alert(`Error al iniciar conexión: ${error.message}`);
+    }
+  };
+
+  const handleSyncGoogle = async () => {
+    if (!userId) return;
+    
+    setIsSyncing(true);
+    try {
+      const result = await googleCalendarService.syncEvents(subjects, customEvents);
+      alert(`Sincronización completada: ${result.created} eventos creados${result.errors > 0 ? `, ${result.errors} errores` : ''}`);
+    } catch (error: any) {
+      alert(`Error al sincronizar: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleDisconnectGoogle = () => {
+    if (!userId) return;
+    if (confirm('¿Estás segura de que deseas desconectar tu cuenta de Google Calendar?')) {
+      googleCalendarService.disconnect(userId);
+      setIsGoogleConnected(false);
+    }
+  };
+
+  const handleExportICS = () => {
+    // Generar archivo .ics
+    let icsContent = 'BEGIN:VCALENDAR\r\n';
+    icsContent += 'VERSION:2.0\r\n';
+    icsContent += 'PRODID:-//Studianta//Calendario Académico//ES\r\n';
+    icsContent += 'CALSCALE:GREGORIAN\r\n';
+    icsContent += 'METHOD:PUBLISH\r\n';
+
+    // Función para formatear fecha/hora en formato iCalendar
+    const formatICSDateTime = (date: Date, time?: string): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      if (time) {
+        const [hours, minutes] = time.split(':');
+        return `${year}${month}${day}T${hours}${minutes}00`;
+      }
+      return `${year}${month}${day}`;
+    };
+
+    // Función para escapar texto para iCalendar
+    const escapeICS = (text: string): string => {
+      return text.replace(/\\/g, '\\\\')
+                 .replace(/;/g, '\\;')
+                 .replace(/,/g, '\\,')
+                 .replace(/\n/g, '\\n');
+    };
+
+    // Agregar eventos de milestones
+    subjects.forEach(subject => {
+      subject.milestones.forEach(milestone => {
+        const eventDate = new Date(milestone.date);
+        const startDateTime = formatICSDateTime(eventDate, milestone.time);
+        const endDateTime = milestone.time 
+          ? formatICSDateTime(new Date(eventDate.getTime() + 2 * 60 * 60 * 1000), milestone.time)
+          : formatICSDateTime(new Date(eventDate.getTime() + 24 * 60 * 60 * 1000));
+
+        icsContent += 'BEGIN:VEVENT\r\n';
+        icsContent += `UID:${milestone.id}@studianta\r\n`;
+        icsContent += `DTSTART${milestone.time ? '' : ';VALUE=DATE'}:${startDateTime}\r\n`;
+        icsContent += `DTEND${milestone.time ? '' : ';VALUE=DATE'}:${endDateTime}\r\n`;
+        icsContent += `SUMMARY:${escapeICS(`[Studianta] ${milestone.type}: ${subject.name}`)}\r\n`;
+        icsContent += `DESCRIPTION:${escapeICS(`Materia: ${subject.name}\\nTipo: ${milestone.type}\\n${milestone.title}`)}\r\n`;
+        icsContent += `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z\r\n`;
+        icsContent += 'END:VEVENT\r\n';
+      });
+    });
+
+    // Agregar eventos personalizados
+    customEvents.forEach(event => {
+      const eventDate = new Date(event.date);
+      const startDateTime = formatICSDateTime(eventDate, event.time);
+      const endDateTime = event.time
+        ? formatICSDateTime(new Date(eventDate.getTime() + 2 * 60 * 60 * 1000), event.time)
+        : formatICSDateTime(new Date(eventDate.getTime() + 24 * 60 * 60 * 1000));
+
+      icsContent += 'BEGIN:VEVENT\r\n';
+      icsContent += `UID:${event.id}@studianta\r\n`;
+      icsContent += `DTSTART${event.time ? '' : ';VALUE=DATE'}:${startDateTime}\r\n`;
+      icsContent += `DTEND${event.time ? '' : ';VALUE=DATE'}:${endDateTime}\r\n`;
+      icsContent += `SUMMARY:${escapeICS(`[Studianta] ${event.title}`)}\r\n`;
+      if (event.description) {
+        icsContent += `DESCRIPTION:${escapeICS(event.description)}\r\n`;
+      }
+      icsContent += `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z\r\n`;
+      icsContent += 'END:VEVENT\r\n';
+    });
+
+    icsContent += 'END:VCALENDAR\r\n';
+
+    // Descargar archivo
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `studianta-calendario-${new Date().toISOString().split('T')[0]}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const navigate = (direction: number) => {
     const next = new Date(anchorDate);
@@ -499,8 +654,117 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
               </button>
             ))}
           </div>
+
+          {/* Botón de Conectividad */}
+          <button
+            onClick={() => setShowConnectivitySection(!showConnectivitySection)}
+            className="w-10 h-10 rounded-full glass-card border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm hover:bg-white/60"
+            title="Conectividad"
+          >
+            {getIcon('download', 'w-5 h-5')}
+          </button>
         </div>
       </header>
+
+      {/* Sección de Conectividad */}
+      {showConnectivitySection && (
+        <div className="mb-4 glass-card rounded-[1.5rem] p-4 md:p-6 border-2 border-[#D4AF37]/30 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-cinzel text-lg font-bold text-[#4A233E] uppercase tracking-wider">
+              Conectividad
+            </h3>
+            <button
+              onClick={() => setShowConnectivitySection(false)}
+              className="text-[#8B5E75] hover:text-[#4A233E] transition-colors"
+            >
+              {getIcon('x', 'w-5 h-5')}
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {/* Exportar Crónicas (.ics) */}
+            <div className="flex items-center justify-between p-4 bg-white/40 rounded-xl border border-[#F8C8DC]/50">
+              <div className="flex items-center gap-3">
+                {getIcon('download', 'w-5 h-5 text-[#8B5E75]')}
+                <div>
+                  <p className="font-cinzel text-sm font-bold text-[#4A233E]">Exportar Crónicas</p>
+                  <p className="text-[9px] text-[#8B5E75] uppercase tracking-wider">Descargar calendario en formato .ics</p>
+                </div>
+              </div>
+              <button
+                onClick={handleExportICS}
+                className="px-4 py-2 bg-[#D4AF37]/80 border-2 border-[#D4AF37] text-[#4A233E] rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest hover:bg-[#D4AF37] transition-colors shadow-md"
+              >
+                Exportar
+              </button>
+            </div>
+
+            {/* Puente con Google */}
+            <div className="flex items-center justify-between p-4 bg-white/40 rounded-xl border border-[#F8C8DC]/50">
+              <div className="flex items-center gap-3">
+                {isGoogleConnected ? (
+                  <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                    {getIcon('check', 'w-3 h-3 text-white')}
+                  </div>
+                ) : (
+                  getIcon('calendar', 'w-5 h-5 text-[#8B5E75]')
+                )}
+                <div>
+                  <p className="font-cinzel text-sm font-bold text-[#4A233E]">
+                    Puente con Google
+                    {isGoogleConnected && (
+                      <span className="ml-2 text-[10px] text-green-600 font-normal">Sincronizado</span>
+                    )}
+                  </p>
+                  <p className="text-[9px] text-[#8B5E75] uppercase tracking-wider">
+                    {isGoogleConnected 
+                      ? 'Sincronización automática activa' 
+                      : 'Conecta tu cuenta de Google Calendar'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {isGoogleConnected ? (
+                  <>
+                    <button
+                      onClick={handleSyncGoogle}
+                      disabled={isSyncing}
+                      className="px-4 py-2 bg-[#E35B8F] text-white rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest hover:bg-[#E35B8F]/90 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {isSyncing ? (
+                        <>
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Sincronizando...
+                        </>
+                      ) : (
+                        <>
+                          {getIcon('check', 'w-3 h-3')}
+                          Sincronizar
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleDisconnectGoogle}
+                      className="px-3 py-2 bg-red-100/60 border-2 border-red-300 text-red-700 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest hover:bg-red-200/60 transition-colors"
+                      title="Desconectar"
+                    >
+                      {getIcon('x', 'w-4 h-4')}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleConnectGoogle}
+                    className="px-4 py-2 bg-[#4285F4] text-white rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest hover:bg-[#4285F4]/90 transition-colors shadow-md flex items-center gap-2"
+                  >
+                    {getIcon('calendar', 'w-4 h-4')}
+                    Vincular
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 glass-card rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden flex flex-col shadow-xl relative border-[#D4AF37]/10">
         {view === 'month' ? (

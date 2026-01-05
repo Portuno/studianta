@@ -16,11 +16,23 @@ import ProfileModule from './components/ProfileModule';
 import BazarArtefactos from './components/BazarArtefactos';
 import FocusFloatingWidget from './components/FocusFloatingWidget';
 import OraculoPage from './components/OraculoPage';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [initialLoading, setInitialLoading] = useState(true); // Solo para la carga inicial
-  const [activeView, setActiveView] = useState<NavView>(NavView.DASHBOARD);
+  
+  // Detectar página desde URL para acceso directo a políticas
+  const getInitialView = (): NavView => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const page = urlParams.get('page');
+    if (page === 'privacy-policy') return NavView.PRIVACY_POLICY;
+    if (page === 'terms-of-service') return NavView.TERMS_OF_SERVICE;
+    return NavView.DASHBOARD;
+  };
+  
+  const [activeView, setActiveView] = useState<NavView>(getInitialView());
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -695,7 +707,8 @@ const App: React.FC = () => {
           onAddCustomEvent={handleAddCalendarEvent}
           onDeleteCustomEvent={handleDeleteCalendarEvent}
           onUpdateCustomEvent={handleUpdateCalendarEvent}
-          isMobile={isMobile} 
+          isMobile={isMobile}
+          userId={user?.id}
         />;
       case NavView.FINANCE:
         return <FinanceModule 
@@ -741,6 +754,7 @@ const App: React.FC = () => {
           customEvents={customEvents}
           modules={modules}
           monthlyBudget={monthlyBudget}
+          setActiveView={setActiveView}
         />;
       case NavView.BAZAR:
         return <BazarArtefactos 
@@ -760,19 +774,32 @@ const App: React.FC = () => {
           isMobile={isMobile}
           onAddJournalEntry={handleAddJournalEntry}
         />;
+      case NavView.PRIVACY_POLICY:
+        return <PrivacyPolicy 
+          onBack={() => setActiveView(NavView.DASHBOARD)}
+          isMobile={isMobile}
+        />;
+      case NavView.TERMS_OF_SERVICE:
+        return <TermsOfService 
+          onBack={() => setActiveView(NavView.DASHBOARD)}
+          isMobile={isMobile}
+        />;
       default:
         return <Dashboard modules={modules} onActivate={toggleModule} isMobile={isMobile} setActiveView={setActiveView} />;
     }
   };
 
+  // Ocultar navegación en páginas de políticas
+  const isPolicyPage = activeView === NavView.PRIVACY_POLICY || activeView === NavView.TERMS_OF_SERVICE;
+
   return (
     <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} h-screen w-screen overflow-hidden`}>
-      {!isMobile && (
+      {!isMobile && !isPolicyPage && (
         <Navigation 
           activeView={activeView} 
           setActiveView={(view) => {
             // Si no hay usuario y se intenta acceder a un módulo que no sea Dashboard, mostrar login
-            if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE) {
+            if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE) {
               setShowLoginModal(true);
             } else {
               setActiveView(view);
@@ -786,16 +813,16 @@ const App: React.FC = () => {
         />
       )}
       
-      <main className={`flex-1 relative overflow-y-auto p-4 md:p-8 ${isMobile ? 'pb-32' : 'pb-8'}`}>
+      <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pb-32' : ''}`}>
         {renderView()}
       </main>
 
-      {isMobile && (
+      {isMobile && !isPolicyPage && (
         <Navigation 
           activeView={activeView}
           setActiveView={(view) => {
             // Si no hay usuario y se intenta acceder a un módulo que no sea Dashboard, mostrar login
-            if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE) {
+            if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE) {
               setShowLoginModal(true);
             } else {
               setActiveView(view);

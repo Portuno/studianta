@@ -108,7 +108,9 @@ export enum NavView {
   SECURITY = 'Seguridad',
   AI = 'IA',
   BAZAR = 'Bazar',
-  ORACLE = 'Oráculo'
+  ORACLE = 'Oráculo',
+  PRIVACY_POLICY = 'Política de Privacidad',
+  TERMS_OF_SERVICE = 'Términos y Condiciones'
 }
 
 // Student Profile Context Interfaces
