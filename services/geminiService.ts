@@ -15,6 +15,8 @@ export class GeminiService {
     // Siempre usar el endpoint del servidor (tanto en desarrollo como en producción)
     // Esto permite usar GEMINI_API_KEY sin prefijo VITE_ en el servidor
     try {
+      console.log(`[GeminiService] Llamando a ${API_ENDPOINT} con tipo: ${type}`);
+      
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: {
@@ -26,8 +28,15 @@ export class GeminiService {
         }),
       });
 
+      console.log(`[GeminiService] Respuesta recibida:`, {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+      });
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error(`[GeminiService] Error en respuesta:`, errorData);
         
         // Manejo específico de errores de API key
         if (response.status === 403 || errorData.message?.includes('API key')) {
@@ -42,12 +51,24 @@ export class GeminiService {
       }
 
       const data = await response.json();
+      console.log(`[GeminiService] Datos recibidos:`, { hasText: !!data.text, textLength: data.text?.length });
       return data.text || 'No se recibió respuesta del Oráculo.';
     } catch (error: any) {
-      console.error(`Gemini ${type} Error:`, error);
+      console.error(`[GeminiService] Error en ${type}:`, error);
+      console.error(`[GeminiService] Detalles del error:`, {
+        message: error?.message,
+        name: error?.name,
+        stack: error?.stack,
+      });
       
       // Error de red o conexión
-      if (error.message?.includes('fetch') || error.message?.includes('Network') || error.message?.includes('404')) {
+      if (
+        error.message?.includes('fetch') || 
+        error.message?.includes('Network') || 
+        error.message?.includes('404') ||
+        error.message?.includes('Failed to fetch') ||
+        error.name === 'TypeError'
+      ) {
         return "📌 RECONOCIMIENTO: Se ha detectado una interferencia en el Atanor.\n\n📖 CONTEXTO: Error de conexión con la red arcana.\n\n💡 EXPLICACIÓN: No he podido canalizar la respuesta del Oráculo. Por favor, verifica tu conexión o intenta en unos instantes.";
       }
 

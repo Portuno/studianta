@@ -65,13 +65,11 @@ export default async function handler(req, res) {
         spcText += `--- FIN CONTEXTO DEL ESTUDIANTE ---\n`;
       }
       
+      const promptText = `${spcText}${context ? `--- CONTEXTO ACADÉMICO Y MATERIALES ---\n${context}\n--- FIN CONTEXTO ---\n\n` : ''}Pregunta del estudiante: ${prompt}`;
+      
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [{
-          parts: [{
-            text: `${spcText}${context ? `--- CONTEXTO ACADÉMICO Y MATERIALES ---\n${context}\n--- FIN CONTEXTO ---\n\n` : ''}Pregunta del estudiante: ${prompt}`
-          }]
-        }],
+        contents: promptText,
         config: {
           systemInstruction: `Eres el Oráculo Académico de Studianta, un tutor de élite para la asignatura "${subjectName}". 
           Tu tono es místico, erudito y profundamente empoderador.
@@ -84,6 +82,12 @@ export default async function handler(req, res) {
           temperature: 0.7,
         }
       });
+
+      // Verificar que la respuesta tenga texto
+      if (!response.text) {
+        console.error('Respuesta sin texto:', response);
+        throw new Error('El Oráculo Académico no pudo generar una respuesta. Por favor, intenta nuevamente.');
+      }
 
       return res.status(200).json({ text: response.text });
     }
@@ -106,16 +110,18 @@ export default async function handler(req, res) {
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [{
-          parts: [{
-            text: `ESTADO FINANCIERO:\nPresupuesto: $${budget}\nBalance: $${balance}\nÚltimos Movimientos:\n${transactionsContext}`
-          }]
-        }],
+        contents: `ESTADO FINANCIERO:\nPresupuesto: $${budget}\nBalance: $${balance}\nÚltimos Movimientos:\n${transactionsContext}`,
         config: {
           systemInstruction: `Eres el Oráculo de la Balanza de Latón. Proporciona un diagnóstico financiero sofisticado y aristocrático.`,
           temperature: 0.5,
         }
       });
+
+      // Verificar que la respuesta tenga texto
+      if (!response.text) {
+        console.error('Respuesta sin texto:', response);
+        throw new Error('El Oráculo de la Balanza no pudo generar una respuesta. Por favor, intenta nuevamente.');
+      }
 
       return res.status(200).json({ text: response.text });
     }
@@ -195,16 +201,18 @@ IMPORTANTE:
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [{
-          parts: [{
-            text: `Consulta de la Buscadora de Luz:\n\n${prompt}`
-          }]
-        }],
+        contents: `Consulta de la Buscadora de Luz:\n\n${prompt}`,
         config: {
           systemInstruction: systemPrompt,
           temperature: 0.8,
         }
       });
+
+      // Verificar que la respuesta tenga texto
+      if (!response.text) {
+        console.error('Respuesta sin texto:', response);
+        throw new Error('El Oráculo no pudo generar una respuesta. Por favor, intenta nuevamente.');
+      }
 
       return res.status(200).json({ text: response.text });
     }
@@ -212,6 +220,14 @@ IMPORTANTE:
     return res.status(400).json({ error: 'Tipo de consulta no válido' });
   } catch (error) {
     console.error('Gemini API Error:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      status: error?.status,
+      statusCode: error?.statusCode,
+      code: error?.code,
+      name: error?.name,
+    });
     
     // Manejo específico de errores de API key
     const errorMessage = error?.message || error?.toString() || '';
