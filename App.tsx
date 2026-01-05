@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavView, Subject, Module, Transaction, JournalEntry, CustomCalendarEvent } from './types';
 import { INITIAL_MODULES, getIcon } from './constants';
 import { supabaseService, supabase, UserProfile } from './services/supabaseService';
+import { Analytics } from '@vercel/analytics/react';
 import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
 import SubjectsModule from './components/SubjectsModule';
@@ -11,6 +12,7 @@ import FocusModule from './components/FocusModule';
 import DiaryModule from './components/DiaryModule';
 import AuthModule from './components/AuthModule';
 import ProfileModule from './components/ProfileModule';
+import BazarArtefactos from './components/BazarArtefactos';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -662,6 +664,12 @@ const App: React.FC = () => {
           onSignOut={handleSignOut}
           isMobile={isMobile} 
         />;
+      case NavView.BAZAR:
+        return <BazarArtefactos 
+          isMobile={isMobile}
+          essence={user ? essence : 500}
+          onEssenceChange={setEssence}
+        />;
       default:
         return <Dashboard modules={modules} onActivate={toggleModule} isMobile={isMobile} setActiveView={setActiveView} />;
     }
@@ -721,6 +729,8 @@ const App: React.FC = () => {
           }}
         />
       )}
+
+      <Analytics />
     </div>
   );
 };

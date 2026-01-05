@@ -40,7 +40,8 @@ import {
   Edit,
   Eye as EyeIcon,
   Play,
-  Search
+  Search,
+  ShoppingBag
 } from 'lucide-react';
 
 export const COLORS = {
@@ -63,6 +64,7 @@ export const INITIAL_MODULES = [
   { id: 'finance', name: 'Balanza de Latón', description: 'Control de Gastos: Gestiona tu presupuesto y salud económica.', cost: 60, active: false, icon: 'scale' },
   { id: 'ai', name: 'Oráculo de Estudio', description: 'Asistente IA: Análisis de PDFs y generación de evaluaciones personalizadas.', cost: 70, active: false, icon: 'brain' },
   { id: 'social', name: 'Ventana al Mundo', description: 'Modo Colaborativo: Conecta con la Logia y comparte apuntes.', cost: 100, active: false, icon: 'users' },
+  { id: 'bazar', name: 'Bazar de Artefactos', description: 'Tienda arcana donde puedes gastar Esencia para desbloquear nuevas funcionalidades.', cost: 300, active: false, icon: 'bazar' },
 ];
 
 export const getIcon = (name: string, className?: string) => {
@@ -108,6 +110,7 @@ export const getIcon = (name: string, className?: string) => {
     case 'eye': return <EyeIcon className={className} />;
     case 'play': return <Play className={className} />;
     case 'search': return <Search className={className} />;
+    case 'bazar': return <ShoppingBag className={className} />;
     default: return null;
   }
 };

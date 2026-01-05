@@ -37,7 +37,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     'ai': NavView.AI,
     'profile': NavView.PROFILE,
     'security': NavView.SECURITY,
-    'social': NavView.SOCIAL
+    'social': NavView.SOCIAL,
+    'bazar': NavView.BAZAR
   };
 
   const GRID_MAPPING: Record<number, { view: NavView; label: string; moduleId?: string }> = {
@@ -50,6 +51,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     70: { view: NavView.SOCIAL, label: 'S', moduleId: 'social' },
     28: { view: NavView.SECURITY, label: 'X', moduleId: 'security' },
     52: { view: NavView.AI, label: 'O', moduleId: 'ai' },
+    22: { view: NavView.BAZAR, label: 'B', moduleId: 'bazar' },
   };
 
   const isModuleActive = (moduleId?: string) => {

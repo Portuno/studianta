@@ -106,5 +106,6 @@ export enum NavView {
   SOCIAL = 'Social',
   PROFILE = 'Perfil',
   SECURITY = 'Seguridad',
-  AI = 'IA'
+  AI = 'IA',
+  BAZAR = 'Bazar'
 }

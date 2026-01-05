@@ -72,6 +72,14 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
             active={activeView === NavView.FINANCE} 
             onClick={() => setActiveView(NavView.FINANCE)} 
           />
+          <NavButton 
+            id={NavView.BAZAR} 
+            icon="bazar" 
+            label="Bazar" 
+            locked={isLocked('bazar')} 
+            active={activeView === NavView.BAZAR} 
+            onClick={() => setActiveView(NavView.BAZAR)} 
+          />
         </div>
       </nav>
     );
@@ -84,6 +92,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
     { id: NavView.FOCUS, icon: 'hourglass', moduleId: 'focus', label: 'Enfoque' },
     { id: NavView.DIARY, icon: 'pen', moduleId: 'diary', label: 'Diario' },
     { id: NavView.FINANCE, icon: 'scale', moduleId: 'finance', label: 'Balanza' },
+    { id: NavView.BAZAR, icon: 'bazar', moduleId: 'bazar', label: 'Bazar' },
     { id: NavView.DASHBOARD, icon: 'sparkles', moduleId: '', label: 'Atanor' },
   ];
 
