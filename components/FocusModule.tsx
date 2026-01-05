@@ -9,13 +9,50 @@ interface FocusModuleProps {
   onAddEssence: (amount: number) => void;
   onAddCalendarEvent?: (event: Omit<CustomCalendarEvent, 'id'>) => void;
   isMobile: boolean;
+  // Estado global del focus
+  focusState?: {
+    isActive: boolean;
+    isPaused: boolean;
+    timeLeft: number;
+    totalTime: number;
+    selectedSubjectId: string | null;
+    sanctuaryMode: boolean;
+  };
+  onFocusStateChange?: (state: {
+    isActive: boolean;
+    isPaused: boolean;
+    timeLeft: number;
+    totalTime: number;
+    selectedSubjectId: string | null;
+    sanctuaryMode: boolean;
+  }) => void;
 }
 
-const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, onAddEssence, onAddCalendarEvent, isMobile }) => {
-  const [isActive, setIsActive] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [totalTime, setTotalTime] = useState(25 * 60);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjects[0]?.id || '');
+const FocusModule: React.FC<FocusModuleProps> = ({ 
+  subjects, 
+  onUpdateSubject, 
+  onAddEssence, 
+  onAddCalendarEvent, 
+  isMobile,
+  focusState,
+  onFocusStateChange
+}) => {
+  // Usar estado global si está disponible, sino usar estado local
+  const [localIsActive, setLocalIsActive] = useState(false);
+  const [localTimeLeft, setLocalTimeLeft] = useState(25 * 60);
+  const [localTotalTime, setLocalTotalTime] = useState(25 * 60);
+  const [localSelectedSubjectId, setLocalSelectedSubjectId] = useState<string | null>(subjects[0]?.id || null);
+  const [localIsPaused, setLocalIsPaused] = useState(false);
+  const [localSanctuaryMode, setLocalSanctuaryMode] = useState(false);
+
+  // Usar estado global o local
+  const isActive = focusState?.isActive ?? localIsActive;
+  const timeLeft = focusState?.timeLeft ?? localTimeLeft;
+  const totalTime = focusState?.totalTime ?? localTotalTime;
+  const selectedSubjectId = focusState?.selectedSubjectId ?? localSelectedSubjectId;
+  const isPaused = focusState?.isPaused ?? localIsPaused;
+  const sanctuaryMode = focusState?.sanctuaryMode ?? localSanctuaryMode;
+
   const [showReflection, setShowReflection] = useState(false);
   const [reflectionData, setReflectionData] = useState({
     motivation: 5,
@@ -25,14 +62,52 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
   });
   const [showCustomTimeModal, setShowCustomTimeModal] = useState(false);
   const [customMinutes, setCustomMinutes] = useState('');
-  const [sanctuaryMode, setSanctuaryMode] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Función para actualizar estado (global o local)
+  const updateState = (updates: Partial<{
+    isActive: boolean;
+    isPaused: boolean;
+    timeLeft: number;
+    totalTime: number;
+    selectedSubjectId: string | null;
+    sanctuaryMode: boolean;
+  }>) => {
+    if (onFocusStateChange && focusState) {
+      onFocusStateChange({ ...focusState, ...updates });
+    } else {
+      if (updates.isActive !== undefined) setLocalIsActive(updates.isActive);
+      if (updates.isPaused !== undefined) setLocalIsPaused(updates.isPaused);
+      if (updates.timeLeft !== undefined) setLocalTimeLeft(updates.timeLeft);
+      if (updates.totalTime !== undefined) setLocalTotalTime(updates.totalTime);
+      if (updates.selectedSubjectId !== undefined) setLocalSelectedSubjectId(updates.selectedSubjectId);
+      if (updates.sanctuaryMode !== undefined) setLocalSanctuaryMode(updates.sanctuaryMode);
+    }
+  };
+
   useEffect(() => {
-    if (isActive && timeLeft > 0) {
+    if (isActive && !isPaused && timeLeft > 0) {
       timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
+        // Usar función de actualización que lee el estado actual
+        if (onFocusStateChange && focusState) {
+          const newTime = focusState.timeLeft - 1;
+          if (newTime > 0) {
+            onFocusStateChange({ ...focusState, timeLeft: newTime });
+          } else {
+            handleCompleteSession();
+          }
+        } else {
+          setLocalTimeLeft(prev => {
+            const newTime = prev - 1;
+            if (newTime > 0) {
+              return newTime;
+            } else {
+              handleCompleteSession();
+              return prev;
+            }
+          });
+        }
       }, 1000);
     } else if (timeLeft === 0 && isActive) {
       handleCompleteSession();
@@ -40,24 +115,34 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isActive, timeLeft]);
+  }, [isActive, isPaused, timeLeft, focusState, onFocusStateChange]);
 
   const handleStart = () => {
-    if (!selectedSubjectId) {
-      alert("Por favor, selecciona una asignatura para vincular tu energía.");
-      return;
-    }
-    setIsActive(true);
+    // Ya no requiere asignatura - es opcional
+    // Auto-iniciar deep focus (sanctuary mode)
+    updateState({ 
+      isActive: true, 
+      isPaused: false,
+      sanctuaryMode: true 
+    });
+  };
+
+  const handlePause = () => {
+    updateState({ isPaused: true });
+  };
+
+  const handleResume = () => {
+    updateState({ isPaused: false });
   };
 
   const handleStop = () => {
-    setIsActive(false);
+    updateState({ isActive: false, isPaused: false, sanctuaryMode: false });
     setReflectionData(prev => ({ ...prev, wasInterrupted: true }));
     setShowReflection(true);
   };
 
   const handleCompleteSession = () => {
-    setIsActive(false);
+    updateState({ isActive: false, isPaused: false, sanctuaryMode: false });
     setReflectionData(prev => ({ ...prev, wasInterrupted: false }));
     setShowReflection(true);
   };
@@ -74,8 +159,8 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
   const handleCustomTime = () => {
     const minutes = parseInt(customMinutes);
     if (minutes > 0 && minutes <= 240) {
-      setTimeLeft(minutes * 60);
-      setTotalTime(minutes * 60);
+      const newTime = minutes * 60;
+      updateState({ timeLeft: newTime, totalTime: newTime });
       setShowCustomTimeModal(false);
       setCustomMinutes('');
     }
@@ -122,8 +207,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
     }
 
     setShowReflection(false);
-    setIsActive(false);
-    setTimeLeft(totalTime);
+    updateState({ isActive: false, isPaused: false, sanctuaryMode: false, timeLeft: totalTime });
     setReflectionData({ motivation: 5, harvest: '', reason: '', wasInterrupted: false });
   };
 
@@ -206,18 +290,26 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
                 </button>
               ) : (
                 <>
+                  {isPaused ? (
+                    <button 
+                      onClick={handleResume}
+                      className="btn-primary w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
+                    >
+                      {getIcon('play', 'w-7 h-7 lg:w-8 lg:h-8 ml-1')}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={handlePause}
+                      className="w-14 h-14 lg:w-16 lg:h-16 rounded-full border-2 border-[#D4AF37] text-[#D4AF37] flex items-center justify-center hover:bg-[#D4AF37]/10 transition-colors shadow-lg"
+                    >
+                      {getIcon('pause', 'w-4 h-4 lg:w-5 lg:h-5')}
+                    </button>
+                  )}
                   <button 
                     onClick={handleStop}
                     className="w-14 h-14 lg:w-16 lg:h-16 rounded-full border-2 border-[#E35B8F] text-[#E35B8F] flex items-center justify-center hover:bg-[#E35B8F]/10 transition-colors shadow-lg"
                   >
                     <div className="w-4 h-4 lg:w-5 lg:h-5 bg-current rounded-sm" />
-                  </button>
-                  <button
-                    onClick={() => setSanctuaryMode(!sanctuaryMode)}
-                    className={`px-4 py-2 rounded-xl font-cinzel text-[9px] uppercase font-bold border-2 transition-all ${sanctuaryMode ? 'bg-[#D4AF37] text-white border-[#D4AF37] shadow-md' : 'text-[#8B5E75] border-[#F8C8DC] hover:bg-white/60 bg-white/80'}`}
-                    title="Modo Santuario (Deep Work)"
-                  >
-                    {getIcon('moon', 'w-3 h-3 inline mr-1')} Santuario
                   </button>
                 </>
               )}
@@ -231,11 +323,11 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
             <div className="space-y-5">
               <select 
                 disabled={isActive}
-                value={selectedSubjectId}
-                onChange={(e) => setSelectedSubjectId(e.target.value)}
+                value={selectedSubjectId || ''}
+                onChange={(e) => updateState({ selectedSubjectId: e.target.value || null })}
                 className="w-full bg-white/60 border border-[#F8C8DC] rounded-xl px-4 py-3.5 text-base font-garamond focus:outline-none focus:border-[#E35B8F] disabled:opacity-50 appearance-none shadow-inner"
               >
-                <option value="" disabled>Seleccionar Asignatura</option>
+                <option value="">Sin asignatura (Enfoque General)</option>
                 {subjects.map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
@@ -245,7 +337,10 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
                   <button
                     key={m}
                     disabled={isActive}
-                    onClick={() => { setTimeLeft(m * 60); setTotalTime(m * 60); }}
+                    onClick={() => { 
+                      const newTime = m * 60;
+                      updateState({ timeLeft: newTime, totalTime: newTime });
+                    }}
                     className={`flex-1 min-w-[80px] py-3 rounded-xl font-cinzel text-[10px] lg:text-[11px] border-2 transition-all ${totalTime === m * 60 ? 'bg-[#E35B8F] text-white border-[#E35B8F] shadow-md scale-[1.03]' : 'text-[#8B5E75] border-[#F8C8DC] hover:bg-white/60'}`}
                   >
                     {m} MIN
@@ -320,12 +415,27 @@ const FocusModule: React.FC<FocusModuleProps> = ({ subjects, onUpdateSubject, on
                     >
                       <div className="w-4 h-4 lg:w-5 lg:h-5 bg-current rounded-sm" />
                     </button>
+                    {isPaused ? (
+                      <button 
+                        onClick={handleResume}
+                        className="btn-primary px-4 py-2 rounded-xl font-cinzel text-[9px] uppercase font-bold shadow-md"
+                      >
+                        {getIcon('play', 'w-3 h-3 inline mr-1')} Reanudar
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={handlePause}
+                        className="px-4 py-2 rounded-xl font-cinzel text-[9px] uppercase font-bold border-2 border-[#D4AF37] text-[#D4AF37] bg-white/80 shadow-md"
+                      >
+                        {getIcon('pause', 'w-3 h-3 inline mr-1')} Pausar
+                      </button>
+                    )}
                     <button
-                      onClick={() => setSanctuaryMode(false)}
-                      className={`px-4 py-2 rounded-xl font-cinzel text-[9px] uppercase font-bold border-2 transition-all bg-[#D4AF37] text-white border-[#D4AF37] shadow-md`}
-                      title="Salir del Modo Santuario"
+                      onClick={handleStop}
+                      className="px-4 py-2 rounded-xl font-cinzel text-[9px] uppercase font-bold border-2 bg-[#E35B8F] text-white border-[#E35B8F] shadow-md"
+                      title="Detener Sesión"
                     >
-                      {getIcon('moon', 'w-3 h-3 inline mr-1')} Salir
+                      {getIcon('x', 'w-3 h-3 inline mr-1')} Detener
                     </button>
                   </>
                 ) : (

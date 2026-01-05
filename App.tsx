@@ -13,6 +13,7 @@ import DiaryModule from './components/DiaryModule';
 import AuthModule from './components/AuthModule';
 import ProfileModule from './components/ProfileModule';
 import BazarArtefactos from './components/BazarArtefactos';
+import FocusFloatingWidget from './components/FocusFloatingWidget';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -29,6 +30,23 @@ const App: React.FC = () => {
   const [customEvents, setCustomEvents] = useState<CustomCalendarEvent[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [securityPin, setSecurityPin] = useState<string | null>(null);
+
+  // Estado global del Focus Timer
+  const [focusState, setFocusState] = useState<{
+    isActive: boolean;
+    isPaused: boolean;
+    timeLeft: number;
+    totalTime: number;
+    selectedSubjectId: string | null;
+    sanctuaryMode: boolean;
+  }>({
+    isActive: false,
+    isPaused: false,
+    timeLeft: 25 * 60,
+    totalTime: 25 * 60,
+    selectedSubjectId: null,
+    sanctuaryMode: false,
+  });
 
   // Ref para rastrear si los datos ya se cargaron (evita recargas duplicadas)
   const dataLoadedRef = useRef(false);
@@ -643,7 +661,9 @@ const App: React.FC = () => {
           onUpdateSubject={updateSubject} 
           onAddEssence={handleAddEssence}
           onAddCalendarEvent={handleAddCalendarEvent}
-          isMobile={isMobile} 
+          isMobile={isMobile}
+          focusState={focusState}
+          onFocusStateChange={setFocusState}
         />;
       case NavView.DIARY:
         const securityModule = modules.find(m => m.id === 'security');
@@ -727,6 +747,22 @@ const App: React.FC = () => {
             setShowPinSetupModal(false);
             setPendingModuleId(null);
           }}
+        />
+      )}
+
+      {/* Widget Flotante de Focus - Solo se muestra cuando está activo y no estás en la vista Focus */}
+      {focusState.isActive && activeView !== NavView.FOCUS && (
+        <FocusFloatingWidget
+          timeLeft={focusState.timeLeft}
+          isActive={focusState.isActive}
+          isPaused={focusState.isPaused}
+          onPause={() => setFocusState(prev => ({ ...prev, isPaused: true }))}
+          onResume={() => setFocusState(prev => ({ ...prev, isPaused: false }))}
+          onStop={() => {
+            setFocusState(prev => ({ ...prev, isActive: false, isPaused: false, sanctuaryMode: false }));
+          }}
+          onOpen={() => setActiveView(NavView.FOCUS)}
+          isMobile={isMobile}
         />
       )}
 

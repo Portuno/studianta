@@ -41,7 +41,8 @@ import {
   Eye as EyeIcon,
   Play,
   Search,
-  ShoppingBag
+  ShoppingBag,
+  Pause
 } from 'lucide-react';
 
 export const COLORS = {
@@ -109,6 +110,7 @@ export const getIcon = (name: string, className?: string) => {
     case 'edit': return <Edit className={className} />;
     case 'eye': return <EyeIcon className={className} />;
     case 'play': return <Play className={className} />;
+    case 'pause': return <Pause className={className} />;
     case 'search': return <Search className={className} />;
     case 'bazar': return <ShoppingBag className={className} />;
     default: return null;
