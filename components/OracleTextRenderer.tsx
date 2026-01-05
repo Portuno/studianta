@@ -90,20 +90,27 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
     lines.forEach((line, index) => {
       const trimmed = line.trim();
 
-      // Detectar encabezados con emojis (### 📌 RECONOCIMIENTO)
-      const headerMatch = trimmed.match(/^###\s*([📌📖💡📚❓])\s*(.+)$/);
-      if (headerMatch) {
+      // Detectar encabezados markdown (###, ##, #) con o sin emojis
+      const headerMatchWithEmoji = trimmed.match(/^###\s*([📌📖💡📚❓📅⚖️✅])\s*(.+)$/);
+      const headerMatchSimple = trimmed.match(/^###\s+(.+)$/);
+      const headerMatchH2 = trimmed.match(/^##\s+(.+)$/);
+      const headerMatchH1 = trimmed.match(/^#\s+(.+)$/);
+      
+      if (headerMatchWithEmoji) {
         flushParagraph();
         flushList();
         
-        const emoji = headerMatch[1];
-        const title = headerMatch[2];
+        const emoji = headerMatchWithEmoji[1];
+        const title = headerMatchWithEmoji[2];
         const iconMap: { [key: string]: string } = {
           '📌': 'target',
           '📖': 'book',
           '💡': 'sparkles',
           '📚': 'book',
-          '❓': 'chat'
+          '❓': 'chat',
+          '📅': 'calendar',
+          '⚖️': 'balance',
+          '✅': 'check'
         };
         
         elements.push(
@@ -116,6 +123,51 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
                 {title}
               </h3>
             </div>
+            <div className="h-px bg-gradient-to-r from-[#D4AF37]/30 via-[#F8C8DC]/50 to-transparent" />
+          </div>
+        );
+        return;
+      }
+      
+      if (headerMatchSimple) {
+        flushParagraph();
+        flushList();
+        const title = headerMatchSimple[1];
+        elements.push(
+          <div key={`header-${keyCounter++}`} className="mb-6 mt-8 first:mt-0">
+            <h3 className="font-marcellus text-[#4A233E] text-xl md:text-2xl font-bold uppercase tracking-wider mb-4">
+              {title}
+            </h3>
+            <div className="h-px bg-gradient-to-r from-[#D4AF37]/30 via-[#F8C8DC]/50 to-transparent" />
+          </div>
+        );
+        return;
+      }
+      
+      if (headerMatchH2) {
+        flushParagraph();
+        flushList();
+        const title = headerMatchH2[1];
+        elements.push(
+          <div key={`header-${keyCounter++}`} className="mb-6 mt-8 first:mt-0">
+            <h2 className="font-marcellus text-[#4A233E] text-2xl md:text-3xl font-bold uppercase tracking-wider mb-4">
+              {title}
+            </h2>
+            <div className="h-px bg-gradient-to-r from-[#D4AF37]/30 via-[#F8C8DC]/50 to-transparent" />
+          </div>
+        );
+        return;
+      }
+      
+      if (headerMatchH1) {
+        flushParagraph();
+        flushList();
+        const title = headerMatchH1[1];
+        elements.push(
+          <div key={`header-${keyCounter++}`} className="mb-6 mt-8 first:mt-0">
+            <h1 className="font-marcellus text-[#4A233E] text-3xl md:text-4xl font-bold uppercase tracking-wider mb-4">
+              {title}
+            </h1>
             <div className="h-px bg-gradient-to-r from-[#D4AF37]/30 via-[#F8C8DC]/50 to-transparent" />
           </div>
         );
