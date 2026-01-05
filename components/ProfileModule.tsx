@@ -231,7 +231,39 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
             </div>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
             <h2 className="font-marcellus text-2xl font-bold text-[#4A233E] mb-1">{displayName}</h2>
-            <p className="font-garamond text-[#8B5E75] text-sm italic">{displayEmail}</p>
+            <p className="font-garamond text-[#8B5E75] text-sm italic mb-4">{displayEmail}</p>
+            
+            {/* Enlaces Legales - Debajo de la foto de perfil - Mobile */}
+            {setActiveView && (
+              <div className="mt-4 pt-4 border-t border-[#F8C8DC]/50">
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => {
+                      if (setActiveView) {
+                        setActiveView(NavView.PRIVACY_POLICY);
+                      } else {
+                        window.location.href = '/privacidad';
+                      }
+                    }}
+                    className="font-garamond text-xs text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+                  >
+                    Política de Privacidad
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (setActiveView) {
+                        setActiveView(NavView.TERMS_OF_SERVICE);
+                      } else {
+                        window.location.href = '/terminosycondiciones';
+                      }
+                    }}
+                    className="font-garamond text-xs text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+                  >
+                    Términos y Condiciones
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           <div className="space-y-4">
             <div>
@@ -354,9 +386,41 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
                   displayName
                 )}
               </h2>
-              <p className="font-garamond text-[#8B5E75] text-sm md:text-base italic opacity-80">
+              <p className="font-garamond text-[#8B5E75] text-sm md:text-base italic opacity-80 mb-4">
                 {displayEmail}
               </p>
+              
+              {/* Enlaces Legales - Debajo de la foto de perfil */}
+              {setActiveView && (
+                <div className="mt-4 pt-4 border-t border-[#F8C8DC]/50">
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => {
+                        if (setActiveView) {
+                          setActiveView(NavView.PRIVACY_POLICY);
+                        } else {
+                          window.location.href = '/privacidad';
+                        }
+                      }}
+                      className="font-garamond text-xs text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+                    >
+                      Política de Privacidad
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (setActiveView) {
+                          setActiveView(NavView.TERMS_OF_SERVICE);
+                        } else {
+                          window.location.href = '/terminosycondiciones';
+                        }
+                      }}
+                      className="font-garamond text-xs text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+                    >
+                      Términos y Condiciones
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -482,42 +546,6 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
           </div>
         </div>
 
-        {/* Enlaces Legales */}
-        {setActiveView && (
-          <div className="relative z-10 mt-6 pt-6 border-t border-[#F8C8DC]/50">
-            <p className="text-[8px] uppercase font-bold text-[#8B5E75] mb-3 font-inter tracking-[0.3em] text-center">
-              Información Legal
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button
-                onClick={() => {
-                  if (setActiveView) {
-                    setActiveView(NavView.PRIVACY_POLICY);
-                  } else {
-                    window.location.href = '/privacidad';
-                  }
-                }}
-                className="px-4 py-2 bg-white/60 border border-[#F8C8DC] text-[#4A233E] rounded-lg font-garamond text-sm hover:bg-white/80 transition-colors flex items-center justify-center gap-2"
-              >
-                {getIcon('security', 'w-4 h-4')}
-                Política de Privacidad
-              </button>
-              <button
-                onClick={() => {
-                  if (setActiveView) {
-                    setActiveView(NavView.TERMS_OF_SERVICE);
-                  } else {
-                    window.location.href = '/terminosycondiciones';
-                  }
-                }}
-                className="px-4 py-2 bg-white/60 border border-[#F8C8DC] text-[#4A233E] rounded-lg font-garamond text-sm hover:bg-white/80 transition-colors flex items-center justify-center gap-2"
-              >
-                {getIcon('file', 'w-4 h-4')}
-                Términos y Condiciones
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Botones de Acción - En la parte inferior */}
         <div className="relative z-10 mt-8 pt-6 border-t border-[#F8C8DC]/50 flex flex-col sm:flex-row gap-4">

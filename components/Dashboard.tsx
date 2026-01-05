@@ -137,6 +137,46 @@ const Dashboard: React.FC<DashboardProps> = ({
               })}
             </div>
           </section>
+
+          {/* Footer con enlace a Política de Privacidad - Mobile - Solo para usuarios autenticados */}
+          {user && (
+            <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30 px-2">
+              <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
+                <button
+                  onClick={() => setActiveView(NavView.PRIVACY_POLICY)}
+                  className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+                >
+                  Política de Privacidad
+                </button>
+                <span className="text-[#F8C8DC]">•</span>
+                <button
+                  onClick={() => setActiveView(NavView.TERMS_OF_SERVICE)}
+                  className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+                >
+                  Términos y Condiciones
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {/* Enlaces Legales - Mobile - Visible para usuarios no autenticados */}
+          {!user && (
+            <div className="mt-6 mb-4 flex flex-wrap items-center justify-center gap-3 text-sm px-2">
+              <button
+                onClick={() => setActiveView(NavView.PRIVACY_POLICY)}
+                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+              >
+                Política de Privacidad
+              </button>
+              <span className="text-[#F8C8DC]">•</span>
+              <button
+                onClick={() => setActiveView(NavView.TERMS_OF_SERVICE)}
+                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+              >
+                Términos y Condiciones
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Modal de Login Mobile */}
@@ -213,20 +253,38 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Modules List Desktop/Tablet */}
       <div className="flex-1 flex flex-col pt-4 lg:pt-8 overflow-hidden">
         {!user && (
-          <div className="mb-6 glass-card p-6 rounded-2xl border-2 border-[#D4AF37]/30">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h3 className="font-cinzel text-lg text-[#4A233E] mb-1">Explora el Atanor</h3>
-                <p className="font-garamond italic text-sm text-[#8B5E75]">Inicia sesión para transmutar módulos y comenzar tu viaje académico</p>
+          <>
+            <div className="mb-6 glass-card p-6 rounded-2xl border-2 border-[#D4AF37]/30">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-cinzel text-lg text-[#4A233E] mb-1">Explora el Atanor</h3>
+                  <p className="font-garamond italic text-sm text-[#8B5E75]">Inicia sesión para transmutar módulos y comenzar tu viaje académico</p>
+                </div>
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="btn-primary px-6 py-3 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest shadow-xl whitespace-nowrap"
+                >
+                  Iniciar Sesión
+                </button>
               </div>
+            </div>
+            {/* Enlaces Legales - Visible para usuarios no autenticados */}
+            <div className="mb-4 flex flex-wrap items-center justify-center gap-3 text-sm">
               <button
-                onClick={() => setShowLoginModal(true)}
-                className="btn-primary px-6 py-3 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest shadow-xl whitespace-nowrap"
+                onClick={() => setActiveView(NavView.PRIVACY_POLICY)}
+                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline text-base"
               >
-                Iniciar Sesión
+                Política de Privacidad
+              </button>
+              <span className="text-[#F8C8DC]">•</span>
+              <button
+                onClick={() => setActiveView(NavView.TERMS_OF_SERVICE)}
+                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline text-base"
+              >
+                Términos y Condiciones
               </button>
             </div>
-          </div>
+          </>
         )}
         <div className="overflow-y-auto pr-2 space-y-8 lg:space-y-10 no-scrollbar">
           <section>
@@ -304,6 +362,27 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </section>
         </div>
+
+        {/* Footer con enlace a Política de Privacidad - Solo para usuarios autenticados */}
+        {user && (
+          <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30">
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
+              <button
+                onClick={() => setActiveView(NavView.PRIVACY_POLICY)}
+                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+              >
+                Política de Privacidad
+              </button>
+              <span className="text-[#F8C8DC]">•</span>
+              <button
+                onClick={() => setActiveView(NavView.TERMS_OF_SERVICE)}
+                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+              >
+                Términos y Condiciones
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modal de Login */}
