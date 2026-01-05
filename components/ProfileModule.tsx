@@ -171,12 +171,9 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#E35B8F] to-[#D4AF37] flex items-center justify-center border-4 border-white shadow-lg">
                 {getIcon('profile', 'w-8 h-8 text-white')}
               </div>
-              <h1 className="font-cinzel text-2xl md:text-3xl font-bold text-[#4A233E] mb-2 uppercase tracking-widest">
+              <h1 className="font-cinzel text-3xl md:text-4xl font-bold text-[#4A233E] mb-2 uppercase tracking-widest">
                 Iniciar Sesión
               </h1>
-              <p className="font-garamond italic text-[#8B5E75] text-sm">
-                Accede a tu perfil académico
-              </p>
             </div>
             <AuthModule onAuthSuccess={onAuthSuccess} />
           </div>

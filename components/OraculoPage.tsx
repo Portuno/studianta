@@ -364,11 +364,13 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
                   <StudiantaSeal className="w-20 h-20" />
                 </div>
                 <h2 className="font-marcellus text-2xl md:text-3xl text-[#4A233E] mb-4">
-                  Salve, Buscadora de Luz
+                  Salve, Buscadora de la luz
                 </h2>
-                <p className="font-garamond text-lg text-[#8B5E75] italic max-w-md">
-                  El Oráculo de la Logia Studianta está listo para escuchar tus consultas. 
-                  Formula tu pregunta y recibirás sabiduría arcana basada en tu perfil completo.
+                <p className="font-garamond text-lg text-[#8B5E75] italic max-w-md mb-4">
+                  El Oráculo de Studianta está listo para escuchar tus consultas. Formula tu pregunta y recibirás sabiduría basada en tu perfil.
+                </p>
+                <p className="font-garamond text-sm text-[#8B5E75] italic max-w-md">
+                  *Chat experimental y en constante desarrollo, esta conversación no quedará guardada (podrás descargarla para tenerla tu)
                 </p>
               </div>
             ) : (
