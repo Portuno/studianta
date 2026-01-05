@@ -11,7 +11,7 @@ const Footer: React.FC<FooterProps> = ({ setActiveView, isMobile = false }) => {
     if (setActiveView) {
       setActiveView(NavView.PRIVACY_POLICY);
     } else {
-      window.location.href = '/?page=privacy-policy';
+      window.location.href = '/privacidad';
     }
   };
 
@@ -19,7 +19,7 @@ const Footer: React.FC<FooterProps> = ({ setActiveView, isMobile = false }) => {
     if (setActiveView) {
       setActiveView(NavView.TERMS_OF_SERVICE);
     } else {
-      window.location.href = '/?page=terms-of-service';
+      window.location.href = '/terminosycondiciones';
     }
   };
 

@@ -1,4 +1,14 @@
 {
-  "version": 2
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/privacidad",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/terminosycondiciones",
+      "destination": "/index.html"
+    }
+  ]
 }
 

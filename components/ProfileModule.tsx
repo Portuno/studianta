@@ -490,14 +490,26 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
-                onClick={() => setActiveView(NavView.PRIVACY_POLICY)}
+                onClick={() => {
+                  if (setActiveView) {
+                    setActiveView(NavView.PRIVACY_POLICY);
+                  } else {
+                    window.location.href = '/privacidad';
+                  }
+                }}
                 className="px-4 py-2 bg-white/60 border border-[#F8C8DC] text-[#4A233E] rounded-lg font-garamond text-sm hover:bg-white/80 transition-colors flex items-center justify-center gap-2"
               >
                 {getIcon('security', 'w-4 h-4')}
                 Política de Privacidad
               </button>
               <button
-                onClick={() => setActiveView(NavView.TERMS_OF_SERVICE)}
+                onClick={() => {
+                  if (setActiveView) {
+                    setActiveView(NavView.TERMS_OF_SERVICE);
+                  } else {
+                    window.location.href = '/terminosycondiciones';
+                  }
+                }}
                 className="px-4 py-2 bg-white/60 border border-[#F8C8DC] text-[#4A233E] rounded-lg font-garamond text-sm hover:bg-white/80 transition-colors flex items-center justify-center gap-2"
               >
                 {getIcon('file', 'w-4 h-4')}

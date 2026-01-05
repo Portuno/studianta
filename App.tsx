@@ -26,6 +26,10 @@ const App: React.FC = () => {
   
   // Detectar página desde URL para acceso directo a políticas
   const getInitialView = (): NavView => {
+    const pathname = window.location.pathname;
+    if (pathname === '/privacidad' || pathname === '/privacidad/') return NavView.PRIVACY_POLICY;
+    if (pathname === '/terminosycondiciones' || pathname === '/terminosycondiciones/') return NavView.TERMS_OF_SERVICE;
+    // Mantener compatibilidad con query params antiguos
     const urlParams = new URLSearchParams(window.location.search);
     const page = urlParams.get('page');
     if (page === 'privacy-policy') return NavView.PRIVACY_POLICY;
@@ -34,6 +38,34 @@ const App: React.FC = () => {
   };
   
   const [activeView, setActiveView] = useState<NavView>(getInitialView());
+
+  // Función para actualizar la URL cuando se cambia de vista
+  const handleViewChange = (view: NavView) => {
+    setActiveView(view);
+    
+    // Actualizar la URL según la vista
+    if (view === NavView.PRIVACY_POLICY) {
+      window.history.pushState({ view: 'privacy' }, '', '/privacidad');
+    } else if (view === NavView.TERMS_OF_SERVICE) {
+      window.history.pushState({ view: 'terms' }, '', '/terminosycondiciones');
+    } else if (view === NavView.DASHBOARD) {
+      // Si vuelve al dashboard desde una página de política, limpiar la URL
+      if (window.location.pathname === '/privacidad' || window.location.pathname === '/terminosycondiciones') {
+        window.history.pushState({ view: 'dashboard' }, '', '/');
+      }
+    }
+  };
+
+  // Escuchar cambios en el historial del navegador (botones atrás/adelante)
+  useEffect(() => {
+    const handlePopState = () => {
+      const newView = getInitialView();
+      setActiveView(newView);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -755,7 +787,7 @@ const App: React.FC = () => {
           customEvents={customEvents}
           modules={modules}
           monthlyBudget={monthlyBudget}
-          setActiveView={setActiveView}
+          setActiveView={handleViewChange}
         />;
       case NavView.BAZAR:
         return <BazarArtefactos 
@@ -777,12 +809,12 @@ const App: React.FC = () => {
         />;
       case NavView.PRIVACY_POLICY:
         return <PrivacyPolicy 
-          onBack={() => setActiveView(NavView.DASHBOARD)}
+          onBack={() => handleViewChange(NavView.DASHBOARD)}
           isMobile={isMobile}
         />;
       case NavView.TERMS_OF_SERVICE:
         return <TermsOfService 
-          onBack={() => setActiveView(NavView.DASHBOARD)}
+          onBack={() => handleViewChange(NavView.DASHBOARD)}
           isMobile={isMobile}
         />;
       default:
@@ -803,7 +835,12 @@ const App: React.FC = () => {
             if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE) {
               setShowLoginModal(true);
             } else {
-              setActiveView(view);
+              // Usar handleViewChange para políticas, setActiveView normal para otras vistas
+              if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE) {
+                handleViewChange(view);
+              } else {
+                setActiveView(view);
+              }
             }
           }} 
           essence={user ? essence : 500} 
@@ -818,7 +855,7 @@ const App: React.FC = () => {
         <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pb-32' : ''}`}>
           {renderView()}
         </main>
-        {!isPolicyPage && <Footer setActiveView={setActiveView} isMobile={isMobile} />}
+        {!isPolicyPage && <Footer setActiveView={handleViewChange} isMobile={isMobile} />}
       </div>
 
       {isMobile && !isPolicyPage && (
@@ -829,7 +866,12 @@ const App: React.FC = () => {
             if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE) {
               setShowLoginModal(true);
             } else {
-              setActiveView(view);
+              // Usar handleViewChange para políticas, setActiveView normal para otras vistas
+              if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE) {
+                handleViewChange(view);
+              } else {
+                setActiveView(view);
+              }
             }
           }} 
           essence={user ? essence : 500} 
