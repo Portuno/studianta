@@ -855,7 +855,7 @@ const App: React.FC = () => {
         <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pb-32' : ''}`}>
           {renderView()}
         </main>
-        {!isPolicyPage && <Footer setActiveView={handleViewChange} isMobile={isMobile} />}
+        {activeView === NavView.DASHBOARD && <Footer setActiveView={handleViewChange} isMobile={isMobile} />}
       </div>
 
       {isMobile && !isPolicyPage && (
