@@ -142,19 +142,27 @@ const Dashboard: React.FC<DashboardProps> = ({
           {user && (
             <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30 px-2">
               <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
-                <button
-                  onClick={() => setActiveView(NavView.PRIVACY_POLICY)}
+                <a
+                  href="/privacidad"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveView(NavView.PRIVACY_POLICY);
+                  }}
                   className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
                 >
                   Política de Privacidad
-                </button>
+                </a>
                 <span className="text-[#F8C8DC]">•</span>
-                <button
-                  onClick={() => setActiveView(NavView.TERMS_OF_SERVICE)}
+                <a
+                  href="/terminosycondiciones"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveView(NavView.TERMS_OF_SERVICE);
+                  }}
                   className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
                 >
                   Términos y Condiciones
-                </button>
+                </a>
               </div>
             </div>
           )}
@@ -162,19 +170,27 @@ const Dashboard: React.FC<DashboardProps> = ({
           {/* Enlaces Legales - Mobile - Visible para usuarios no autenticados */}
           {!user && (
             <div className="mt-6 mb-4 flex flex-wrap items-center justify-center gap-3 text-sm px-2">
-              <button
-                onClick={() => setActiveView(NavView.PRIVACY_POLICY)}
+              <a
+                href="/privacidad"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveView(NavView.PRIVACY_POLICY);
+                }}
                 className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
               >
                 Política de Privacidad
-              </button>
+              </a>
               <span className="text-[#F8C8DC]">•</span>
-              <button
-                onClick={() => setActiveView(NavView.TERMS_OF_SERVICE)}
+              <a
+                href="/terminosycondiciones"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveView(NavView.TERMS_OF_SERVICE);
+                }}
                 className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
               >
                 Términos y Condiciones
-              </button>
+              </a>
             </div>
           )}
         </div>
@@ -270,19 +286,27 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
             {/* Enlaces Legales - Visible para usuarios no autenticados */}
             <div className="mb-4 flex flex-wrap items-center justify-center gap-3 text-sm">
-              <button
-                onClick={() => setActiveView(NavView.PRIVACY_POLICY)}
+              <a
+                href="/privacidad"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveView(NavView.PRIVACY_POLICY);
+                }}
                 className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline text-base"
               >
                 Política de Privacidad
-              </button>
+              </a>
               <span className="text-[#F8C8DC]">•</span>
-              <button
-                onClick={() => setActiveView(NavView.TERMS_OF_SERVICE)}
+              <a
+                href="/terminosycondiciones"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveView(NavView.TERMS_OF_SERVICE);
+                }}
                 className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline text-base"
               >
                 Términos y Condiciones
-              </button>
+              </a>
             </div>
           </>
         )}
@@ -367,19 +391,27 @@ const Dashboard: React.FC<DashboardProps> = ({
         {user && (
           <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30">
             <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
-              <button
-                onClick={() => setActiveView(NavView.PRIVACY_POLICY)}
+              <a
+                href="/privacidad"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveView(NavView.PRIVACY_POLICY);
+                }}
                 className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
               >
                 Política de Privacidad
-              </button>
+              </a>
               <span className="text-[#F8C8DC]">•</span>
-              <button
-                onClick={() => setActiveView(NavView.TERMS_OF_SERVICE)}
+              <a
+                href="/terminosycondiciones"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveView(NavView.TERMS_OF_SERVICE);
+                }}
                 className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
               >
                 Términos y Condiciones
-              </button>
+              </a>
             </div>
           </div>
         )}

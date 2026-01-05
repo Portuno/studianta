@@ -29,19 +29,27 @@ const Footer: React.FC<FooterProps> = ({ setActiveView, isMobile = false }) => {
         <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} items-center justify-between gap-4`}>
           {/* Links legales */}
           <div className="flex flex-wrap items-center gap-4 justify-center md:justify-start">
-            <button
-              onClick={handlePrivacyClick}
+            <a
+              href="/privacidad"
+              onClick={(e) => {
+                e.preventDefault();
+                handlePrivacyClick();
+              }}
               className="font-garamond text-sm text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
             >
               Política de Privacidad
-            </button>
+            </a>
             <span className="text-[#F8C8DC]">•</span>
-            <button
-              onClick={handleTermsClick}
+            <a
+              href="/terminosycondiciones"
+              onClick={(e) => {
+                e.preventDefault();
+                handleTermsClick();
+              }}
               className="font-garamond text-sm text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
             >
               Términos y Condiciones
-            </button>
+            </a>
           </div>
 
           {/* Créditos */}
