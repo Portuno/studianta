@@ -10,6 +10,7 @@ interface CalendarModuleProps {
   customEvents?: CustomCalendarEvent[];
   onAddCustomEvent: (e: CustomCalendarEvent) => void;
   onDeleteCustomEvent: (id: string) => void;
+  onUpdateCustomEvent?: (e: CustomCalendarEvent) => void;
   isMobile: boolean;
 }
 
@@ -41,11 +42,14 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
   customEvents = [],
   onAddCustomEvent,
   onDeleteCustomEvent,
+  onUpdateCustomEvent,
   isMobile 
 }) => {
   const [view, setView] = useState<'month' | 'week' | 'day'>(isMobile ? 'day' : 'week');
   const [anchorDate, setAnchorDate] = useState(new Date());
   const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CustomCalendarEvent | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<{ id: string; title: string } | null>(null);
 
   const navigate = (direction: number) => {
     const next = new Date(anchorDate);
@@ -167,6 +171,26 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     };
     onAddCustomEvent(newEvent);
     setShowAddEventModal(false);
+  };
+
+  const handleUpdateCustomEvent = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingEvent || !onUpdateCustomEvent) return;
+    
+    const formData = new FormData(e.currentTarget);
+    const selectedDate = formData.get('date') as string;
+    const timeValue = formData.get('time') as string;
+    const updatedEvent: CustomCalendarEvent = {
+      ...editingEvent,
+      title: formData.get('title') as string,
+      description: formData.get('description') as string,
+      date: selectedDate || editingEvent.date,
+      time: timeValue || undefined,
+      color: formData.get('color') as string,
+      priority: formData.get('priority') as any || 'low'
+    };
+    onUpdateCustomEvent(updatedEvent);
+    setEditingEvent(null);
   };
 
   const renderDayColumn = (date: Date) => {
@@ -401,9 +425,33 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                    </div>
                 </div>
                 {event.type === 'custom' && (
-                  <button onClick={() => onDeleteCustomEvent(event.id)} className="text-[#8B5E75] p-2 hover:bg-white/60 rounded-full transition-all">
-                    {getIcon('trash', 'w-4 h-4')}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {onUpdateCustomEvent && (
+                      <button 
+                        onClick={() => {
+                          const customEvent = customEvents.find(e => e.id === event.id);
+                          if (customEvent) {
+                            setEditingEvent(customEvent);
+                          }
+                        }} 
+                        className="bg-[#D4AF37] text-white p-3 rounded-xl hover:bg-[#D4AF37]/90 transition-all shadow-md hover:scale-105 active:scale-95 flex items-center justify-center gap-2 min-w-[100px]"
+                        title="Editar evento"
+                      >
+                        {getIcon('edit', 'w-5 h-5')}
+                        <span className="font-cinzel text-[10px] font-black uppercase tracking-wider hidden md:inline">Editar</span>
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => {
+                        setEventToDelete({ id: event.id, title: event.title });
+                      }} 
+                      className="bg-[#E35B8F] text-white p-3 rounded-xl hover:bg-[#E35B8F]/90 transition-all shadow-md hover:scale-105 active:scale-95 flex items-center justify-center gap-2 min-w-[100px]"
+                      title="Eliminar evento"
+                    >
+                      {getIcon('trash', 'w-5 h-5')}
+                      <span className="font-cinzel text-[10px] font-black uppercase tracking-wider hidden md:inline">Eliminar</span>
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
@@ -556,6 +604,128 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
               <button type="submit" className="flex-[2] btn-primary py-3.5 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-[0_8px_20px_rgba(227,91,143,0.4)]">Sellar Registro</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Form Modal for Editing Event */}
+      {editingEvent && onUpdateCustomEvent && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-xl p-4" onClick={() => setEditingEvent(null)}>
+          <form onSubmit={handleUpdateCustomEvent} className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 font-inter border-2 border-[#D4AF37]/40" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold tracking-[0.2em] uppercase">Editar Evento</h2>
+            <div className="space-y-4">
+              <input 
+                required 
+                name="title" 
+                type="text" 
+                placeholder="Nombre del Hito..." 
+                defaultValue={editingEvent.title}
+                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none font-bold focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+              />
+              <textarea
+                name="description"
+                placeholder="Descripción (opcional)..."
+                defaultValue={editingEvent.description || ''}
+                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all resize-none min-h-[60px]"
+              />
+              <input 
+                required
+                name="date" 
+                type="date" 
+                defaultValue={editingEvent.date}
+                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora (Opcional)</label>
+                  <input 
+                    name="time" 
+                    type="time" 
+                    defaultValue={editingEvent.time || ''}
+                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Prioridad</label>
+                  <select 
+                    name="priority" 
+                    defaultValue={editingEvent.priority}
+                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="low">Normal</option>
+                    <option value="high">Crítica</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-between p-2">
+                {[COLORS.primary, COLORS.gold, COLORS.mauve, '#48C9B0', '#5DADE2'].map(c => {
+                  const rgb = c.startsWith('#') 
+                    ? {
+                        r: parseInt(c.slice(1, 3), 16),
+                        g: parseInt(c.slice(3, 5), 16),
+                        b: parseInt(c.slice(5, 7), 16)
+                      }
+                    : { r: 0, g: 0, b: 0 };
+                  return (
+                    <label key={c} className="cursor-pointer">
+                      <input type="radio" name="color" value={c} required className="peer sr-only" defaultChecked={c === editingEvent.color} />
+                      <div 
+                        className="w-8 h-8 rounded-full border-2 border-white transition-all peer-checked:scale-125 peer-checked:ring-2 peer-checked:ring-[#D4AF37]" 
+                        style={{ 
+                          backgroundColor: c,
+                          boxShadow: `0 4px 12px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`
+                        }} 
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex gap-4 mt-8">
+              <button type="button" onClick={() => setEditingEvent(null)} className="flex-1 py-3 text-[10px] font-black text-[#8B5E75] uppercase tracking-widest">Cancelar</button>
+              <button type="submit" className="flex-[2] btn-primary py-3.5 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-[0_8px_20px_rgba(227,91,143,0.4)]">Guardar Cambios</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Delete */}
+      {eventToDelete && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-xl p-4" onClick={() => setEventToDelete(null)}>
+          <div className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 font-inter border-2 border-[#E35B8F]/40" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#E35B8F]/20 flex items-center justify-center border-2 border-[#E35B8F]/40">
+                {getIcon('trash', 'w-8 h-8 text-[#E35B8F]')}
+              </div>
+              <h2 className="font-cinzel text-xl text-[#4A233E] mb-2 font-bold tracking-wider">¿Eliminar Evento?</h2>
+              <p className="text-sm text-[#8B5E75] font-garamond italic">
+                "{eventToDelete.title}"
+              </p>
+              <p className="text-xs text-[#8B5E75] mt-3 opacity-70">
+                Esta acción no se puede deshacer
+              </p>
+            </div>
+            <div className="flex gap-4 mt-8">
+              <button 
+                type="button" 
+                onClick={() => setEventToDelete(null)} 
+                className="flex-1 py-3 rounded-xl text-[10px] font-black text-[#8B5E75] uppercase tracking-widest bg-white/60 border-2 border-[#F8C8DC] hover:bg-white/80 transition-all"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  if (eventToDelete) {
+                    onDeleteCustomEvent(eventToDelete.id);
+                    setEventToDelete(null);
+                  }
+                }} 
+                className="flex-[2] bg-[#E35B8F] text-white py-3.5 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-[0_8px_20px_rgba(227,91,143,0.4)] hover:bg-[#E35B8F]/90 transition-all"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

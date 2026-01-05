@@ -87,27 +87,27 @@ const FocusModule: React.FC<FocusModuleProps> = ({
   };
 
   useEffect(() => {
+    // Si estamos usando estado global, NO ejecutar timer aquí (se maneja en App.tsx)
+    if (onFocusStateChange && focusState) {
+      // El timer global en App.tsx maneja la actualización
+      if (timeLeft === 0 && isActive) {
+        handleCompleteSession();
+      }
+      return;
+    }
+
+    // Solo ejecutar timer local si NO estamos usando estado global
     if (isActive && !isPaused && timeLeft > 0) {
       timerRef.current = setInterval(() => {
-        // Usar función de actualización que lee el estado actual
-        if (onFocusStateChange && focusState) {
-          const newTime = focusState.timeLeft - 1;
+        setLocalTimeLeft(prev => {
+          const newTime = prev - 1;
           if (newTime > 0) {
-            onFocusStateChange({ ...focusState, timeLeft: newTime });
+            return newTime;
           } else {
             handleCompleteSession();
+            return prev;
           }
-        } else {
-          setLocalTimeLeft(prev => {
-            const newTime = prev - 1;
-            if (newTime > 0) {
-              return newTime;
-            } else {
-              handleCompleteSession();
-              return prev;
-            }
-          });
-        }
+        });
       }, 1000);
     } else if (timeLeft === 0 && isActive) {
       handleCompleteSession();
@@ -243,7 +243,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
         </div>
       )}
 
-      <div className={`max-w-4xl w-full flex flex-col items-center gap-8 lg:gap-12 animate-fade-in transition-all duration-500 ${sanctuaryMode ? 'opacity-0 pointer-events-none' : 'opacity-100'} overflow-visible`}>
+      <div className="max-w-4xl w-full flex flex-col items-center gap-8 lg:gap-12 animate-fade-in transition-all duration-500 overflow-visible">
         <header className="text-center">
           <h1 className="font-cinzel text-xl md:text-2xl lg:text-3xl text-[#8B5E75] tracking-[0.4em] uppercase opacity-60 mb-2">
             El Reloj de Arena
@@ -363,94 +363,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
         </div>
       </div>
 
-      {/* Temporizador flotante en modo Santuario */}
-      {sanctuaryMode && (
-        <div 
-          className="fixed inset-0 flex items-center justify-center z-[200]"
-          onClick={(e) => {
-            // Si se hace clic fuera del temporizador, salir del modo Santuario
-            if (e.target === e.currentTarget) {
-              setSanctuaryMode(false);
-            }
-          }}
-        >
-          <div 
-            className="relative group pointer-events-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-[#E35B8F]/10 to-[#D4AF37]/10 rounded-full blur-[80px] opacity-50" />
-            <div className="glass-card w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-full flex flex-col items-center justify-center border-2 border-[#F8C8DC]/40 shadow-2xl relative z-10 overflow-hidden">
-              {/* Efecto de llenado */}
-              <div 
-                className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#E35B8F]/40 via-[#E35B8F]/30 to-[#E35B8F]/20 transition-all duration-1000 ease-out"
-                style={{ 
-                  height: `${fillProgress}%`,
-                  clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)'
-                }}
-              />
-              {/* Partículas doradas */}
-              {fillProgress > 10 && Array.from({ length: Math.floor(fillProgress / 10) }).map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute rounded-full bg-[#D4AF37]/60 animate-pulse"
-                  style={{
-                    bottom: `${Math.random() * fillProgress}%`,
-                    left: `${Math.random() * 100}%`,
-                    width: `${Math.random() * 6 + 3}px`,
-                    height: `${Math.random() * 6 + 3}px`,
-                    animationDelay: `${Math.random() * 2}s`,
-                    animationDuration: `${Math.random() * 3 + 2}s`
-                  }}
-                />
-              ))}
-              <span className="font-mono text-5xl md:text-7xl lg:text-8xl font-black text-[#4A233E] tabular-nums tracking-tighter relative z-10">
-                {formatTime(timeLeft)}
-              </span>
-              <div className="mt-4 lg:mt-6 flex flex-col items-center gap-3 relative z-10">
-                {isActive ? (
-                  <>
-                    <button 
-                      onClick={handleStop}
-                      className="w-14 h-14 lg:w-16 lg:h-16 rounded-full border-2 border-[#E35B8F] text-[#E35B8F] flex items-center justify-center hover:bg-[#E35B8F]/10 transition-colors shadow-lg bg-white/80"
-                    >
-                      <div className="w-4 h-4 lg:w-5 lg:h-5 bg-current rounded-sm" />
-                    </button>
-                    {isPaused ? (
-                      <button 
-                        onClick={handleResume}
-                        className="btn-primary px-4 py-2 rounded-xl font-cinzel text-[9px] uppercase font-bold shadow-md"
-                      >
-                        {getIcon('play', 'w-3 h-3 inline mr-1')} Reanudar
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={handlePause}
-                        className="px-4 py-2 rounded-xl font-cinzel text-[9px] uppercase font-bold border-2 border-[#D4AF37] text-[#D4AF37] bg-white/80 shadow-md"
-                      >
-                        {getIcon('pause', 'w-3 h-3 inline mr-1')} Pausar
-                      </button>
-                    )}
-                    <button
-                      onClick={handleStop}
-                      className="px-4 py-2 rounded-xl font-cinzel text-[9px] uppercase font-bold border-2 bg-[#E35B8F] text-white border-[#E35B8F] shadow-md"
-                      title="Detener Sesión"
-                    >
-                      {getIcon('x', 'w-3 h-3 inline mr-1')} Detener
-                    </button>
-                  </>
-                ) : (
-                  <button 
-                    onClick={handleStart}
-                    className="btn-primary w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
-                  >
-                    {getIcon('play', 'w-7 h-7 lg:w-8 lg:h-8 ml-1')}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modo Santuario - Solo efectos visuales de fondo, sin bloquear interacción */}
 
       {/* Modal para tiempo personalizado */}
       {showCustomTimeModal && (

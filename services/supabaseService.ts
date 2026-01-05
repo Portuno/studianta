@@ -689,6 +689,26 @@ export class SupabaseService {
     };
   }
 
+  async updateCalendarEvent(userId: string, event: CustomCalendarEvent): Promise<CustomCalendarEvent> {
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .update({
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        time: event.time,
+        color: event.color,
+        priority: event.priority
+      })
+      .eq('user_id', userId)
+      .eq('id', event.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
   async deleteCalendarEvent(userId: string, eventId: string) {
     const { error } = await supabase
       .from('calendar_events')

@@ -48,6 +48,31 @@ const App: React.FC = () => {
     sanctuaryMode: false,
   });
 
+  // Timer global que funciona en todas las vistas
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    if (focusState.isActive && !focusState.isPaused && focusState.timeLeft > 0) {
+      intervalId = setInterval(() => {
+        setFocusState(prev => {
+          const newTime = prev.timeLeft - 1;
+          if (newTime > 0) {
+            return { ...prev, timeLeft: newTime };
+          } else {
+            // Timer completado - detener
+            return { ...prev, isActive: false, isPaused: false, sanctuaryMode: false };
+          }
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [focusState.isActive, focusState.isPaused]);
+
   // Ref para rastrear si los datos ya se cargaron (evita recargas duplicadas)
   const dataLoadedRef = useRef(false);
   const initialLoadDoneRef = useRef(false); // Para evitar que INITIAL_SESSION recargue datos
@@ -562,6 +587,18 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateCalendarEvent = async (event: CustomCalendarEvent) => {
+    if (!user) return;
+    
+    setCustomEvents(customEvents.map(e => e.id === event.id ? event : e));
+    
+    try {
+      await supabaseService.updateCalendarEvent(user.id, event);
+    } catch (error) {
+      console.error('Error updating calendar event:', error);
+    }
+  };
+
   const handleMaterialUpload = async () => {
     if (!user) return;
     
@@ -643,6 +680,7 @@ const App: React.FC = () => {
           customEvents={customEvents}
           onAddCustomEvent={handleAddCalendarEvent}
           onDeleteCustomEvent={handleDeleteCalendarEvent}
+          onUpdateCustomEvent={handleUpdateCalendarEvent}
           isMobile={isMobile} 
         />;
       case NavView.FINANCE:
