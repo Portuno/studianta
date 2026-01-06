@@ -224,7 +224,7 @@ export class SupabaseService {
         id: userId,
         email,
         full_name: fullName || '',
-        essence: 500,
+        essence: 0,
         total_essence_earned: 0,
         arcane_level: 'Buscadora de Luz',
       })
@@ -270,7 +270,7 @@ export class SupabaseService {
         institution: data.institution, // Mapear institution (antes university)
         avatar_url: data.avatar_url,
         arcane_level: data.arcane_level || 'Buscadora de Luz',
-        essence: data.essence || 500,
+        essence: data.essence || 0,
         total_essence_earned: data.total_essence_earned || 0,
         created_at: data.created_at,
         updated_at: data.updated_at,
@@ -326,7 +326,7 @@ export class SupabaseService {
         institution: data.institution,
         avatar_url: data.avatar_url,
         arcane_level: data.arcane_level || 'Buscadora de Luz',
-        essence: data.essence || 500,
+        essence: data.essence || 0,
         total_essence_earned: data.total_essence_earned || 0,
         created_at: data.created_at,
         updated_at: data.updated_at,

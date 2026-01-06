@@ -83,7 +83,7 @@ const App: React.FC = () => {
   
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [modules, setModules] = useState<Module[]>(INITIAL_MODULES);
-  const [essence, setEssence] = useState<number>(500);
+  const [essence, setEssence] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [monthlyBudget, setMonthlyBudget] = useState<number>(0);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
@@ -270,7 +270,7 @@ const App: React.FC = () => {
           // Limpiar datos locales
           setSubjects([]);
           setModules(INITIAL_MODULES);
-          setEssence(500);
+          setEssence(0);
           setTransactions([]);
           setMonthlyBudget(0);
           setJournalEntries([]);
@@ -793,7 +793,7 @@ const App: React.FC = () => {
             isMobile={isMobile} 
             setActiveView={setActiveView}
             user={user}
-            essence={user ? essence : 500}
+            essence={user ? essence : 0}
             showLoginModal={showLoginModal}
             setShowLoginModal={setShowLoginModal}
             onAuthSuccess={handleAuthSuccess}
@@ -871,7 +871,7 @@ const App: React.FC = () => {
       case NavView.BAZAR:
         return <BazarArtefactos 
           isMobile={isMobile}
-          essence={user ? essence : 500}
+          essence={user ? essence : 0}
           onEssenceChange={setEssence}
         />;
       case NavView.ORACLE:
@@ -922,7 +922,7 @@ const App: React.FC = () => {
               }
             }
           }} 
-          essence={user ? essence : 500} 
+          essence={user ? essence : 0} 
           isMobile={false}
           modules={modules}
           user={user}
@@ -953,7 +953,7 @@ const App: React.FC = () => {
               }
             }
           }} 
-          essence={user ? essence : 500} 
+          essence={user ? essence : 0} 
           isMobile={true}
           modules={modules}
           user={user}

@@ -22,7 +22,7 @@ const BazarArtefactos: React.FC<BazarArtefactosProps> = ({
   onEssenceChange
 }) => {
   // Estado interno para esencia si no se proporciona externamente
-  const [internalEssence, setInternalEssence] = useState(500);
+  const [internalEssence, setInternalEssence] = useState(0);
   
   // Usar esencia externa si está disponible, sino usar la interna
   const currentEssence = externalEssence !== undefined ? externalEssence : internalEssence;
