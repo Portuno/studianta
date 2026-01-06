@@ -539,7 +539,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
   const renderDayFocus = () => {
     const events = getEventsForDate(anchorDate);
     return (
-      <div className="flex-1 p-4 sm:p-6 md:p-12 overflow-y-auto bg-gradient-to-b from-white/30 to-transparent relative no-scrollbar pb-24 sm:pb-12">
+      <div className="flex-1 p-6 md:p-12 overflow-y-auto bg-gradient-to-b from-white/30 to-transparent relative no-scrollbar">
         {/* Mystic Watermark */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] overflow-hidden">
            {getIcon('compass', 'w-[80vw] h-[80vw]')}
@@ -562,26 +562,26 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
             {events.map(event => (
               <div 
                 key={event.id}
-                className={`glass-card p-4 sm:p-6 md:p-8 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] border-l-4 flex flex-col sm:flex-row items-start sm:items-center justify-between group transition-all duration-300 font-inter shadow-md gap-3 sm:gap-4`}
+                className={`glass-card p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border-l-4 flex items-center justify-between group transition-all duration-300 font-inter shadow-md`}
                 style={{ borderLeftColor: event.color }}
               >
-                <div className="flex items-center gap-3 sm:gap-4 md:gap-8 flex-1 w-full sm:w-auto">
-                   <div className={`w-14 h-14 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shadow-inner flex-shrink-0`} style={{ backgroundColor: `${event.color}10`, color: event.color }}>
-                      {event.type === 'milestone' ? getIcon('calendar', 'w-7 h-7 sm:w-6 sm:h-6 md:w-8 md:h-8') : 
-                       event.type === 'finance' ? getIcon('scale', 'w-7 h-7 sm:w-6 sm:h-6 md:w-8 md:h-8') : 
-                       event.type === 'mood' ? getIcon(event.moodIcon!, 'w-7 h-7 sm:w-6 sm:h-6 md:w-8 md:h-8') :
-                       getIcon('book', 'w-7 h-7 sm:w-6 sm:h-6 md:w-8 md:h-8')}
+                <div className="flex items-center gap-4 md:gap-8">
+                   <div className={`w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shadow-inner`} style={{ backgroundColor: `${event.color}10`, color: event.color }}>
+                      {event.type === 'milestone' ? getIcon('calendar', 'w-6 h-6 md:w-8 md:h-8') : 
+                       event.type === 'finance' ? getIcon('scale', 'w-6 h-6 md:w-8 md:h-8') : 
+                       event.type === 'mood' ? getIcon(event.moodIcon!, 'w-6 h-6 md:w-8 md:h-8') :
+                       getIcon('book', 'w-6 h-6 md:w-8 md:h-8')}
                    </div>
-                   <div className="flex-1 min-w-0">
-                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                       <h4 className="font-cinzel text-base sm:text-lg md:text-xl font-bold text-[#4A233E] tracking-tight break-words">{event.title}</h4>
-                       {event.time && <span className="text-[9px] sm:text-[8px] bg-[#4A233E]/10 text-[#4A233E] px-3 py-1 rounded-full font-bold uppercase whitespace-nowrap self-start sm:self-auto">{event.time}</span>}
+                   <div>
+                     <div className="flex items-center gap-3">
+                       <h4 className="font-cinzel text-base md:text-xl font-bold text-[#4A233E] tracking-tight">{event.title}</h4>
+                       {event.time && <span className="text-[8px] bg-[#4A233E]/10 text-[#4A233E] px-3 py-0.5 rounded-full font-bold uppercase">{event.time}</span>}
                      </div>
-                     <p className="text-[10px] sm:text-[9px] md:text-xs text-[#8B5E75] font-bold uppercase tracking-wider opacity-60 mt-1 sm:mt-0.5 break-words">{event.subtitle}</p>
+                     <p className="text-[9px] md:text-xs text-[#8B5E75] font-bold uppercase tracking-wider opacity-60 mt-0.5">{event.subtitle}</p>
                    </div>
                 </div>
                 {event.type === 'custom' && (
-                  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end sm:justify-start">
+                  <div className="flex items-center gap-3">
                     {onUpdateCustomEvent && (
                       <button 
                         onClick={() => {
@@ -590,24 +590,22 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                             setEditingEvent(customEvent);
                           }
                         }} 
-                        className="bg-[#D4AF37] text-white px-4 py-2.5 sm:p-3 rounded-xl hover:bg-[#D4AF37]/90 transition-all shadow-md hover:scale-105 active:scale-95 flex items-center justify-center gap-2 min-w-[100px] min-h-[44px] touch-manipulation"
+                        className="bg-[#D4AF37] text-white p-3 rounded-xl hover:bg-[#D4AF37]/90 transition-all shadow-md hover:scale-105 active:scale-95 flex items-center justify-center gap-2 min-w-[100px]"
                         title="Editar evento"
-                        aria-label="Editar evento"
                       >
                         {getIcon('edit', 'w-5 h-5')}
-                        <span className="font-cinzel text-[10px] font-black uppercase tracking-wider">EDITAR</span>
+                        <span className="font-cinzel text-[10px] font-black uppercase tracking-wider hidden md:inline">Editar</span>
                       </button>
                     )}
                     <button 
                       onClick={() => {
                         setEventToDelete({ id: event.id, title: event.title });
                       }} 
-                      className="bg-[#E35B8F] text-white px-4 py-2.5 sm:p-3 rounded-xl hover:bg-[#E35B8F]/90 transition-all shadow-md hover:scale-105 active:scale-95 flex items-center justify-center gap-2 min-w-[100px] min-h-[44px] touch-manipulation"
+                      className="bg-[#E35B8F] text-white p-3 rounded-xl hover:bg-[#E35B8F]/90 transition-all shadow-md hover:scale-105 active:scale-95 flex items-center justify-center gap-2 min-w-[100px]"
                       title="Eliminar evento"
-                      aria-label="Eliminar evento"
                     >
                       {getIcon('trash', 'w-5 h-5')}
-                      <span className="font-cinzel text-[10px] font-black uppercase tracking-wider">ELIMINAR</span>
+                      <span className="font-cinzel text-[10px] font-black uppercase tracking-wider hidden md:inline">Eliminar</span>
                     </button>
                   </div>
                 )}
@@ -621,49 +619,39 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
 
   return (
     <div className="h-full flex flex-col pb-10">
-      <header className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4 sm:mb-6 px-3 sm:px-4">
-        <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto">
+      <header className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 px-2">
+        <div className="flex items-center gap-4">
           <div className="flex gap-2">
-            <button 
-              onClick={() => navigate(-1)} 
-              className="min-w-[48px] min-h-[48px] w-12 h-12 rounded-full glass-card border-2 border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm touch-manipulation"
-              aria-label="Día anterior"
-            >
-              <div className="rotate-180">{getIcon('chevron', 'w-6 h-6')}</div>
+            <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-full glass-card border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm">
+              <div className="rotate-180">{getIcon('chevron', 'w-5 h-5')}</div>
             </button>
-            <button 
-              onClick={() => navigate(1)} 
-              className="min-w-[48px] min-h-[48px] w-12 h-12 rounded-full glass-card border-2 border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm touch-manipulation"
-              aria-label="Día siguiente"
-            >
-              {getIcon('chevron', 'w-6 h-6')}
+            <button onClick={() => navigate(1)} className="w-10 h-10 rounded-full glass-card border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm">
+              {getIcon('chevron', 'w-5 h-5')}
             </button>
           </div>
-          <div className="text-center md:text-left flex-1 md:flex-none">
-            <h1 className="font-cinzel text-xl sm:text-2xl md:text-3xl font-bold text-[#4A233E] capitalize tracking-tight">
+          <div className="text-center md:text-left">
+            <h1 className="font-cinzel text-2xl md:text-3xl font-bold text-[#4A233E] capitalize tracking-tight">
               {anchorDate.toLocaleString('es-ES', { month: 'long' })}
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto justify-center flex-wrap">
-          {!isMobile && (
-            <button 
-              onClick={() => setShowAddEventModal(true)}
-              className="btn-primary flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-cinzel text-xs font-bold uppercase tracking-widest shadow-lg active:scale-95 transition-all min-h-[44px] touch-manipulation"
-            >
-              {getIcon('plus', 'w-5 h-5')} Agregar
-            </button>
-          )}
+        <div className="flex items-center gap-4 w-full md:w-auto justify-center">
+          <button 
+            onClick={() => setShowAddEventModal(true)}
+            className="btn-primary flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-cinzel text-[10px] font-bold uppercase tracking-widest shadow-lg active:scale-95 transition-all"
+          >
+            {getIcon('plus', 'w-4 h-4')} Agregar
+          </button>
           
-          <div className="flex gap-2 bg-white/40 p-1.5 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar shadow-inner border-2 border-[#D4AF37]/20">
+          <div className="flex gap-1.5 bg-white/40 p-1 rounded-xl w-full md:w-auto overflow-x-auto no-scrollbar shadow-inner border border-[#D4AF37]/20">
             {(['month', 'week', 'day'] as const).map(v => (
               <button 
                 key={v}
                 onClick={() => setView(v)}
-                className={`flex-1 sm:flex-none px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-cinzel text-[10px] sm:text-[9px] font-black uppercase tracking-[0.15em] transition-all min-h-[44px] touch-manipulation ${view === v ? 'bg-[#E35B8F] text-white shadow-md scale-105' : 'text-[#8B5E75] active:bg-white/60'}`}
+                className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-cinzel text-[9px] font-black uppercase tracking-[0.15em] transition-all ${view === v ? 'bg-[#E35B8F] text-white shadow-md' : 'text-[#8B5E75] hover:bg-white/40'}`}
               >
-                {v === 'month' ? 'MES' : v === 'week' ? 'SEMANA' : 'DÍA'}
+                {v === 'month' ? 'Mes' : v === 'week' ? 'Semana' : 'Día'}
               </button>
             ))}
           </div>
@@ -671,11 +659,10 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
           {/* Botón de Conectividad */}
           <button
             onClick={() => setShowConnectivitySection(!showConnectivitySection)}
-            className="min-w-[48px] min-h-[48px] w-12 h-12 rounded-full glass-card border-2 border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm hover:bg-white/60 touch-manipulation"
+            className="w-10 h-10 rounded-full glass-card border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm hover:bg-white/60"
             title="Conectividad"
-            aria-label="Conectividad"
           >
-            {getIcon('download', 'w-6 h-6')}
+            {getIcon('download', 'w-5 h-5')}
           </button>
         </div>
       </header>
@@ -804,12 +791,11 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
       {isMobile && (
         <button 
           onClick={() => setShowAddEventModal(true)}
-          className="fixed bottom-32 right-4 sm:right-6 w-16 h-16 bg-[#E35B8F] border-3 border-[#D4AF37] rounded-full flex items-center justify-center shadow-[0_10px_25px_rgba(227,91,143,0.4)] z-[100] hover:scale-110 active:scale-90 transition-all overflow-hidden touch-manipulation safe-area-inset-bottom"
-          aria-label="Agregar evento"
+          className="fixed bottom-28 right-6 w-14 h-14 bg-[#E35B8F] border-2 border-[#D4AF37] rounded-full flex items-center justify-center shadow-[0_10px_20px_rgba(227,91,143,0.3)] z-[100] hover:scale-110 active:scale-90 transition-all overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-[#E35B8F] to-[#FFD1DC] opacity-50"></div>
           <div className="relative z-10 text-white drop-shadow-md">
-            {getIcon('plus', "w-7 h-7")}
+            {getIcon('plus', "w-6 h-6")}
           </div>
         </button>
       )}

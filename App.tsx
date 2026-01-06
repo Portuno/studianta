@@ -67,7 +67,19 @@ const App: React.FC = () => {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  // Mejor detección de dispositivos
+  const getDeviceType = () => {
+    const width = window.innerWidth;
+    return {
+      isMobile: width < 768,
+      isTablet: width >= 768 && width < 1024,
+      isDesktop: width >= 1024
+    };
+  };
+
+  const [deviceType, setDeviceType] = useState(getDeviceType());
+  const isMobile = deviceType.isMobile;
+  const isTablet = deviceType.isTablet;
   
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [modules, setModules] = useState<Module[]>(INITIAL_MODULES);
@@ -381,7 +393,10 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => {
+      setDeviceType(getDeviceType());
+    };
+    
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -915,7 +930,7 @@ const App: React.FC = () => {
         />
       )}
       
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'pb-28' : ''}`}>
         <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pb-32' : ''}`}>
           {renderView()}
         </main>

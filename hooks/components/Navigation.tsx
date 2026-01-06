@@ -23,8 +23,8 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
 
   if (isMobile) {
     return (
-      <nav className="fixed bottom-0 left-0 right-0 h-28 glass-card border-t-2 border-[#F8C8DC] flex items-center justify-between px-3 pb-safe z-[150] rounded-t-[2.5rem] shadow-[0_-8px_25px_rgba(74,35,62,0.15)] safe-area-inset-bottom">
-        <div className="flex flex-1 justify-around items-center max-w-full">
+      <nav className="fixed bottom-0 left-0 right-0 h-24 glass-card border-t border-[#F8C8DC] flex items-center justify-between px-2 pb-8 z-[150] rounded-t-[2.5rem] shadow-[0_-8px_25px_rgba(74,35,62,0.1)]">
+        <div className="flex flex-1 justify-around">
           <NavButton 
             id={NavView.SUBJECTS} 
             icon="book" 
@@ -43,20 +43,19 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
           />
         </div>
 
-        <div className="relative -mt-12 mx-2 flex-shrink-0">
+        <div className="relative -mt-10 px-2">
           <button 
             onClick={() => setActiveView(NavView.DASHBOARD)}
-            className={`min-w-[72px] min-h-[72px] w-18 h-18 rounded-full border-4 border-white shadow-2xl flex flex-col items-center justify-center transition-all duration-300 active:scale-95 ${activeView === NavView.DASHBOARD ? 'bg-[#E35B8F] text-white scale-105' : 'bg-[#4A233E] text-[#D4AF37]'}`}
-            aria-label="Atanor - Dashboard"
+            className={`w-16 h-16 rounded-full border-4 border-white shadow-xl flex flex-col items-center justify-center transition-all duration-500 ${activeView === NavView.DASHBOARD ? 'bg-[#E35B8F] text-white scale-110' : 'bg-[#4A233E] text-[#D4AF37]'}`}
           >
-            <div className="p-1">
-              {getIcon('sparkles', "w-7 h-7")}
+            <div className="p-0">
+              {getIcon('sparkles', "w-6 h-6")}
             </div>
-            <span className="text-[8px] font-black uppercase tracking-[0.15em] mt-0.5 leading-tight">ATANOR</span>
+            <span className="text-[7px] font-black uppercase tracking-[0.2em] mt-0.5">ATANOR</span>
           </button>
         </div>
 
-        <div className="flex flex-1 justify-around items-center max-w-full">
+        <div className="flex flex-1 justify-around">
           <NavButton 
             id={NavView.FOCUS} 
             icon="hourglass" 
@@ -212,18 +211,17 @@ const NavButton: React.FC<NavButtonProps> = ({ id, icon, label, locked, active, 
   <button
     disabled={locked}
     onClick={onClick}
-    className={`flex flex-col items-center justify-center gap-1.5 transition-all duration-300 relative min-w-[56px] min-h-[56px] touch-manipulation ${
-      active ? 'text-[#E35B8F] scale-105' : locked ? 'text-[#8B5E75]/30 grayscale' : 'text-[#8B5E75] active:scale-95'
+    className={`flex flex-col items-center justify-center gap-1.5 transition-all duration-300 relative ${
+      active ? 'text-[#E35B8F] scale-105' : locked ? 'text-[#8B5E75]/30 grayscale' : 'text-[#8B5E75]'
     }`}
-    aria-label={label}
   >
-    <div className={`p-2 rounded-xl transition-all ${active ? 'bg-[#E35B8F]/15' : ''}`}>
-      {getIcon(icon, "w-7 h-7")}
+    <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-[#E35B8F]/10' : ''}`}>
+      {getIcon(icon, "w-6 h-6")}
     </div>
-    <span className={`text-[9px] font-black uppercase tracking-wider whitespace-nowrap font-inter leading-tight ${active ? 'opacity-100 font-bold' : 'opacity-75'}`}>
+    <span className={`text-[8px] font-black uppercase tracking-wider whitespace-nowrap font-inter ${active ? 'opacity-100' : 'opacity-70'}`}>
       {label}
     </span>
-    {locked && <div className="absolute -top-1 -right-1 text-[#D4AF37] bg-white rounded-full p-0.5">{getIcon('lock', 'w-3 h-3')}</div>}
+    {locked && <div className="absolute top-0 right-0 text-[#D4AF37]">{getIcon('lock', 'w-2.5 h-2.5')}</div>}
   </button>
 );
 

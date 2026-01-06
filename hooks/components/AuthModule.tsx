@@ -72,7 +72,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Tu nombre..."
-                className="w-full bg-white/60 border-2 border-[#F8C8DC] rounded-xl px-4 py-3.5 text-base focus:outline-none focus:border-[#E35B8F] min-h-[48px]"
+                className="w-full bg-white/60 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#E35B8F]"
                 required={!isLogin}
               />
             </div>
@@ -87,7 +87,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="tu@email.com"
-              className="w-full bg-white/60 border-2 border-[#F8C8DC] rounded-xl px-4 py-3.5 text-base focus:outline-none focus:border-[#E35B8F] min-h-[48px]"
+              className="w-full bg-white/60 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#E35B8F]"
               required
             />
           </div>
@@ -101,7 +101,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-white/60 border-2 border-[#F8C8DC] rounded-xl px-4 py-3.5 text-base focus:outline-none focus:border-[#E35B8F] min-h-[48px]"
+              className="w-full bg-white/60 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#E35B8F]"
               required
               minLength={6}
             />
@@ -116,7 +116,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full btn-primary py-4 rounded-xl sm:rounded-2xl font-cinzel text-sm font-black uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation active:scale-95"
+            className="w-full btn-primary py-4 rounded-2xl font-cinzel text-sm font-black uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <div className="flex items-center justify-center gap-2">
@@ -144,7 +144,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
             type="button"
             onClick={handleGoogleSignIn}
             disabled={googleLoading || loading}
-            className="w-full flex items-center justify-center gap-3 py-4 rounded-xl sm:rounded-2xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel text-sm font-black uppercase tracking-widest shadow-lg hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation active:scale-95"
+            className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel text-sm font-black uppercase tracking-widest shadow-lg hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {googleLoading ? (
               <div className="flex items-center justify-center gap-2">

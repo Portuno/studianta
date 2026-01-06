@@ -77,9 +77,9 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-cinzel text-xs sm:text-sm font-bold shadow-lg min-h-[48px] touch-manipulation active:scale-95"
+          className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-cinzel text-xs font-bold shadow-lg"
         >
-          {getIcon('plus', 'w-5 h-5')}
+          {getIcon('plus', 'w-4 h-4')}
           Inaugurar Cátedra
         </button>
       </div>
@@ -93,7 +93,7 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
         {subjects.map(subject => (
           <div 
             key={subject.id} 
-            className={`glass-card p-5 sm:p-6 md:p-6 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] cursor-pointer transition-all duration-300 active:scale-95 border-l-4 group relative touch-manipulation min-h-[140px] ${subject.status === 'Aprobada' ? 'border-l-[#D4AF37]' : 'border-l-[#E35B8F]'}`}
+            className={`glass-card p-5 md:p-6 rounded-[2rem] md:rounded-[2.5rem] cursor-pointer transition-all duration-300 active:scale-95 border-l-4 group relative ${subject.status === 'Aprobada' ? 'border-l-[#D4AF37]' : 'border-l-[#E35B8F]'}`}
             onClick={() => setSelectedSubjectId(subject.id)}
           >
             <div className="flex justify-between items-start mb-4">
@@ -102,10 +102,9 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
               </span>
               <button 
                 onClick={(e) => { e.stopPropagation(); setSubjectToDelete(subject); }}
-                className="text-[#8B5E75] hover:text-red-500 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg active:bg-red-50 touch-manipulation"
-                aria-label="Eliminar asignatura"
+                className="text-[#8B5E75] hover:text-red-500 p-2"
               >
-                {getIcon('trash', 'w-5 h-5')}
+                {getIcon('trash', 'w-4 h-4')}
               </button>
             </div>
             <h3 className="font-cinzel text-lg md:text-xl text-[#4A233E] mb-1 truncate font-bold">{subject.name}</h3>
@@ -151,64 +150,28 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
 
       {showCelebration && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#E35B8F]/30 backdrop-blur-md p-4" onClick={() => setShowCelebration(false)}>
-          <div className="glass-card max-w-sm w-full p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] text-center shadow-2xl mx-4" onClick={(e) => e.stopPropagation()}>
-             <h2 className="font-cinzel text-2xl sm:text-3xl text-[#4A233E] mb-4 font-bold uppercase tracking-widest">¡TRIUNFO!</h2>
-             <div className="mb-6 sm:mb-8">
-               <label className="block text-xs sm:text-[10px] uppercase font-bold text-[#8B5E75] mb-3 font-inter">Nota Obtenida</label>
-               <input 
-                 type="number" 
-                 step="0.1" 
-                 value={finalGrade} 
-                 onChange={(e) => setFinalGrade(e.target.value)} 
-                 className="w-full text-center bg-white/60 border-2 border-[#D4AF37] rounded-xl px-4 py-4 font-inter text-2xl sm:text-3xl text-[#4A233E] outline-none focus:border-[#D4AF37] min-h-[56px]" 
-                 placeholder="0.0"
-                 autoFocus
-               />
+          <div className="glass-card max-w-sm w-full p-8 rounded-[2rem] md:rounded-[3rem] text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
+             <h2 className="font-cinzel text-3xl text-[#4A233E] mb-2 font-bold uppercase tracking-widest">¡TRIUNFO!</h2>
+             <div className="mb-8">
+               <label className="block text-[10px] uppercase font-bold text-[#8B5E75] mb-2 font-inter">Nota Obtenida</label>
+               <input type="number" step="0.1" value={finalGrade} onChange={(e) => setFinalGrade(e.target.value)} className="w-full text-center bg-white/60 border border-[#D4AF37] rounded-xl px-4 py-4 font-inter text-3xl text-[#4A233E] outline-none" placeholder="0.0" />
              </div>
-             <button 
-               onClick={submitFinalGrade} 
-               className="btn-primary w-full py-4 rounded-xl sm:rounded-2xl font-cinzel text-sm sm:text-xs tracking-widest font-black uppercase shadow-lg min-h-[48px] touch-manipulation active:scale-95"
-             >
-               GUARDAR NOTA
-             </button>
+             <button onClick={submitFinalGrade} className="btn-primary w-full py-4 rounded-2xl font-cinzel text-xs tracking-widest font-black uppercase shadow-lg">GUARDAR NOTA</button>
           </div>
         </div>
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4 safe-area-inset" onClick={() => setShowAddModal(false)}>
-          <form onSubmit={handleAdd} className="glass-card w-full max-w-md p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-cinzel text-lg sm:text-xl text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">REGISTRAR CÁTEDRA</h2>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4" onClick={() => setShowAddModal(false)}>
+          <form onSubmit={handleAdd} className="glass-card w-full max-w-md p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-cinzel text-lg md:text-xl text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">REGISTRAR CÁTEDRA</h2>
             <div className="space-y-4 font-inter">
-              <input 
-                required 
-                name="name" 
-                type="text" 
-                placeholder="Nombre de la Cátedra" 
-                className="w-full bg-white/40 border-2 border-[#F8C8DC] rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#E35B8F] min-h-[48px]" 
-              />
-              <input 
-                required 
-                name="career" 
-                type="text" 
-                placeholder="Carrera / Área" 
-                className="w-full bg-white/40 border-2 border-[#F8C8DC] rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#E35B8F] min-h-[48px]" 
-              />
+              <input required name="name" type="text" placeholder="Nombre de la Cátedra" className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-4 text-sm focus:outline-none" />
+              <input required name="career" type="text" placeholder="Carrera / Área" className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-4 text-sm focus:outline-none" />
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-8">
-              <button 
-                type="button" 
-                onClick={() => setShowAddModal(false)} 
-                className="flex-1 py-3.5 sm:py-4 text-sm font-bold text-[#8B5E75] uppercase min-h-[48px] touch-manipulation active:bg-white/40 rounded-xl"
-              >
-                Cerrar
-              </button>
-              <button 
-                type="submit" 
-                className="flex-[2] btn-primary py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-cinzel text-sm font-black uppercase tracking-widest min-h-[48px] touch-manipulation active:scale-95"
-              >
-                Inaugurar
-              </button>
+            <div className="flex gap-4 mt-8">
+              <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-4 text-xs font-bold text-[#8B5E75] uppercase">Cerrar</button>
+              <button type="submit" className="flex-[2] btn-primary py-4 rounded-2xl font-cinzel text-xs font-black uppercase tracking-widest">Inaugurar</button>
             </div>
           </form>
         </div>

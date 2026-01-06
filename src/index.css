@@ -22,6 +22,53 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
+  /* Mejorar rendimiento en móviles */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Safe area para dispositivos con notch */
+@supports (padding: max(0px)) {
+  .safe-area-inset-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .safe-area-inset-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+}
+
+/* Mejorar interacción táctil */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Botones táctiles más grandes en móviles */
+@media (max-width: 767px) {
+  button:not(.no-touch), a:not(.no-touch), [role="button"]:not(.no-touch) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  input, textarea, select {
+    font-size: 16px; /* Evita zoom en iOS */
+    min-height: 48px;
+  }
+}
+
+/* Mejorar scroll en móviles */
+@media (max-width: 1023px) {
+  .no-scrollbar {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .font-cinzel { 
