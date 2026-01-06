@@ -214,6 +214,12 @@ export const getIcon = (iconName: string, className: string = 'w-6 h-6'): React.
         <path d="M6 12v5c3 3 9 3 12 0v-5" />
       </svg>
     ),
+    search: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+      </svg>
+    ),
   };
 
   return icons[iconName] || icons.book; // Default to book icon if not found
