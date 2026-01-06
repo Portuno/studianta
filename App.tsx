@@ -19,6 +19,7 @@ import FocusFloatingWidget from './components/FocusFloatingWidget';
 import OraculoPage from './components/OraculoPage';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
+import DocsPage from './components/DocsPage';
 import Footer from './components/Footer';
 
 const App: React.FC = () => {
@@ -30,11 +31,13 @@ const App: React.FC = () => {
     const pathname = window.location.pathname;
     if (pathname === '/privacidad' || pathname === '/privacidad/') return NavView.PRIVACY_POLICY;
     if (pathname === '/terminosycondiciones' || pathname === '/terminosycondiciones/') return NavView.TERMS_OF_SERVICE;
+    if (pathname === '/docs' || pathname === '/docs/') return NavView.DOCS;
     // Mantener compatibilidad con query params antiguos
     const urlParams = new URLSearchParams(window.location.search);
     const page = urlParams.get('page');
     if (page === 'privacy-policy') return NavView.PRIVACY_POLICY;
     if (page === 'terms-of-service') return NavView.TERMS_OF_SERVICE;
+    if (page === 'docs') return NavView.DOCS;
     return NavView.DASHBOARD;
   };
   
@@ -49,9 +52,11 @@ const App: React.FC = () => {
       window.history.pushState({ view: 'privacy' }, '', '/privacidad');
     } else if (view === NavView.TERMS_OF_SERVICE) {
       window.history.pushState({ view: 'terms' }, '', '/terminosycondiciones');
+    } else if (view === NavView.DOCS) {
+      window.history.pushState({ view: 'docs' }, '', '/docs');
     } else if (view === NavView.DASHBOARD) {
-      // Si vuelve al dashboard desde una página de política, limpiar la URL
-      if (window.location.pathname === '/privacidad' || window.location.pathname === '/terminosycondiciones') {
+      // Si vuelve al dashboard desde una página de política/docs, limpiar la URL
+      if (window.location.pathname === '/privacidad' || window.location.pathname === '/terminosycondiciones' || window.location.pathname === '/docs') {
         window.history.pushState({ view: 'dashboard' }, '', '/');
       }
     }
@@ -896,13 +901,18 @@ const App: React.FC = () => {
           onBack={() => handleViewChange(NavView.DASHBOARD)}
           isMobile={isMobile}
         />;
+      case NavView.DOCS:
+        return <DocsPage 
+          onBack={() => handleViewChange(NavView.DASHBOARD)}
+          isMobile={isMobile}
+        />;
       default:
         return <Dashboard modules={modules} onActivate={toggleModule} isMobile={isMobile} setActiveView={setActiveView} />;
     }
   };
 
-  // Ocultar navegación en páginas de políticas
-  const isPolicyPage = activeView === NavView.PRIVACY_POLICY || activeView === NavView.TERMS_OF_SERVICE;
+  // Ocultar navegación en páginas de políticas y docs
+  const isPolicyPage = activeView === NavView.PRIVACY_POLICY || activeView === NavView.TERMS_OF_SERVICE || activeView === NavView.DOCS;
 
   return (
     <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} h-screen w-screen overflow-hidden`}>

@@ -110,6 +110,7 @@ export enum NavView {
   AI = 'IA',
   BAZAR = 'Bazar',
   ORACLE = 'Oráculo',
+  DOCS = 'Documentación',
   PRIVACY_POLICY = 'Política de Privacidad',
   TERMS_OF_SERVICE = 'Términos y Condiciones'
 }

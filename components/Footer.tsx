@@ -23,6 +23,14 @@ const Footer: React.FC<FooterProps> = ({ setActiveView, isMobile = false }) => {
     }
   };
 
+  const handleDocsClick = () => {
+    if (setActiveView) {
+      setActiveView(NavView.DOCS);
+    } else {
+      window.location.href = '/docs';
+    }
+  };
+
   return (
     <footer className="glass-card border-t border-[#F8C8DC] py-4 px-4 md:px-8 mt-auto">
       <div className="max-w-7xl mx-auto">
@@ -49,6 +57,17 @@ const Footer: React.FC<FooterProps> = ({ setActiveView, isMobile = false }) => {
               className="font-garamond text-sm text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
             >
               Términos y Condiciones
+            </a>
+            <span className="text-[#F8C8DC]">•</span>
+            <a
+              href="/docs"
+              onClick={(e) => {
+                e.preventDefault();
+                handleDocsClick();
+              }}
+              className="font-garamond text-sm text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+            >
+              Documentación
             </a>
           </div>
 
