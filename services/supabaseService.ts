@@ -294,29 +294,50 @@ export class SupabaseService {
     if (updates.essence !== undefined) dbUpdates.essence = updates.essence;
     if (updates.total_essence_earned !== undefined) dbUpdates.total_essence_earned = updates.total_essence_earned;
 
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(dbUpdates)
-      .eq('id', userId)
-      .select()
-      .single();
+    try {
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from('profiles')
+          .update(dbUpdates)
+          .eq('id', userId)
+          .select()
+          .single();
+        
+        if (result.error && isNetworkError(result.error)) {
+          throw result.error;
+        }
+        return result;
+      });
 
-    if (error) throw error;
+      if (error) {
+        if (isNetworkError(error)) {
+          console.error('Network error updating profile:', error);
+          throw new Error('Error de conexión. Por favor, intenta nuevamente.');
+        }
+        throw error;
+      }
     
-    // Mapear de vuelta a TypeScript
-    return {
-      id: data.id,
-      email: data.email,
-      full_name: data.full_name,
-      career: data.career,
-      institution: data.institution,
-      avatar_url: data.avatar_url,
-      arcane_level: data.arcane_level || 'Buscadora de Luz',
-      essence: data.essence || 500,
-      total_essence_earned: data.total_essence_earned || 0,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-    };
+      // Mapear de vuelta a TypeScript
+      return {
+        id: data.id,
+        email: data.email,
+        full_name: data.full_name,
+        career: data.career,
+        institution: data.institution,
+        avatar_url: data.avatar_url,
+        arcane_level: data.arcane_level || 'Buscadora de Luz',
+        essence: data.essence || 500,
+        total_essence_earned: data.total_essence_earned || 0,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      };
+    } catch (error: any) {
+      if (isNetworkError(error)) {
+        console.error('Network error updating profile:', error);
+        throw new Error('Error de conexión al actualizar perfil. Por favor, intenta nuevamente.');
+      }
+      throw error;
+    }
   }
 
   async updateEssence(userId: string, essence: number) {
@@ -632,15 +653,26 @@ export class SupabaseService {
 
   async getJournalEntries(userId: string): Promise<JournalEntry[]> {
     try {
-      const { data, error } = await supabase
-        .from('journal_entries')
-        .select('*')
-        .eq('user_id', userId)
-        .order('date', { ascending: false });
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from('journal_entries')
+          .select('*')
+          .eq('user_id', userId)
+          .order('date', { ascending: false });
+        
+        if (result.error && isNetworkError(result.error)) {
+          throw result.error;
+        }
+        return result;
+      });
 
       if (error) {
         if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
           console.warn('Table journal_entries not found');
+          return [];
+        }
+        if (isNetworkError(error)) {
+          console.warn('Network error loading journal entries, returning empty array');
           return [];
         }
         throw error;
@@ -658,6 +690,10 @@ export class SupabaseService {
       }));
     } catch (error: any) {
       if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        return [];
+      }
+      if (isNetworkError(error)) {
+        console.warn('Network error loading journal entries, returning empty array');
         return [];
       }
       throw error;
@@ -734,15 +770,26 @@ export class SupabaseService {
 
   async getCalendarEvents(userId: string): Promise<CustomCalendarEvent[]> {
     try {
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .select('*')
-        .eq('user_id', userId)
-        .order('date', { ascending: true });
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from('calendar_events')
+          .select('*')
+          .eq('user_id', userId)
+          .order('date', { ascending: true });
+        
+        if (result.error && isNetworkError(result.error)) {
+          throw result.error;
+        }
+        return result;
+      });
 
       if (error) {
         if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
           console.warn('Table calendar_events not found');
+          return [];
+        }
+        if (isNetworkError(error)) {
+          console.warn('Network error loading calendar events, returning empty array');
           return [];
         }
         throw error;
@@ -762,35 +809,61 @@ export class SupabaseService {
       if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
         return [];
       }
+      if (isNetworkError(error)) {
+        console.warn('Network error loading calendar events, returning empty array');
+        return [];
+      }
       throw error;
     }
   }
 
   async createCalendarEvent(userId: string, event: Omit<CustomCalendarEvent, 'id'>): Promise<CustomCalendarEvent> {
-    const { data, error } = await supabase
-      .from('calendar_events')
-      .insert({
-        title: event.title,
-        description: event.description,
-        date: event.date,
-        time: event.time,
-        color: event.color,
-        priority: event.priority,
-        user_id: userId,
-      })
-      .select()
-      .single();
+    try {
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from('calendar_events')
+          .insert({
+            title: event.title,
+            description: event.description,
+            date: event.date,
+            time: event.time,
+            color: event.color,
+            priority: event.priority,
+            user_id: userId,
+          })
+          .select()
+          .single();
+        
+        if (result.error && isNetworkError(result.error)) {
+          throw result.error;
+        }
+        return result;
+      });
 
-    if (error) throw error;
-    return {
-      id: data.id,
-      title: data.title,
-      description: data.description,
-      date: data.date,
-      time: data.time,
-      color: data.color,
-      priority: data.priority,
-    };
+      if (error) {
+        if (isNetworkError(error)) {
+          console.error('Network error creating calendar event:', error);
+          throw new Error('Error de conexión al crear evento. Por favor, intenta nuevamente.');
+        }
+        throw error;
+      }
+      
+      return {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        date: data.date,
+        time: data.time,
+        color: data.color,
+        priority: data.priority,
+      };
+    } catch (error: any) {
+      if (isNetworkError(error)) {
+        console.error('Network error creating calendar event:', error);
+        throw new Error('Error de conexión al crear evento. Por favor, intenta nuevamente.');
+      }
+      throw error;
+    }
   }
 
   async updateCalendarEvent(userId: string, event: CustomCalendarEvent): Promise<CustomCalendarEvent> {
