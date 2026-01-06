@@ -392,6 +392,19 @@ export class GoogleCalendarService {
   }
 
   /**
+   * Calcula la fecha del día siguiente en formato YYYY-MM-DD
+   */
+  private getNextDay(dateStr: string): string {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + 1);
+    const nextYear = date.getFullYear();
+    const nextMonth = (date.getMonth() + 1).toString().padStart(2, '0');
+    const nextDay = date.getDate().toString().padStart(2, '0');
+    return `${nextYear}-${nextMonth}-${nextDay}`;
+  }
+
+  /**
    * Valida y formatea una fecha para Google Calendar
    */
   private validateAndFormatDate(dateStr: string, timeStr?: string): { isValid: boolean; dateTime?: string; date?: string; error?: string } {
@@ -436,14 +449,19 @@ export class GoogleCalendarService {
     }
 
     // Construir fecha/hora completa en formato ISO (YYYY-MM-DDTHH:MM:00)
+    // IMPORTANTE: No usar toISOString() porque convierte a UTC y puede cambiar la fecha
+    // En su lugar, construir directamente la fecha/hora en formato ISO local
     const dateTimeStr = `${dateStr}T${normalizedTime}:00`;
-    const dateTime = new Date(dateTimeStr);
     
-    if (isNaN(dateTime.getTime())) {
+    // Validar que la fecha/hora sea válida
+    const testDate = new Date(dateTimeStr);
+    if (isNaN(testDate.getTime())) {
       return { isValid: false, error: `Fecha/hora inválida: ${dateTimeStr}` };
     }
 
-    return { isValid: true, dateTime: dateTime.toISOString() };
+    // Retornar la fecha/hora en formato ISO local (sin conversión a UTC)
+    // Google Calendar espera el formato: YYYY-MM-DDTHH:MM:SS
+    return { isValid: true, dateTime: dateTimeStr };
   }
 
   /**
@@ -583,20 +601,29 @@ export class GoogleCalendarService {
           
           if (milestone.time && validation.dateTime) {
             // Evento con hora
-            const startDate = new Date(validation.dateTime);
-            const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 horas
+            // Calcular fecha de fin sumando 2 horas directamente en el string (sin conversión UTC)
+            const [datePart, timePart] = validation.dateTime.split('T');
+            const [hours, minutes] = timePart.split(':').map(Number);
+            let endHours = hours + 2;
+            let endDatePart = datePart;
             
-            if (isNaN(endDate.getTime())) {
-              console.error(`[Google Calendar] Error calculando fecha de fin para milestone "${milestone.title}"`);
-              errors++;
-              continue;
+            // Manejar cambio de día si las horas exceden 24
+            if (endHours >= 24) {
+              endHours = endHours - 24;
+              const date = new Date(datePart);
+              date.setDate(date.getDate() + 1);
+              endDatePart = date.toISOString().slice(0, 10);
             }
+            
+            const endHoursStr = endHours.toString().padStart(2, '0');
+            const endMinutesStr = minutes.toString().padStart(2, '0');
+            const endDateTime = `${endDatePart}T${endHoursStr}:${endMinutesStr}:00`;
 
             googleEvent = {
               summary: `[Studianta] ${eventTitle}`,
               description: `Materia: ${subject.name}\nTipo: ${milestone.type}\n${milestone.title}`,
               start: { dateTime: validation.dateTime, timeZone },
-              end: { dateTime: endDate.toISOString(), timeZone },
+              end: { dateTime: endDateTime, timeZone },
               colorId: milestone.type === 'Examen' ? '6' : '9',
               reminders: {
                 useDefault: false,
@@ -661,20 +688,27 @@ export class GoogleCalendarService {
 
         if (event.time && validation.dateTime) {
           // Evento con hora
-          const startDate = new Date(validation.dateTime);
-          const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 horas
+          // Calcular fecha de fin sumando 2 horas directamente en el string (sin conversión UTC)
+          const [datePart, timePart] = validation.dateTime.split('T');
+          const [hours, minutes] = timePart.split(':').map(Number);
+          let endHours = hours + 2;
+          let endDatePart = datePart;
           
-          if (isNaN(endDate.getTime())) {
-            console.error(`[Google Calendar] Error calculando fecha de fin para evento "${event.title}"`);
-            errors++;
-            continue;
+          // Manejar cambio de día si las horas exceden 24
+          if (endHours >= 24) {
+            endHours = endHours - 24;
+            endDatePart = this.getNextDay(datePart);
           }
+          
+          const endHoursStr = endHours.toString().padStart(2, '0');
+          const endMinutesStr = minutes.toString().padStart(2, '0');
+          const endDateTime = `${endDatePart}T${endHoursStr}:${endMinutesStr}:00`;
 
           googleEvent = {
             summary: `[Studianta] ${event.title}`,
             description: event.description || '',
             start: { dateTime: validation.dateTime, timeZone },
-            end: { dateTime: endDate.toISOString(), timeZone },
+            end: { dateTime: endDateTime, timeZone },
             colorId: event.priority === 'high' ? '6' : '1',
             reminders: {
               useDefault: false,
@@ -754,19 +788,29 @@ export class GoogleCalendarService {
       let googleEvent: GoogleCalendarEvent;
       
       if (milestone.time && validation.dateTime) {
-        const startDate = new Date(validation.dateTime);
-        const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+        // Calcular fecha de fin sumando 2 horas directamente en el string (sin conversión UTC)
+        const [datePart, timePart] = validation.dateTime.split('T');
+        const [hours, minutes] = timePart.split(':').map(Number);
+        let endHours = hours + 2;
+        let endDatePart = datePart;
         
-        if (isNaN(endDate.getTime())) {
-          console.error(`[Google Calendar] Error calculando fecha de fin para milestone "${milestone.title}"`);
-          return;
+        // Manejar cambio de día si las horas exceden 24
+        if (endHours >= 24) {
+          endHours = endHours - 24;
+          const date = new Date(datePart);
+          date.setDate(date.getDate() + 1);
+          endDatePart = date.toISOString().slice(0, 10);
         }
+        
+        const endHoursStr = endHours.toString().padStart(2, '0');
+        const endMinutesStr = minutes.toString().padStart(2, '0');
+        const endDateTime = `${endDatePart}T${endHoursStr}:${endMinutesStr}:00`;
 
         googleEvent = {
           summary: `[Studianta] ${eventTitle}`,
           description: `Materia: ${subject.name}\nTipo: ${milestone.type}\n${milestone.title}`,
           start: { dateTime: validation.dateTime, timeZone },
-          end: { dateTime: endDate.toISOString(), timeZone },
+          end: { dateTime: endDateTime, timeZone },
           colorId: milestone.type === 'Examen' ? '6' : '9',
           reminders: {
             useDefault: false,
@@ -833,19 +877,29 @@ export class GoogleCalendarService {
       let googleEvent: GoogleCalendarEvent;
 
       if (event.time && validation.dateTime) {
-        const startDate = new Date(validation.dateTime);
-        const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+        // Calcular fecha de fin sumando 2 horas directamente en el string (sin conversión UTC)
+        const [datePart, timePart] = validation.dateTime.split('T');
+        const [hours, minutes] = timePart.split(':').map(Number);
+        let endHours = hours + 2;
+        let endDatePart = datePart;
         
-        if (isNaN(endDate.getTime())) {
-          console.error(`[Google Calendar] Error calculando fecha de fin para evento "${event.title}"`);
-          return;
+        // Manejar cambio de día si las horas exceden 24
+        if (endHours >= 24) {
+          endHours = endHours - 24;
+          const date = new Date(datePart);
+          date.setDate(date.getDate() + 1);
+          endDatePart = date.toISOString().slice(0, 10);
         }
+        
+        const endHoursStr = endHours.toString().padStart(2, '0');
+        const endMinutesStr = minutes.toString().padStart(2, '0');
+        const endDateTime = `${endDatePart}T${endHoursStr}:${endMinutesStr}:00`;
 
         googleEvent = {
           summary: `[Studianta] ${event.title}`,
           description: event.description || '',
           start: { dateTime: validation.dateTime, timeZone },
-          end: { dateTime: endDate.toISOString(), timeZone },
+          end: { dateTime: endDateTime, timeZone },
           colorId: event.priority === 'high' ? '6' : '1',
           reminders: {
             useDefault: false,
