@@ -99,15 +99,15 @@ const App: React.FC = () => {
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    if (focusState.isActive && !focusState.isPaused && focusState.timeLeft > 0) {
+    if (focusState.isActive && !focusState.isPaused && focusState.timeLeft >= 0) {
       intervalId = setInterval(() => {
         setFocusState(prev => {
           const newTime = prev.timeLeft - 1;
-          if (newTime > 0) {
+          if (newTime >= 0) {
             return { ...prev, timeLeft: newTime };
           } else {
             // Timer completado - detener
-            return { ...prev, isActive: false, isPaused: false, sanctuaryMode: false };
+            return { ...prev, isActive: false, isPaused: false, sanctuaryMode: false, timeLeft: 0 };
           }
         });
       }, 1000);
@@ -119,6 +119,22 @@ const App: React.FC = () => {
       }
     };
   }, [focusState.isActive, focusState.isPaused]);
+
+  // Detectar cuando el timer llega a 0 y completar la sesión
+  useEffect(() => {
+    if (focusState.timeLeft === 0 && focusState.isActive && !focusState.isPaused) {
+      // Pequeño delay para asegurar que el estado se actualizó
+      const timeoutId = setTimeout(() => {
+        setFocusState(prev => ({
+          ...prev,
+          isActive: false,
+          isPaused: false,
+          sanctuaryMode: false
+        }));
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [focusState.timeLeft, focusState.isActive, focusState.isPaused]);
 
   // Ref para rastrear si los datos ya se cargaron (evita recargas duplicadas)
   const dataLoadedRef = useRef(false);

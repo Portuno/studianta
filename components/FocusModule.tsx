@@ -91,26 +91,26 @@ const FocusModule: React.FC<FocusModuleProps> = ({
     // Si estamos usando estado global, NO ejecutar timer aquí (se maneja en App.tsx)
     if (onFocusStateChange && focusState) {
       // El timer global en App.tsx maneja la actualización
-      if (timeLeft === 0 && isActive) {
+      if (timeLeft === 0 && isActive && !isPaused) {
         handleCompleteSession();
       }
       return;
     }
 
     // Solo ejecutar timer local si NO estamos usando estado global
-    if (isActive && !isPaused && timeLeft > 0) {
+    if (isActive && !isPaused && timeLeft >= 0) {
       timerRef.current = setInterval(() => {
         setLocalTimeLeft(prev => {
           const newTime = prev - 1;
-          if (newTime > 0) {
+          if (newTime >= 0) {
             return newTime;
           } else {
             handleCompleteSession();
-            return prev;
+            return 0;
           }
         });
       }, 1000);
-    } else if (timeLeft === 0 && isActive) {
+    } else if (timeLeft === 0 && isActive && !isPaused) {
       handleCompleteSession();
     }
     return () => {
@@ -297,7 +297,9 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                   onClick={handleStart}
                   className="btn-primary w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
                 >
-                  {getIcon('play', 'w-7 h-7 lg:w-8 lg:h-8 ml-1')}
+                  <svg className="w-7 h-7 lg:w-8 lg:h-8 ml-1" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
                 </button>
               ) : (
                 <>
@@ -306,7 +308,9 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                       onClick={handleResume}
                       className="btn-primary w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
                     >
-                      {getIcon('play', 'w-7 h-7 lg:w-8 lg:h-8 ml-1')}
+                      <svg className="w-7 h-7 lg:w-8 lg:h-8 ml-1" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
                     </button>
                   ) : (
                     <button 

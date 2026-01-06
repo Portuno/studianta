@@ -19,12 +19,75 @@ const getSupabaseClient = (): SupabaseClient => {
         autoRefreshToken: true,
         detectSessionInUrl: true,
       },
+      db: {
+        schema: 'public',
+      },
+      global: {
+        headers: {
+          'x-client-info': 'studianta-web',
+        },
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
     });
   }
   return supabaseInstance;
 };
 
 export const supabase: SupabaseClient = getSupabaseClient();
+
+// Helper function para reintentos con backoff exponencial
+const retryWithBackoff = async <T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  initialDelay: number = 1000
+): Promise<T> => {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      
+      // Si es un error de red, intentar de nuevo
+      const isNetworkError = 
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('ERR_HTTP2') ||
+        error?.message?.includes('NetworkError') ||
+        error?.message?.includes('Network request failed') ||
+        error?.code === 'ECONNREFUSED' ||
+        error?.code === 'ETIMEDOUT';
+      
+      if (!isNetworkError || attempt === maxRetries - 1) {
+        throw error;
+      }
+      
+      // Esperar antes de reintentar (backoff exponencial)
+      const delay = initialDelay * Math.pow(2, attempt);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
+};
+
+// Helper function para detectar errores de red
+const isNetworkError = (error: any): boolean => {
+  return (
+    error?.message?.includes('Failed to fetch') ||
+    error?.message?.includes('ERR_HTTP2') ||
+    error?.message?.includes('NetworkError') ||
+    error?.message?.includes('Network request failed') ||
+    error?.message?.includes('PING_FAILED') ||
+    error?.code === 'ECONNREFUSED' ||
+    error?.code === 'ETIMEDOUT' ||
+    error?.name === 'TypeError'
+  );
+};
 
 export interface UserProfile {
   id: string;
@@ -173,33 +236,52 @@ export class SupabaseService {
   }
 
   async getProfile(userId: string): Promise<UserProfile | null> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        if (result.error && isNetworkError(result.error)) {
+          throw result.error;
+        }
+        return result;
+      });
 
-    if (error) {
-      if (error.code === 'PGRST116') return null; // No profile found
-      throw error;
-    }
-    
-    if (!data) return null;
+      if (error) {
+        if (error.code === 'PGRST116') return null; // No profile found
+        if (isNetworkError(error)) {
+          console.warn('Network error loading profile, returning null');
+          return null;
+        }
+        throw error;
+      }
+      
+      if (!data) return null;
     
     // Mapear campos de la base de datos a TypeScript
-    return {
-      id: data.id,
-      email: data.email,
-      full_name: data.full_name,
-      career: data.career,
-      institution: data.institution, // Mapear institution (antes university)
-      avatar_url: data.avatar_url,
-      arcane_level: data.arcane_level || 'Buscadora de Luz',
-      essence: data.essence || 500,
-      total_essence_earned: data.total_essence_earned || 0,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-    };
+      return {
+        id: data.id,
+        email: data.email,
+        full_name: data.full_name,
+        career: data.career,
+        institution: data.institution, // Mapear institution (antes university)
+        avatar_url: data.avatar_url,
+        arcane_level: data.arcane_level || 'Buscadora de Luz',
+        essence: data.essence || 500,
+        total_essence_earned: data.total_essence_earned || 0,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      };
+    } catch (error: any) {
+      if (isNetworkError(error)) {
+        console.warn('Network error loading profile, returning null');
+        return null;
+      }
+      throw error;
+    }
   }
 
   async updateProfile(userId: string, updates: Partial<UserProfile>) {
@@ -270,15 +352,26 @@ export class SupabaseService {
 
   async getSubjects(userId: string): Promise<Subject[]> {
     try {
-      const { data, error } = await supabase
-        .from('subjects')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from('subjects')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        
+        if (result.error && isNetworkError(result.error)) {
+          throw result.error;
+        }
+        return result;
+      });
 
       if (error) {
         if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
           console.warn('Table subjects not found');
+          return [];
+        }
+        if (isNetworkError(error)) {
+          console.warn('Network error loading subjects, returning empty array');
           return [];
         }
         throw error;
@@ -431,15 +524,26 @@ export class SupabaseService {
 
   async getTransactions(userId: string): Promise<Transaction[]> {
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', userId)
-        .order('date', { ascending: false });
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', userId)
+          .order('date', { ascending: false });
+        
+        if (result.error && isNetworkError(result.error)) {
+          throw result.error;
+        }
+        return result;
+      });
 
       if (error) {
         if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
           console.warn('Table transactions not found');
+          return [];
+        }
+        if (isNetworkError(error)) {
+          console.warn('Network error loading transactions, returning empty array');
           return [];
         }
         throw error;
