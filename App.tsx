@@ -921,11 +921,11 @@ const App: React.FC = () => {
           activeView={activeView} 
           setActiveView={(view) => {
             // Si no hay usuario y se intenta acceder a un módulo que no sea Dashboard, mostrar login
-            if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE) {
+            if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE && view !== NavView.DOCS) {
               setShowLoginModal(true);
             } else {
-              // Usar handleViewChange para políticas, setActiveView normal para otras vistas
-              if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE) {
+              // Usar handleViewChange para políticas y docs, setActiveView normal para otras vistas
+              if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE || view === NavView.DOCS) {
                 handleViewChange(view);
               } else {
                 setActiveView(view);
@@ -952,11 +952,11 @@ const App: React.FC = () => {
           activeView={activeView}
           setActiveView={(view) => {
             // Si no hay usuario y se intenta acceder a un módulo que no sea Dashboard, mostrar login
-            if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE) {
+            if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE && view !== NavView.DOCS) {
               setShowLoginModal(true);
             } else {
-              // Usar handleViewChange para políticas, setActiveView normal para otras vistas
-              if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE) {
+              // Usar handleViewChange para políticas y docs, setActiveView normal para otras vistas
+              if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE || view === NavView.DOCS) {
                 handleViewChange(view);
               } else {
                 setActiveView(view);
