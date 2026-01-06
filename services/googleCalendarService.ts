@@ -1,10 +1,21 @@
 import { Subject, CustomCalendarEvent } from '../types';
 
 // Configuración de OAuth2 de Google Calendar
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+// El Client ID se obtiene del backend para no exponer credenciales
+let GOOGLE_CLIENT_ID: string | null = null;
 const GOOGLE_REDIRECT_URI = window.location.origin + window.location.pathname;
 const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 const GOOGLE_DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'];
+
+// Obtener la URL base del backend (Vercel en producción, localhost en desarrollo)
+const getBackendUrl = (): string => {
+  // En producción, usar la URL actual (Vercel)
+  if (import.meta.env.PROD) {
+    return window.location.origin;
+  }
+  // En desarrollo, usar localhost o la variable de entorno si existe
+  return import.meta.env.VITE_BACKEND_URL || window.location.origin;
+};
 
 export interface GoogleCalendarToken {
   access_token: string;
@@ -45,11 +56,41 @@ export class GoogleCalendarService {
   private calendarId: string | null = null;
 
   /**
+   * Obtiene el Client ID desde el backend
+   */
+  private async getClientId(): Promise<string> {
+    if (GOOGLE_CLIENT_ID) {
+      return GOOGLE_CLIENT_ID;
+    }
+
+    try {
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/api/google/oauth/config`);
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
+        throw new Error(error.message || 'Error al obtener configuración de Google OAuth');
+      }
+
+      const data = await response.json();
+      GOOGLE_CLIENT_ID = data.client_id;
+      return GOOGLE_CLIENT_ID;
+    } catch (error: any) {
+      throw new Error(
+        `Error al obtener configuración de Google OAuth: ${error.message || 'Error desconocido'}\n\n` +
+        `Por favor, asegúrate de que GOOGLE_CLIENT_ID esté configurado en las variables de entorno de Vercel.`
+      );
+    }
+  }
+
+  /**
    * Inicia el flujo de OAuth2 para obtener permisos de Google Calendar
    */
   async initiateOAuth(): Promise<void> {
-    if (!GOOGLE_CLIENT_ID) {
-      throw new Error('VITE_GOOGLE_CLIENT_ID no está configurado en las variables de entorno');
+    const clientId = await this.getClientId();
+    
+    if (!clientId) {
+      throw new Error('No se pudo obtener el Google Client ID desde el servidor');
     }
 
     // Construir redirect_uri dinámicamente basado en la URL actual
@@ -64,7 +105,7 @@ export class GoogleCalendarService {
     }
 
     const params = new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID,
+      client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
       scope: GOOGLE_SCOPE,
@@ -107,165 +148,101 @@ export class GoogleCalendarService {
 
   /**
    * Intercambia el código de autorización por un token de acceso
-   * NOTA: En producción, esto debe hacerse en el backend
+   * Usa el backend para mantener el Client Secret seguro
    */
   private async exchangeCodeForToken(code: string, redirectUri: string): Promise<GoogleCalendarToken> {
-    const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
+    const backendUrl = getBackendUrl();
     
-    // Verificar que el Client ID esté configurado
-    if (!GOOGLE_CLIENT_ID) {
-      throw new Error(
-        'VITE_GOOGLE_CLIENT_ID no está configurado.\n\n' +
-        'Por favor, añade VITE_GOOGLE_CLIENT_ID a tu archivo .env o .env.local'
-      );
-    }
-    
-    // Si no hay secret, intentar usar un endpoint backend
-    if (!GOOGLE_CLIENT_SECRET) {
-      // Usar un endpoint de Supabase Edge Function o backend propio
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      if (backendUrl) {
-        const response = await fetch(`${backendUrl}/api/google/oauth/token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, redirect_uri: redirectUri }),
-        });
+    try {
+      const response = await fetch(`${backendUrl}/api/google/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, redirect_uri: redirectUri }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
+        const errorMessage = error.message || error.error || 'Error desconocido';
         
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
-          throw new Error(`Error al intercambiar código por token: ${error.error || error.message || 'Error desconocido'}`);
+        // Mensajes más descriptivos para errores comunes
+        if (error.error === 'redirect_uri_mismatch') {
+          throw new Error(
+            `Error de configuración: La URI de redirección no coincide.\n\n` +
+            `URI usada: ${redirectUri}\n\n` +
+            `Por favor, asegúrate de que esta URI exacta esté registrada en Google Cloud Console:\n` +
+            `1. Ve a Google Cloud Console > APIs & Services > Credentials\n` +
+            `2. Edita tu OAuth 2.0 Client ID\n` +
+            `3. Añade esta URI en "Authorized redirect URIs":\n` +
+            `   ${redirectUri}\n\n` +
+            `Consulta la documentación de configuración para más detalles.`
+          );
         }
         
-        return await response.json();
+        if (error.error === 'invalid_client' || response.status === 401) {
+          throw new Error(
+            `Error de autenticación: Client ID o Client Secret inválidos.\n\n` +
+            `Por favor, verifica que GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET estén correctamente configurados en las variables de entorno de Vercel.`
+          );
+        }
+        
+        if (error.error === 'invalid_grant') {
+          throw new Error(
+            `Error: El código de autorización ha expirado o ya fue usado.\n\n` +
+            `Por favor, intenta conectar nuevamente.`
+          );
+        }
+        
+        throw new Error(`Error al obtener token: ${errorMessage}`);
       }
       
+      return await response.json();
+    } catch (error: any) {
+      // Si el error ya tiene un mensaje descriptivo, lanzarlo tal cual
+      if (error.message && !error.message.includes('fetch')) {
+        throw error;
+      }
+      
+      // Si es un error de red, dar un mensaje más útil
       throw new Error(
-        'VITE_GOOGLE_CLIENT_SECRET no está configurado.\n\n' +
-        'Para desarrollo local, añade VITE_GOOGLE_CLIENT_SECRET a tu archivo .env o .env.local:\n' +
-        'VITE_GOOGLE_CLIENT_SECRET=tu_client_secret_aqui\n\n' +
-        '⚠️ IMPORTANTE: En producción, NO expongas el CLIENT_SECRET en el frontend.\n' +
-        'Usa un backend (Supabase Edge Function o servidor propio) para manejar el intercambio de tokens.\n\n' +
-        'Consulta GOOGLE_CALENDAR_SETUP.md para más información.'
+        `Error de conexión al intercambiar código por token: ${error.message || 'Error desconocido'}\n\n` +
+        `Por favor, verifica que los endpoints de API estén correctamente desplegados en Vercel.`
       );
     }
-
-    // Intercambio directo (solo para desarrollo, no usar en producción)
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code',
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Error desconocido', error_description: 'No se pudo parsear la respuesta del servidor' }));
-      const errorMessage = error.error_description || error.error || 'Error desconocido';
-      
-      // Mensajes más descriptivos para errores comunes
-      if (error.error === 'redirect_uri_mismatch') {
-        throw new Error(
-          `Error de configuración: La URI de redirección no coincide.\n\n` +
-          `URI usada: ${redirectUri}\n\n` +
-          `Por favor, asegúrate de que esta URI exacta esté registrada en Google Cloud Console:\n` +
-          `1. Ve a Google Cloud Console > APIs & Services > Credentials\n` +
-          `2. Edita tu OAuth 2.0 Client ID\n` +
-          `3. Añade esta URI en "Authorized redirect URIs":\n` +
-          `   ${redirectUri}\n\n` +
-          `Consulta GOOGLE_CALENDAR_SETUP.md para más detalles.`
-        );
-      }
-      
-      if (error.error === 'invalid_client' || response.status === 401) {
-        throw new Error(
-          `Error de autenticación: Client ID o Client Secret inválidos.\n\n` +
-          `Posibles causas:\n` +
-          `1. VITE_GOOGLE_CLIENT_SECRET no está configurado o es incorrecto\n` +
-          `2. VITE_GOOGLE_CLIENT_ID no coincide con el Client Secret\n` +
-          `3. El Client Secret ha sido regenerado en Google Cloud Console\n\n` +
-          `Solución:\n` +
-          `1. Verifica que VITE_GOOGLE_CLIENT_ID y VITE_GOOGLE_CLIENT_SECRET estén en tu archivo .env o .env.local\n` +
-          `2. Asegúrate de que correspondan al mismo OAuth Client ID en Google Cloud Console\n` +
-          `3. Reinicia el servidor de desarrollo después de cambiar las variables\n\n` +
-          `Consulta GOOGLE_CALENDAR_SETUP.md para más información.`
-        );
-      }
-      
-      if (error.error === 'invalid_grant') {
-        throw new Error(
-          `Error: El código de autorización ha expirado o ya fue usado.\n\n` +
-          `Por favor, intenta conectar nuevamente.`
-        );
-      }
-      
-      throw new Error(`Error al obtener token: ${errorMessage}\n\nCódigo de error: ${error.error || 'desconocido'}`);
-    }
-
-    const data = await response.json();
-    return {
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      expires_in: data.expires_in,
-      expires_at: Date.now() + (data.expires_in * 1000),
-      token_type: data.token_type,
-    };
   }
 
   /**
    * Refresca el token de acceso si está expirado
+   * Usa el backend para mantener el Client Secret seguro
    */
   private async refreshAccessToken(): Promise<string> {
     if (!this.refreshToken) {
       throw new Error('No hay refresh token disponible. Por favor, vuelve a autorizar.');
     }
 
-    const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
+    const backendUrl = getBackendUrl();
     
-    if (!GOOGLE_CLIENT_SECRET) {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
-      if (backendUrl) {
-        const response = await fetch(`${backendUrl}/api/google/oauth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: this.refreshToken }),
-        });
-        
-        if (!response.ok) {
-          throw new Error('Error al refrescar token');
-        }
-        
-        const data = await response.json();
-        this.accessToken = data.access_token;
-        this.expiresAt = Date.now() + (data.expires_in * 1000);
-        return this.accessToken;
+    try {
+      const response = await fetch(`${backendUrl}/api/google/oauth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: this.refreshToken }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
+        throw new Error(error.message || 'Error al refrescar token');
       }
       
-      throw new Error('VITE_GOOGLE_CLIENT_SECRET o VITE_BACKEND_URL debe estar configurado');
+      const data = await response.json();
+      this.accessToken = data.access_token;
+      this.expiresAt = data.expires_at || (Date.now() + (data.expires_in * 1000));
+      return this.accessToken;
+    } catch (error: any) {
+      throw new Error(
+        `Error al refrescar token: ${error.message || 'Error desconocido'}\n\n` +
+        `Por favor, verifica que los endpoints de API estén correctamente desplegados en Vercel.`
+      );
     }
-
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        refresh_token: this.refreshToken,
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
-        grant_type: 'refresh_token',
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Error al refrescar token');
-    }
-
-    const data = await response.json();
-    this.accessToken = data.access_token;
-    this.expiresAt = Date.now() + (data.expires_in * 1000);
-    return this.accessToken;
   }
 
   /**
