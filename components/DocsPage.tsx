@@ -123,143 +123,151 @@ const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
   const CurrentContent = currentSection?.content || EssenceSection;
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className={`h-full flex flex-col bg-white ${isMobile ? '' : ''}`}>
       {/* Header */}
       <header className="flex-none border-b-2 border-[#D4AF37] bg-white shadow-sm z-20">
-        <div className="max-w-7xl mx-auto px-3 md:px-8 py-3 md:py-4">
-          <div className="flex items-center justify-between gap-2 md:gap-4">
-            <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
-              {onBack && (
-                <button
-                  onClick={onBack}
-                  className="w-9 h-9 md:w-10 md:h-10 rounded-lg border-2 border-[#D4AF37] flex items-center justify-center text-[#4A233E] hover:bg-[#D4AF37]/10 transition-all flex-shrink-0 touch-manipulation"
-                  aria-label="Volver"
-                  tabIndex={0}
-                >
-                  {getIcon('chevron', 'w-4 h-4 md:w-5 md:h-5 rotate-180')}
-                </button>
+        <div className={`${isMobile ? 'px-4' : 'max-w-7xl mx-auto px-8'} py-3 md:py-4`}>
+          <div className="flex items-center gap-2 md:gap-4">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="w-9 h-9 md:w-10 md:h-10 rounded-lg border-2 border-[#D4AF37] flex items-center justify-center text-[#4A233E] hover:bg-[#D4AF37]/10 active:bg-[#D4AF37]/10 transition-all flex-shrink-0 touch-manipulation"
+                aria-label="Volver"
+                tabIndex={0}
+              >
+                {getIcon('chevron', 'w-4 h-4 md:w-5 md:h-5 rotate-180')}
+              </button>
+            )}
+            <div className="flex-1 min-w-0">
+              <h1 className="font-cinzel text-lg md:text-2xl lg:text-3xl font-bold text-[#1a1a1a] tracking-tight leading-tight">
+                {isMobile ? 'Docs' : 'Documentación de Studianta'}
+              </h1>
+              {!isMobile && (
+                <p className="font-inter text-sm text-[#666] mt-1">
+                  Guía completa de la plataforma
+                </p>
               )}
-              <div className="min-w-0 flex-1">
-                <h1 className="font-cinzel text-lg md:text-2xl lg:text-3xl font-bold text-[#1a1a1a] tracking-tight leading-tight">
-                  {isMobile ? 'Docs' : 'Documentación de Studianta'}
-                </h1>
-                {!isMobile && (
-                  <p className="font-inter text-sm text-[#666] mt-1">
-                    Guía completa de la plataforma
-                  </p>
-                )}
-              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar Navigation */}
-        <aside className={`${isMobile ? 'hidden' : 'flex'} w-64 flex-shrink-0 border-r-2 border-[#D4AF37] bg-[#fafafa] overflow-y-auto`}>
-          <div className="w-full p-4">
-            {/* Buscador */}
-            <div className="mb-6">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  {getIcon('search', 'w-5 h-5 text-[#666]')}
-                </div>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar en documentación..."
-                  className="w-full pl-10 pr-4 py-2.5 border-2 border-[#D4AF37]/30 rounded-lg bg-white text-[#1a1a1a] placeholder:text-[#999] focus:outline-none focus:border-[#D4AF37] transition-colors font-inter text-sm"
-                />
+      {isMobile ? (
+        /* Mobile Layout - Vertical Structure */
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Mobile Search */}
+          <div className="flex-none border-b border-[#D4AF37]/30 bg-[#fafafa] px-4 py-3">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                {getIcon('search', 'w-4 h-4 text-[#666]')}
               </div>
-              {searchQuery && (
-                <p className="text-xs text-[#666] mt-2 font-inter">
-                  {filteredSections.length} resultado{filteredSections.length !== 1 ? 's' : ''} encontrado{filteredSections.length !== 1 ? 's' : ''}
-                </p>
-              )}
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar en documentación..."
+                className="w-full pl-9 pr-4 py-2.5 border-2 border-[#D4AF37]/30 rounded-lg bg-white text-[#1a1a1a] placeholder:text-[#999] focus:outline-none focus:border-[#D4AF37] transition-colors font-inter text-base touch-manipulation"
+              />
             </div>
-
-            {/* Navegación */}
-            <nav className="space-y-1">
-              {filteredSections.map((section) => (
-                <button
-                  key={section.id}
-                  onClick={() => {
-                    setSelectedSection(section.id);
-                    setSearchQuery(''); // Limpiar búsqueda al seleccionar
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all font-inter ${
-                    selectedSection === section.id
-                      ? 'bg-[#D4AF37] text-white shadow-md'
-                      : 'text-[#1a1a1a] hover:bg-[#D4AF37]/10'
-                  }`}
-                >
-                  <div className={`flex-shrink-0 ${selectedSection === section.id ? 'text-white' : 'text-[#D4AF37]'}`}>
-                    {getIcon(section.icon, 'w-5 h-5')}
-                  </div>
-                  <span className="font-medium text-sm">{section.title}</span>
-                </button>
-              ))}
-            </nav>
+            {searchQuery && (
+              <p className="text-xs text-[#666] mt-2 font-inter">
+                {filteredSections.length} resultado{filteredSections.length !== 1 ? 's' : ''}
+              </p>
+            )}
           </div>
-        </aside>
 
-        {/* Mobile Navigation */}
-        {isMobile && (
-          <div className="w-full border-b-2 border-[#D4AF37] bg-[#fafafa] overflow-x-auto no-scrollbar">
-            <div className="p-3">
-              <div className="relative w-full mb-3">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  {getIcon('search', 'w-4 h-4 text-[#666]')}
-                </div>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar..."
-                  className="w-full pl-9 pr-4 py-2.5 border-2 border-[#D4AF37]/30 rounded-lg bg-white text-[#1a1a1a] placeholder:text-[#999] focus:outline-none focus:border-[#D4AF37] transition-colors font-inter text-base touch-manipulation"
-                />
+          {/* Mobile Navigation - Dropdown/Select Style */}
+          <div className="flex-none border-b-2 border-[#D4AF37] bg-white px-4 py-3">
+            <div className="relative">
+              <select
+                value={selectedSection}
+                onChange={(e) => {
+                  setSelectedSection(e.target.value);
+                  setSearchQuery('');
+                }}
+                className="w-full px-3 py-2.5 border-2 border-[#D4AF37]/30 rounded-lg bg-white text-[#1a1a1a] focus:outline-none focus:border-[#D4AF37] transition-colors font-inter text-base touch-manipulation appearance-none pr-10"
+              >
+                {filteredSections.map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.title}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                {getIcon('chevron', 'w-5 h-5 text-[#D4AF37]')}
               </div>
-              {searchQuery && (
-                <p className="text-xs text-[#666] mb-2 font-inter">
-                  {filteredSections.length} resultado{filteredSections.length !== 1 ? 's' : ''}
-                </p>
-              )}
-            </div>
-            <div className="flex gap-2 px-3 pb-3 overflow-x-auto no-scrollbar">
-              {filteredSections.map((section) => (
-                <button
-                  key={section.id}
-                  onClick={() => {
-                    setSelectedSection(section.id);
-                    setSearchQuery('');
-                  }}
-                  className={`flex-shrink-0 flex items-center gap-2 px-3 py-2.5 rounded-lg transition-all font-inter text-sm touch-manipulation min-h-[44px] ${
-                    selectedSection === section.id
-                      ? 'bg-[#D4AF37] text-white shadow-md'
-                      : 'bg-white text-[#1a1a1a] border-2 border-[#D4AF37]/30 active:bg-[#D4AF37]/10'
-                  }`}
-                  tabIndex={0}
-                >
-                  <div className={`flex-shrink-0 ${selectedSection === section.id ? 'text-white' : 'text-[#D4AF37]'}`}>
-                    {getIcon(section.icon, 'w-4 h-4')}
-                  </div>
-                  <span className="font-medium whitespace-nowrap">{section.title}</span>
-                </button>
-              ))}
             </div>
           </div>
-        )}
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-white">
-          <div className={`max-w-4xl mx-auto ${isMobile ? 'px-4 py-4' : 'px-6 md:px-12 py-8 md:py-12'}`}>
-            <div className="prose prose-lg max-w-none">
+          {/* Mobile Content */}
+          <main className="flex-1 overflow-y-auto bg-white">
+            <div className="px-4 py-6">
               <CurrentContent isMobile={isMobile} />
             </div>
-          </div>
-        </main>
-      </div>
+          </main>
+        </div>
+      ) : (
+        /* Desktop Layout */
+        <div className="flex-1 flex overflow-hidden">
+          {/* Sidebar Navigation */}
+          <aside className="flex w-64 flex-shrink-0 border-r-2 border-[#D4AF37] bg-[#fafafa] overflow-y-auto">
+            <div className="w-full p-4">
+              {/* Buscador */}
+              <div className="mb-6">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    {getIcon('search', 'w-5 h-5 text-[#666]')}
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar en documentación..."
+                    className="w-full pl-10 pr-4 py-2.5 border-2 border-[#D4AF37]/30 rounded-lg bg-white text-[#1a1a1a] placeholder:text-[#999] focus:outline-none focus:border-[#D4AF37] transition-colors font-inter text-sm"
+                  />
+                </div>
+                {searchQuery && (
+                  <p className="text-xs text-[#666] mt-2 font-inter">
+                    {filteredSections.length} resultado{filteredSections.length !== 1 ? 's' : ''} encontrado{filteredSections.length !== 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+
+              {/* Navegación */}
+              <nav className="space-y-1">
+                {filteredSections.map((section) => (
+                  <button
+                    key={section.id}
+                    onClick={() => {
+                      setSelectedSection(section.id);
+                      setSearchQuery(''); // Limpiar búsqueda al seleccionar
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all font-inter ${
+                      selectedSection === section.id
+                        ? 'bg-[#D4AF37] text-white shadow-md'
+                        : 'text-[#1a1a1a] hover:bg-[#D4AF37]/10'
+                    }`}
+                  >
+                    <div className={`flex-shrink-0 ${selectedSection === section.id ? 'text-white' : 'text-[#D4AF37]'}`}>
+                      {getIcon(section.icon, 'w-5 h-5')}
+                    </div>
+                    <span className="font-medium text-sm">{section.title}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main className="flex-1 overflow-y-auto bg-white">
+            <div className="max-w-4xl mx-auto px-6 md:px-12 py-8 md:py-12">
+              <div className="prose prose-lg max-w-none">
+                <CurrentContent isMobile={isMobile} />
+              </div>
+            </div>
+          </main>
+        </div>
+      )}
     </div>
   );
 };
@@ -267,13 +275,13 @@ const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
 // Sección de Esencia
 const EssenceSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Sistema de Esencia
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           La <strong className="text-[#D4AF37] font-semibold">Esencia</strong> es el sistema de gamificación de Studianta. 
           Representa tu energía y dedicación en el camino académico. Comenzarás con <strong className="text-[#D4AF37] font-semibold">0 esencia</strong> 
           y podrás ganarla a través de diversas actividades en la plataforma.
@@ -281,26 +289,26 @@ const EssenceSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) 
       </div>
 
       <section className={`bg-[#D4AF37]/5 border-l-4 border-[#D4AF37] ${isMobile ? 'p-4' : 'p-6'} rounded-r-lg`}>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 flex items-center gap-2 md:gap-3`}>
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} flex items-center ${isMobile ? 'gap-2' : 'gap-2 md:gap-3'}`}>
           {getIcon('sparkles', `${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-[#D4AF37]`)}
           Cómo Ganar Esencia
         </h3>
-        <ul className={`space-y-3 md:space-y-4 text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
-          <li className="flex items-start gap-2 md:gap-3">
+        <ul className={`${isMobile ? 'space-y-3' : 'space-y-3 md:space-y-4'} text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <div className="w-2 h-2 rounded-full bg-[#D4AF37] mt-2.5 flex-shrink-0" />
             <div>
               <strong className="text-[#1a1a1a] font-semibold">Sesiones de Enfoque:</strong> Gana esencia por cada minuto 
               de estudio completado. Las sesiones completadas otorgan bonificaciones adicionales de <strong className="text-[#D4AF37]">+5 esencia</strong>.
             </div>
           </li>
-          <li className="flex items-start gap-2 md:gap-3">
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <div className="w-2 h-2 rounded-full bg-[#D4AF37] mt-2.5 flex-shrink-0" />
             <div>
               <strong className="text-[#1a1a1a] font-semibold">Sellar Notas:</strong> Al sellar una nota en Asignaturas, 
               ganas <strong className="text-[#D4AF37] font-semibold">+3 esencia</strong>. Esto consagra tu conocimiento al Oráculo.
             </div>
           </li>
-          <li className="flex items-start gap-2 md:gap-3">
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <div className="w-2 h-2 rounded-full bg-[#D4AF37] mt-2.5 flex-shrink-0" />
             <div>
               <strong className="text-[#1a1a1a] font-semibold">Completar Tareas:</strong> Varias acciones en la plataforma 
@@ -373,20 +381,20 @@ const EssenceSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) 
 // Sección de Dashboard
 const DashboardSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Atanor (Dashboard)
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           El <strong className="text-[#D4AF37] font-semibold">Atanor</strong> es tu centro de control. Desde aquí puedes acceder 
           a todos los módulos de Studianta. El diseño tipo "tablero mágico" te permite visualizar y activar 
           cada sección de forma intuitiva.
         </p>
       </div>
       <div className={`bg-[#D4AF37]/5 border-l-4 border-[#D4AF37] ${isMobile ? 'p-4' : 'p-6'} rounded-r-lg`}>
-        <p className={`text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
+        <p className={`text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
           <strong className="text-[#1a1a1a] font-semibold">Tip:</strong> Los módulos activos aparecen con colores vibrantes, 
           mientras que los inactivos están en escala de grises hasta que los actives.
         </p>
@@ -398,41 +406,41 @@ const DashboardSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }
 // Sección de Asignaturas
 const SubjectsSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Asignaturas
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           En <strong className="text-[#D4AF37] font-semibold">Asignaturas</strong> gestionas todas tus materias, horarios, 
           apuntes y materiales de estudio.
         </p>
       </div>
       <section>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4`}>Funcionalidades principales</h3>
-        <ul className={`space-y-2 md:space-y-3 text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
-          <li className="flex items-start gap-2 md:gap-3">
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Funcionalidades principales</h3>
+        <ul className={`${isMobile ? 'space-y-3' : 'space-y-2 md:space-y-3'} text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Agregar materias con información completa (profesor, aula, horarios)</span>
           </li>
-          <li className="flex items-start gap-2 md:gap-3">
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Crear hitos importantes (exámenes, entregas, parciales)</span>
           </li>
-          <li className="flex items-start gap-2 md:gap-3">
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Tomar notas y organizarlas por materia</span>
           </li>
-          <li className="flex items-start gap-2 md:gap-3">
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Subir materiales de estudio (PDFs, imágenes, documentos)</span>
           </li>
-          <li className="flex items-start gap-2 md:gap-3">
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span><strong className="text-[#D4AF37] font-semibold">Sellar notas</strong> para ganar +3 esencia</span>
           </li>
-          <li className="flex items-start gap-2 md:gap-3">
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Consultar al Oráculo sobre temas específicos de cada materia</span>
           </li>
@@ -445,21 +453,21 @@ const SubjectsSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false })
 // Sección de Calendario
 const CalendarSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Calendario
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           El <strong className="text-[#D4AF37] font-semibold">Calendario</strong> integra todos tus eventos académicos, 
           financieros y personales en una vista unificada.
         </p>
       </div>
       <section>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4`}>Vistas disponibles</h3>
-        <ul className={`space-y-2 md:space-y-3 text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
-          <li className="flex items-start gap-2 md:gap-3">
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Vistas disponibles</h3>
+        <ul className={`${isMobile ? 'space-y-3' : 'space-y-2 md:space-y-3'} text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span><strong className="text-[#1a1a1a] font-semibold">Vista Mensual:</strong> Visualiza todo el mes en un vistazo</span>
           </li>
@@ -474,9 +482,9 @@ const CalendarSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false })
         </ul>
       </section>
       <section>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4`}>Funcionalidades</h3>
-        <ul className={`space-y-2 md:space-y-3 text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
-          <li className="flex items-start gap-2 md:gap-3">
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Funcionalidades</h3>
+        <ul className={`${isMobile ? 'space-y-3' : 'space-y-2 md:space-y-3'} text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Crear eventos personalizados con descripción, hora de inicio y fin</span>
           </li>
@@ -501,21 +509,21 @@ const CalendarSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false })
 // Sección de Enfoque
 const FocusSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Enfoque
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           <strong className="text-[#D4AF37] font-semibold">Enfoque</strong> es tu herramienta de productividad basada en 
           la técnica Pomodoro. Gestiona sesiones de estudio enfocadas y gana esencia por tu dedicación.
         </p>
       </div>
       <section>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4`}>Cómo funciona</h3>
-        <ul className={`space-y-2 md:space-y-3 text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
-          <li className="flex items-start gap-2 md:gap-3">
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Cómo funciona</h3>
+        <ul className={`${isMobile ? 'space-y-3' : 'space-y-2 md:space-y-3'} text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Inicia una sesión de estudio (25 minutos por defecto)</span>
           </li>
@@ -544,21 +552,21 @@ const FocusSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =>
 // Sección de Diario
 const DiarySection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Diario
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           El <strong className="text-[#D4AF37] font-semibold">Diario</strong> es tu espacio personal para registrar estados 
           emocionales, reflexiones y momentos importantes de tu camino académico.
         </p>
       </div>
       <section>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4`}>Características</h3>
-        <ul className={`space-y-2 md:space-y-3 text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
-          <li className="flex items-start gap-2 md:gap-3">
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Características</h3>
+        <ul className={`${isMobile ? 'space-y-3' : 'space-y-2 md:space-y-3'} text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Registra tu estado emocional (Radiante, Enfocada, Equilibrada, Agotada, Estresada)</span>
           </li>
@@ -587,21 +595,21 @@ const DiarySection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =>
 // Sección de Finanzas
 const FinanceSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Balanza (Finanzas)
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           La <strong className="text-[#D4AF37] font-semibold">Balanza</strong> te ayuda a gestionar tus finanzas académicas, 
           controlar ingresos y gastos, y mantener un presupuesto saludable.
         </p>
       </div>
       <section>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4`}>Funcionalidades</h3>
-        <ul className={`space-y-2 md:space-y-3 text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
-          <li className="flex items-start gap-2 md:gap-3">
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Funcionalidades</h3>
+        <ul className={`${isMobile ? 'space-y-3' : 'space-y-2 md:space-y-3'} text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Registra ingresos y gastos académicos</span>
           </li>
@@ -630,22 +638,22 @@ const FinanceSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) 
 // Sección de Oráculo
 const OracleSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Oráculo Personal
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           El <strong className="text-[#D4AF37] font-semibold">Oráculo Personal</strong> es tu asistente IA que conoce todo 
           sobre tu situación académica. Utiliza tu perfil completo para darte consejos personalizados y 
           ayudarte a tomar decisiones informadas.
         </p>
       </div>
       <section>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4`}>Qué puede hacer</h3>
-        <ul className={`space-y-2 md:space-y-3 text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
-          <li className="flex items-start gap-2 md:gap-3">
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Qué puede hacer</h3>
+        <ul className={`${isMobile ? 'space-y-3' : 'space-y-2 md:space-y-3'} text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Analizar tu situación académica completa</span>
           </li>
@@ -668,7 +676,7 @@ const OracleSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =
         </ul>
       </section>
       <div className={`bg-[#D4AF37]/5 border-l-4 border-[#D4AF37] ${isMobile ? 'p-4' : 'p-6'} rounded-r-lg`}>
-        <p className={`text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
+        <p className={`text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
           <strong className="text-[#1a1a1a] font-semibold">Tip:</strong> El Oráculo tiene acceso a toda tu información 
           (materias, calendario, finanzas, diario) para darte respuestas contextualizadas y precisas.
         </p>
@@ -680,25 +688,25 @@ const OracleSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =
 // Sección de Bazar
 const BazarSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Bazar de Artefactos
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           El <strong className="text-[#D4AF37] font-semibold">Bazar de Artefactos</strong> es donde puedes gastar tu esencia 
           en mejoras y artefactos que potencian tu experiencia en Studianta.
         </p>
       </div>
       <div className={`bg-[#E35B8F]/5 border-l-4 border-[#E35B8F] ${isMobile ? 'p-4' : 'p-6'} rounded-r-lg`}>
-        <p className={`text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
+        <p className={`text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
           <strong className="text-[#1a1a1a] font-semibold">Costo de activación:</strong> <span className={`text-[#D4AF37] font-bold ${isMobile ? 'text-base' : 'text-lg'}`}>200 esencia</span>
         </p>
       </div>
       <div>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4`}>Disponible próximamente</h3>
-        <p className={`text-[#666] font-inter ${isMobile ? 'text-sm' : ''}`}>
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Disponible próximamente</h3>
+        <p className={`text-[#666] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
           El Bazar estará disponible en futuras actualizaciones con artefactos y mejoras exclusivas.
         </p>
       </div>
@@ -709,21 +717,21 @@ const BazarSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =>
 // Sección de Perfil
 const ProfileSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Perfil
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           Tu <strong className="text-[#D4AF37] font-semibold">Perfil</strong> contiene toda tu información personal y académica, 
           así como tus estadísticas y progreso en Studianta.
         </p>
       </div>
       <section>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4`}>Información que puedes gestionar</h3>
-        <ul className={`space-y-2 md:space-y-3 text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
-          <li className="flex items-start gap-2 md:gap-3">
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Información que puedes gestionar</h3>
+        <ul className={`${isMobile ? 'space-y-3' : 'space-y-2 md:space-y-3'} text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Nombre completo y foto de perfil</span>
           </li>
@@ -752,26 +760,26 @@ const ProfileSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) 
 // Sección de Seguridad
 const SecuritySection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Seguridad
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           El módulo de <strong className="text-[#D4AF37] font-semibold">Seguridad</strong> te permite proteger tus entradas 
           del Diario con un PIN personal.
         </p>
       </div>
       <div className={`bg-[#E35B8F]/5 border-l-4 border-[#E35B8F] ${isMobile ? 'p-4' : 'p-6'} rounded-r-lg`}>
-        <p className={`text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
+        <p className={`text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
           <strong className="text-[#1a1a1a] font-semibold">Costo de activación:</strong> <span className={`text-[#D4AF37] font-bold ${isMobile ? 'text-base' : 'text-lg'}`}>0 esencia</span> (gratis)
         </p>
       </div>
       <section>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4`}>Funcionalidades</h3>
-        <ul className={`space-y-2 md:space-y-3 text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
-          <li className="flex items-start gap-2 md:gap-3">
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Funcionalidades</h3>
+        <ul className={`${isMobile ? 'space-y-3' : 'space-y-2 md:space-y-3'} text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
+          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
             <span>Establecer un PIN de 4 dígitos</span>
           </li>
@@ -792,25 +800,25 @@ const SecuritySection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false })
 // Sección de Social
 const SocialSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`space-y-6 ${isMobile ? 'md:space-y-8' : ''}`}>
+    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
       <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 tracking-tight`}>
+        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Social
         </h2>
-        <div className={`h-1 bg-[#D4AF37] mb-4 md:mb-6 ${isMobile ? 'w-16' : 'w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base' : 'text-lg'} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
           El módulo <strong className="text-[#D4AF37] font-semibold">Social</strong> te permite conectar con otros estudiantes 
           y compartir experiencias académicas.
         </p>
       </div>
       <div className={`bg-[#E35B8F]/5 border-l-4 border-[#E35B8F] ${isMobile ? 'p-4' : 'p-6'} rounded-r-lg`}>
-        <p className={`text-[#333] font-inter ${isMobile ? 'text-sm' : ''}`}>
+        <p className={`text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
           <strong className="text-[#1a1a1a] font-semibold">Costo de activación:</strong> <span className={`text-[#D4AF37] font-bold ${isMobile ? 'text-base' : 'text-lg'}`}>100 esencia</span>
         </p>
       </div>
       <div>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4`}>Disponible próximamente</h3>
-        <p className={`text-[#666] font-inter ${isMobile ? 'text-sm' : ''}`}>
+        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Disponible próximamente</h3>
+        <p className={`text-[#666] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
           Las funcionalidades sociales estarán disponibles en futuras actualizaciones.
         </p>
       </div>
