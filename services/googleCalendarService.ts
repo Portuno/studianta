@@ -1,4 +1,5 @@
-import { Subject, CustomCalendarEvent } from '../types';
+import { Subject, CustomCalendarEvent, Milestone } from '../types';
+import { supabaseService } from './supabaseService';
 
 // Configuración de OAuth2 de Google Calendar
 // El Client ID se obtiene del backend para no exponer credenciales
@@ -446,67 +447,235 @@ export class GoogleCalendarService {
   }
 
   /**
-   * Sincroniza eventos académicos a Google Calendar
+   * Sincroniza un evento individual a Google Calendar (con tracking para evitar duplicados)
    */
-  async syncEvents(
-    subjects: Subject[],
-    customEvents: CustomCalendarEvent[]
-  ): Promise<{ created: number; errors: number }> {
+  private async syncSingleEvent(
+    userId: string,
+    eventType: 'milestone' | 'custom_event',
+    eventId: string,
+    googleEvent: GoogleCalendarEvent,
+    eventTitle: string,
+    eventDate: string,
+    eventTime?: string
+  ): Promise<{ created: boolean; updated: boolean; googleEventId: string | null }> {
     if (!this.calendarId) {
       await this.getOrCreateStudiantaCalendar();
     }
 
     const token = await this.getValidAccessToken();
+    
+    // Verificar si el evento ya está sincronizado
+    const tracking = await supabaseService.getSyncTracking(userId, eventType, eventId);
+    
+    if (tracking && tracking.google_calendar_event_id) {
+      // Evento ya existe, actualizarlo
+      try {
+        const response = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events/${tracking.google_calendar_event_id}`,
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(googleEvent),
+          }
+        );
+
+        if (response.ok) {
+          // Actualizar tracking
+          await supabaseService.saveSyncTracking(
+            userId,
+            eventType,
+            eventId,
+            tracking.google_calendar_event_id,
+            eventDate,
+            eventTime || null,
+            eventTitle
+          );
+          return { created: false, updated: true, googleEventId: tracking.google_calendar_event_id };
+        } else {
+          const error = await response.json().catch(() => ({}));
+          // Si el evento fue eliminado en Google Calendar, crear uno nuevo
+          if (response.status === 404) {
+            // Continuar para crear nuevo evento
+          } else {
+            throw new Error(`Error al actualizar evento: ${error.error?.message || 'Error desconocido'}`);
+          }
+        }
+      } catch (error: any) {
+        console.error('Error al actualizar evento existente, intentando crear nuevo:', error);
+        // Continuar para crear nuevo evento
+      }
+    }
+
+    // Crear nuevo evento
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(googleEvent),
+        }
+      );
+
+      if (response.ok) {
+        const createdEvent = await response.json();
+        const googleEventId = createdEvent.id;
+        
+        // Guardar tracking
+        await supabaseService.saveSyncTracking(
+          userId,
+          eventType,
+          eventId,
+          googleEventId,
+          eventDate,
+          eventTime || null,
+          eventTitle
+        );
+        
+        return { created: true, updated: false, googleEventId };
+      } else {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(`Error al crear evento: ${error.error?.message || 'Error desconocido'}`);
+      }
+    } catch (error: any) {
+      console.error('Error al crear evento:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sincroniza eventos académicos a Google Calendar (evita duplicados usando tracking)
+   */
+  async syncEvents(
+    userId: string,
+    subjects: Subject[],
+    customEvents: CustomCalendarEvent[]
+  ): Promise<{ created: number; updated: number; errors: number }> {
+    if (!this.calendarId) {
+      await this.getOrCreateStudiantaCalendar();
+    }
+
     let created = 0;
+    let updated = 0;
     let errors = 0;
 
-    // Extraer eventos de milestones de subjects
-    const milestoneEvents: GoogleCalendarEvent[] = [];
-    subjects.forEach(subject => {
-      subject.milestones.forEach(milestone => {
-        const validation = this.validateAndFormatDate(milestone.date, milestone.time);
+    // Sincronizar milestones de subjects
+    for (const subject of subjects) {
+      for (const milestone of subject.milestones) {
+        try {
+          const validation = this.validateAndFormatDate(milestone.date, milestone.time);
+          
+          if (!validation.isValid) {
+            console.error(`[Google Calendar] Error validando milestone "${milestone.title}": ${validation.error}`);
+            errors++;
+            continue;
+          }
+
+          const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          const eventTitle = `${milestone.type}: ${subject.name}`;
+          let googleEvent: GoogleCalendarEvent;
+          
+          if (milestone.time && validation.dateTime) {
+            // Evento con hora
+            const startDate = new Date(validation.dateTime);
+            const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 horas
+            
+            if (isNaN(endDate.getTime())) {
+              console.error(`[Google Calendar] Error calculando fecha de fin para milestone "${milestone.title}"`);
+              errors++;
+              continue;
+            }
+
+            googleEvent = {
+              summary: `[Studianta] ${eventTitle}`,
+              description: `Materia: ${subject.name}\nTipo: ${milestone.type}\n${milestone.title}`,
+              start: { dateTime: validation.dateTime, timeZone },
+              end: { dateTime: endDate.toISOString(), timeZone },
+              colorId: milestone.type === 'Examen' ? '6' : '9',
+              reminders: {
+                useDefault: false,
+                overrides: [
+                  { method: 'popup', minutes: 1440 },
+                  { method: 'popup', minutes: 60 },
+                ],
+              },
+            };
+          } else if (validation.date) {
+            // Evento de día completo
+            googleEvent = {
+              summary: `[Studianta] ${eventTitle}`,
+              description: `Materia: ${subject.name}\nTipo: ${milestone.type}\n${milestone.title}`,
+              start: { date: validation.date },
+              end: { date: validation.date },
+              colorId: milestone.type === 'Examen' ? '6' : '9',
+              reminders: {
+                useDefault: false,
+                overrides: [
+                  { method: 'popup', minutes: 1440 },
+                  { method: 'popup', minutes: 60 },
+                ],
+              },
+            };
+          } else {
+            continue;
+          }
+
+          const result = await this.syncSingleEvent(
+            userId,
+            'milestone',
+            milestone.id,
+            googleEvent,
+            eventTitle,
+            milestone.date,
+            milestone.time
+          );
+
+          if (result.created) created++;
+          if (result.updated) updated++;
+        } catch (error: any) {
+          console.error(`Error sincronizando milestone "${milestone.title}":`, error);
+          errors++;
+        }
+      }
+    }
+
+    // Sincronizar custom events
+    for (const event of customEvents) {
+      try {
+        const validation = this.validateAndFormatDate(event.date, event.time);
         
         if (!validation.isValid) {
-          console.error(`[Google Calendar] Error validando milestone "${milestone.title}": ${validation.error}`);
+          console.error(`[Google Calendar] Error validando evento personalizado "${event.title}": ${validation.error}`);
           errors++;
-          return;
+          continue;
         }
 
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        
-        if (milestone.time && validation.dateTime) {
+        let googleEvent: GoogleCalendarEvent;
+
+        if (event.time && validation.dateTime) {
           // Evento con hora
           const startDate = new Date(validation.dateTime);
           const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 horas
           
           if (isNaN(endDate.getTime())) {
-            console.error(`[Google Calendar] Error calculando fecha de fin para milestone "${milestone.title}"`);
+            console.error(`[Google Calendar] Error calculando fecha de fin para evento "${event.title}"`);
             errors++;
-            return;
+            continue;
           }
 
-          milestoneEvents.push({
-            summary: `[Studianta] ${milestone.type}: ${subject.name}`,
-            description: `Materia: ${subject.name}\nTipo: ${milestone.type}\n${milestone.title}`,
+          googleEvent = {
+            summary: `[Studianta] ${event.title}`,
+            description: event.description || '',
             start: { dateTime: validation.dateTime, timeZone },
             end: { dateTime: endDate.toISOString(), timeZone },
-            colorId: milestone.type === 'Examen' ? '6' : '9', // 6 = naranja (examen), 9 = azul (entrega)
-            reminders: {
-              useDefault: false,
-              overrides: [
-                { method: 'popup', minutes: 1440 }, // 1 día antes
-                { method: 'popup', minutes: 60 },  // 1 hora antes
-              ],
-            },
-          });
-        } else if (validation.date) {
-          // Evento de día completo
-          milestoneEvents.push({
-            summary: `[Studianta] ${milestone.type}: ${subject.name}`,
-            description: `Materia: ${subject.name}\nTipo: ${milestone.type}\n${milestone.title}`,
-            start: { date: validation.date },
-            end: { date: validation.date },
-            colorId: milestone.type === 'Examen' ? '6' : '9',
+            colorId: event.priority === 'high' ? '6' : '1',
             reminders: {
               useDefault: false,
               overrides: [
@@ -514,36 +683,165 @@ export class GoogleCalendarService {
                 { method: 'popup', minutes: 60 },
               ],
             },
-          });
+          };
+        } else if (validation.date) {
+          // Evento de día completo
+          googleEvent = {
+            summary: `[Studianta] ${event.title}`,
+            description: event.description || '',
+            start: { date: validation.date },
+            end: { date: validation.date },
+            colorId: event.priority === 'high' ? '6' : '1',
+            reminders: {
+              useDefault: false,
+              overrides: [
+                { method: 'popup', minutes: 1440 },
+                { method: 'popup', minutes: 60 },
+              ],
+            },
+          };
+        } else {
+          continue;
         }
-      });
-    });
 
-    // Convertir customEvents a formato Google Calendar
-    const customGoogleEvents: GoogleCalendarEvent[] = [];
-    customEvents.forEach(event => {
-      const validation = this.validateAndFormatDate(event.date, event.time);
+        const result = await this.syncSingleEvent(
+          userId,
+          'custom_event',
+          event.id,
+          googleEvent,
+          event.title,
+          event.date,
+          event.time
+        );
+
+        if (result.created) created++;
+        if (result.updated) updated++;
+      } catch (error: any) {
+        // Si es error de permisos, propagarlo
+        if (error.message && error.message.includes('Error de permisos')) {
+          throw error;
+        }
+        console.error(`Error sincronizando evento "${event.title}":`, error);
+        errors++;
+      }
+    }
+
+    return { created, updated, errors };
+  }
+
+  /**
+   * Sincroniza un milestone individual automáticamente
+   */
+  async syncMilestone(
+    userId: string,
+    subject: Subject,
+    milestone: Milestone
+  ): Promise<void> {
+    if (!this.isConnected(userId)) {
+      return; // No está conectado, no hacer nada
+    }
+
+    try {
+      const validation = this.validateAndFormatDate(milestone.date, milestone.time);
       
       if (!validation.isValid) {
-        console.error(`[Google Calendar] Error validando evento personalizado "${event.title}": ${validation.error}`);
-        errors++;
+        console.error(`[Google Calendar] Error validando milestone "${milestone.title}": ${validation.error}`);
         return;
       }
 
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-      if (event.time && validation.dateTime) {
-        // Evento con hora
+      const eventTitle = `${milestone.type}: ${subject.name}`;
+      let googleEvent: GoogleCalendarEvent;
+      
+      if (milestone.time && validation.dateTime) {
         const startDate = new Date(validation.dateTime);
-        const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 horas
+        const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
         
         if (isNaN(endDate.getTime())) {
-          console.error(`[Google Calendar] Error calculando fecha de fin para evento "${event.title}"`);
-          errors++;
+          console.error(`[Google Calendar] Error calculando fecha de fin para milestone "${milestone.title}"`);
           return;
         }
 
-        customGoogleEvents.push({
+        googleEvent = {
+          summary: `[Studianta] ${eventTitle}`,
+          description: `Materia: ${subject.name}\nTipo: ${milestone.type}\n${milestone.title}`,
+          start: { dateTime: validation.dateTime, timeZone },
+          end: { dateTime: endDate.toISOString(), timeZone },
+          colorId: milestone.type === 'Examen' ? '6' : '9',
+          reminders: {
+            useDefault: false,
+            overrides: [
+              { method: 'popup', minutes: 1440 },
+              { method: 'popup', minutes: 60 },
+            ],
+          },
+        };
+      } else if (validation.date) {
+        googleEvent = {
+          summary: `[Studianta] ${eventTitle}`,
+          description: `Materia: ${subject.name}\nTipo: ${milestone.type}\n${milestone.title}`,
+          start: { date: validation.date },
+          end: { date: validation.date },
+          colorId: milestone.type === 'Examen' ? '6' : '9',
+          reminders: {
+            useDefault: false,
+            overrides: [
+              { method: 'popup', minutes: 1440 },
+              { method: 'popup', minutes: 60 },
+            ],
+          },
+        };
+      } else {
+        return;
+      }
+
+      await this.syncSingleEvent(
+        userId,
+        'milestone',
+        milestone.id,
+        googleEvent,
+        eventTitle,
+        milestone.date,
+        milestone.time
+      );
+    } catch (error: any) {
+      console.error(`Error sincronizando milestone "${milestone.title}":`, error);
+      // No lanzar error, solo loguear para no interrumpir el flujo
+    }
+  }
+
+  /**
+   * Sincroniza un custom event individual automáticamente
+   */
+  async syncCustomEvent(
+    userId: string,
+    event: CustomCalendarEvent
+  ): Promise<void> {
+    if (!this.isConnected(userId)) {
+      return; // No está conectado, no hacer nada
+    }
+
+    try {
+      const validation = this.validateAndFormatDate(event.date, event.time);
+      
+      if (!validation.isValid) {
+        console.error(`[Google Calendar] Error validando evento "${event.title}": ${validation.error}`);
+        return;
+      }
+
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      let googleEvent: GoogleCalendarEvent;
+
+      if (event.time && validation.dateTime) {
+        const startDate = new Date(validation.dateTime);
+        const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+        
+        if (isNaN(endDate.getTime())) {
+          console.error(`[Google Calendar] Error calculando fecha de fin para evento "${event.title}"`);
+          return;
+        }
+
+        googleEvent = {
           summary: `[Studianta] ${event.title}`,
           description: event.description || '',
           start: { dateTime: validation.dateTime, timeZone },
@@ -556,10 +854,9 @@ export class GoogleCalendarService {
               { method: 'popup', minutes: 60 },
             ],
           },
-        });
+        };
       } else if (validation.date) {
-        // Evento de día completo
-        customGoogleEvents.push({
+        googleEvent = {
           summary: `[Studianta] ${event.title}`,
           description: event.description || '',
           start: { date: validation.date },
@@ -572,59 +869,67 @@ export class GoogleCalendarService {
               { method: 'popup', minutes: 60 },
             ],
           },
-        });
+        };
+      } else {
+        return;
       }
-    });
 
-    // Combinar todos los eventos
-    const allEvents = [...milestoneEvents, ...customGoogleEvents];
+      await this.syncSingleEvent(
+        userId,
+        'custom_event',
+        event.id,
+        googleEvent,
+        event.title,
+        event.date,
+        event.time
+      );
+    } catch (error: any) {
+      console.error(`Error sincronizando evento "${event.title}":`, error);
+      // No lanzar error, solo loguear para no interrumpir el flujo
+    }
+  }
 
-    // Crear eventos en Google Calendar
-    for (const event of allEvents) {
-      try {
+  /**
+   * Elimina un evento de Google Calendar cuando se elimina en Studianta
+   */
+  async deleteSyncedEvent(
+    userId: string,
+    eventType: 'milestone' | 'custom_event',
+    eventId: string
+  ): Promise<void> {
+    if (!this.isConnected(userId)) {
+      return;
+    }
+
+    try {
+      const tracking = await supabaseService.getSyncTracking(userId, eventType, eventId);
+      
+      if (tracking && tracking.google_calendar_event_id) {
+        if (!this.calendarId) {
+          await this.getOrCreateStudiantaCalendar();
+        }
+
+        const token = await this.getValidAccessToken();
+        
         const response = await fetch(
-          `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events`,
+          `https://www.googleapis.com/calendar/v3/calendars/${this.calendarId}/events/${tracking.google_calendar_event_id}`,
           {
-            method: 'POST',
+            method: 'DELETE',
             headers: {
               Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
             },
-            body: JSON.stringify(event),
           }
         );
 
-        if (response.ok) {
-          created++;
-        } else {
-          const error = await response.json().catch(() => ({}));
-          
-          // Si es error de permisos, lanzar error para que se maneje arriba
-          if (this.isInsufficientPermissionsError(response, error)) {
-            const userId = this.getUserIdFromStorage();
-            if (userId) {
-              this.clearTokensAndForceReauth(userId);
-            }
-            throw new Error(
-              'Error de permisos: El token no tiene los permisos necesarios para crear eventos.\n\n' +
-              'Por favor, desconecta y vuelve a conectar tu cuenta de Google Calendar.'
-            );
-          }
-          
-          console.error('Error al crear evento:', error);
-          errors++;
+        if (response.ok || response.status === 404) {
+          // Eliminar tracking (404 significa que ya fue eliminado)
+          await supabaseService.deleteSyncTracking(userId, eventType, eventId);
         }
-      } catch (error: any) {
-        // Si es error de permisos, propagarlo
-        if (error.message && error.message.includes('Error de permisos')) {
-          throw error;
-        }
-        console.error('Error al crear evento:', error);
-        errors++;
       }
+    } catch (error: any) {
+      console.error('Error eliminando evento de Google Calendar:', error);
+      // No lanzar error, solo loguear
     }
-
-    return { created, errors };
   }
 
   /**

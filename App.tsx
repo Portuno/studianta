@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavView, Subject, Module, Transaction, JournalEntry, CustomCalendarEvent } from './types';
 import { INITIAL_MODULES, getIcon } from './constants';
 import { supabaseService, supabase, UserProfile } from './services/supabaseService';
+import { googleCalendarService } from './services/googleCalendarService';
 import { Analytics } from '@vercel/analytics/react';
 import { useInteractionAggregator } from './hooks/useInteractionAggregator';
 import Navigation from './components/Navigation';
@@ -513,10 +514,35 @@ const App: React.FC = () => {
   const updateSubject = async (updated: Subject) => {
     if (!user) return;
     
+    const oldSubject = subjects.find(s => s.id === updated.id);
     setSubjects(subjects.map(s => s.id === updated.id ? updated : s));
     
     try {
       await supabaseService.updateSubject(user.id, updated.id, updated);
+      
+      // Sincronizar milestones automáticamente con Google Calendar
+      if (googleCalendarService.isConnected(user.id)) {
+        // Sincronizar todos los milestones del subject actualizado
+        for (const milestone of updated.milestones) {
+          googleCalendarService.syncMilestone(user.id, updated, milestone).catch(err => {
+            console.error('Error sincronizando milestone con Google Calendar:', err);
+          });
+        }
+        
+        // Si se eliminaron milestones, eliminar de Google Calendar
+        if (oldSubject) {
+          const oldMilestoneIds = new Set(oldSubject.milestones.map(m => m.id));
+          const newMilestoneIds = new Set(updated.milestones.map(m => m.id));
+          
+          for (const oldMilestoneId of oldMilestoneIds) {
+            if (!newMilestoneIds.has(oldMilestoneId as string)) {
+              googleCalendarService.deleteSyncedEvent(user.id, 'milestone', oldMilestoneId as string).catch(err => {
+                console.error('Error eliminando milestone de Google Calendar:', err);
+              });
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error updating subject:', error);
     }
@@ -633,6 +659,13 @@ const App: React.FC = () => {
     try {
       const created = await supabaseService.createCalendarEvent(user.id, event);
       setCustomEvents([...customEvents, created]);
+      
+      // Sincronizar automáticamente con Google Calendar
+      if (googleCalendarService.isConnected(user.id)) {
+        googleCalendarService.syncCustomEvent(user.id, created).catch(err => {
+          console.error('Error sincronizando evento con Google Calendar:', err);
+        });
+      }
     } catch (error) {
       console.error('Error creating calendar event:', error);
     }
@@ -641,10 +674,18 @@ const App: React.FC = () => {
   const handleDeleteCalendarEvent = async (id: string) => {
     if (!user) return;
     
+    const eventToDelete = customEvents.find(e => e.id === id);
     setCustomEvents(customEvents.filter(e => e.id !== id));
     
     try {
       await supabaseService.deleteCalendarEvent(user.id, id);
+      
+      // Eliminar de Google Calendar si está sincronizado
+      if (eventToDelete && googleCalendarService.isConnected(user.id)) {
+        googleCalendarService.deleteSyncedEvent(user.id, 'custom_event', id).catch(err => {
+          console.error('Error eliminando evento de Google Calendar:', err);
+        });
+      }
     } catch (error) {
       console.error('Error deleting calendar event:', error);
     }
@@ -657,6 +698,13 @@ const App: React.FC = () => {
     
     try {
       await supabaseService.updateCalendarEvent(user.id, event);
+      
+      // Sincronizar automáticamente con Google Calendar
+      if (googleCalendarService.isConnected(user.id)) {
+        googleCalendarService.syncCustomEvent(user.id, event).catch(err => {
+          console.error('Error sincronizando evento con Google Calendar:', err);
+        });
+      }
     } catch (error) {
       console.error('Error updating calendar event:', error);
     }

@@ -1211,6 +1211,105 @@ export class SupabaseService {
     // Por ahora, comparación simple (NO SEGURO para producción)
     return config.security_pin === pin;
   }
+
+  // ============ GOOGLE CALENDAR SYNC TRACKING ============
+
+  async getSyncTracking(userId: string, eventType: 'milestone' | 'custom_event', eventId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('google_calendar_sync_tracking')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('studianta_event_type', eventType)
+        .eq('studianta_event_id', eventId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') return null; // No tracking found
+        throw error;
+      }
+      return data;
+    } catch (error: any) {
+      if (error.code === 'PGRST116' || error.code === '42P01') return null;
+      throw error;
+    }
+  }
+
+  async saveSyncTracking(
+    userId: string,
+    eventType: 'milestone' | 'custom_event',
+    eventId: string,
+    googleEventId: string,
+    eventDate: string,
+    eventTime: string | null,
+    eventTitle: string
+  ) {
+    try {
+      // Intentar actualizar si existe
+      const existing = await this.getSyncTracking(userId, eventType, eventId);
+      
+      if (existing) {
+        const { data, error } = await supabase
+          .from('google_calendar_sync_tracking')
+          .update({
+            google_calendar_event_id: googleEventId,
+            event_date: eventDate,
+            event_time: eventTime,
+            event_title: eventTitle,
+            last_synced_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      } else {
+        // Crear nuevo tracking
+        const { data, error } = await supabase
+          .from('google_calendar_sync_tracking')
+          .insert({
+            user_id: userId,
+            studianta_event_type: eventType,
+            studianta_event_id: eventId,
+            google_calendar_event_id: googleEventId,
+            event_date: eventDate,
+            event_time: eventTime,
+            event_title: eventTitle,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
+    } catch (error: any) {
+      if (error.code === '42P01') {
+        console.warn('Table google_calendar_sync_tracking does not exist. Run script 14_google_calendar_sync_tracking.sql');
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async deleteSyncTracking(userId: string, eventType: 'milestone' | 'custom_event', eventId: string) {
+    try {
+      const { error } = await supabase
+        .from('google_calendar_sync_tracking')
+        .delete()
+        .eq('user_id', userId)
+        .eq('studianta_event_type', eventType)
+        .eq('studianta_event_id', eventId);
+
+      if (error && error.code !== '42P01') throw error;
+    } catch (error: any) {
+      if (error.code === '42P01') {
+        console.warn('Table google_calendar_sync_tracking does not exist');
+        return;
+      }
+      throw error;
+    }
+  }
 }
 
 export const supabaseService = new SupabaseService();

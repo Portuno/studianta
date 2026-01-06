@@ -106,8 +106,9 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     
     setIsSyncing(true);
     try {
-      const result = await googleCalendarService.syncEvents(subjects, customEvents);
-      alert(`Sincronización completada: ${result.created} eventos creados${result.errors > 0 ? `, ${result.errors} errores` : ''}`);
+      const result = await googleCalendarService.syncEvents(userId, subjects, customEvents);
+      const message = `Sincronización completada: ${result.created} eventos creados, ${result.updated} eventos actualizados${result.errors > 0 ? `, ${result.errors} errores` : ''}`;
+      alert(message);
     } catch (error: any) {
       alert(`Error al sincronizar: ${error.message}`);
     } finally {
