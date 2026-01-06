@@ -27,6 +27,7 @@ interface ConvergenceEvent {
   color: string;
   moodIcon?: string;
   time?: string;
+  endTime?: string;
   amount?: number;
 }
 
@@ -177,7 +178,9 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     customEvents.forEach(event => {
       const eventDate = new Date(event.date);
       const startDateTime = formatICSDateTime(eventDate, event.time);
-      const endDateTime = event.time
+      const endDateTime = event.endTime
+        ? formatICSDateTime(eventDate, event.endTime)
+        : event.time
         ? formatICSDateTime(new Date(eventDate.getTime() + 2 * 60 * 60 * 1000), event.time)
         : formatICSDateTime(new Date(eventDate.getTime() + 24 * 60 * 60 * 1000));
 
@@ -303,7 +306,8 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
           type: 'custom',
           priority: ev.priority,
           color: ev.color,
-          time: ev.time
+          time: ev.time,
+          endTime: ev.endTime
         });
       }
     });
@@ -316,12 +320,14 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     const formData = new FormData(e.currentTarget);
     const selectedDate = formData.get('date') as string;
     const timeValue = formData.get('time') as string;
+    const endTimeValue = formData.get('endTime') as string;
     const newEvent: CustomCalendarEvent = {
       id: Math.random().toString(36).substring(7),
       title: formData.get('title') as string,
-      description: formData.get('description') as string,
+      description: formData.get('description') as string || undefined,
       date: selectedDate || anchorDate.toISOString().split('T')[0],
       time: timeValue || undefined,
+      endTime: endTimeValue || undefined,
       color: formData.get('color') as string,
       priority: formData.get('priority') as any || 'low'
     };
@@ -336,12 +342,14 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     const formData = new FormData(e.currentTarget);
     const selectedDate = formData.get('date') as string;
     const timeValue = formData.get('time') as string;
+    const endTimeValue = formData.get('endTime') as string;
     const updatedEvent: CustomCalendarEvent = {
       ...editingEvent,
       title: formData.get('title') as string,
-      description: formData.get('description') as string,
+      description: formData.get('description') as string || undefined,
       date: selectedDate || editingEvent.date,
       time: timeValue || undefined,
+      endTime: endTimeValue || undefined,
       color: formData.get('color') as string,
       priority: formData.get('priority') as any || 'low'
     };
@@ -401,7 +409,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 </div>
                 <div className="flex flex-col gap-0.5">
                   <p className="text-[9px] text-[#8B5E75] font-medium uppercase tracking-wider opacity-80">
-                    {event.time ? `${event.time} • ` : ''}{event.subtitle}
+                    {event.time ? `${event.time}${event.endTime ? ` - ${event.endTime}` : ''} • ` : ''}{event.subtitle}
                   </p>
                 </div>
               </div>
@@ -490,7 +498,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                     key={e.id} 
                     className="h-1 w-full rounded-full opacity-60 hover:opacity-100 transition-opacity cursor-help relative group/event" 
                     style={{ backgroundColor: e.color }}
-                    title={`${e.time ? `${e.time} - ` : ''}${e.title}${e.subtitle ? ` (${e.subtitle})` : ''}`}
+                    title={`${e.time ? `${e.time}${e.endTime ? ` - ${e.endTime}` : ''} • ` : ''}${e.title}${e.subtitle ? ` (${e.subtitle})` : ''}`}
                   />
                 ))}
                 {events.length > 3 && (
@@ -575,7 +583,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                    <div className="flex-1 min-w-0">
                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                        <h4 className="font-cinzel text-base sm:text-lg md:text-xl font-bold text-[#4A233E] tracking-tight break-words">{event.title}</h4>
-                       {event.time && <span className="text-[9px] sm:text-[8px] bg-[#4A233E]/10 text-[#4A233E] px-3 py-1 rounded-full font-bold uppercase whitespace-nowrap self-start sm:self-auto">{event.time}</span>}
+                       {event.time && <span className="text-[9px] sm:text-[8px] bg-[#4A233E]/10 text-[#4A233E] px-3 py-1 rounded-full font-bold uppercase whitespace-nowrap self-start sm:self-auto">{event.time}{event.endTime ? ` - ${event.endTime}` : ''}</span>}
                      </div>
                      <p className="text-[10px] sm:text-[9px] md:text-xs text-[#8B5E75] font-bold uppercase tracking-wider opacity-60 mt-1 sm:mt-0.5 break-words">{event.subtitle}</p>
                    </div>
@@ -827,6 +835,11 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 placeholder="Nombre del Hito..." 
                 className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none font-bold focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
               />
+              <textarea
+                name="description"
+                placeholder="Descripción (opcional)..."
+                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all resize-none min-h-[60px]"
+              />
               <input 
                 required
                 name="date" 
@@ -836,7 +849,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora (Opcional)</label>
+                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora Inicio (Opcional)</label>
                   <input 
                     name="time" 
                     type="time" 
@@ -844,15 +857,23 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Prioridad</label>
-                  <select 
-                    name="priority" 
-                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="low">Normal</option>
-                    <option value="high">Crítica</option>
-                  </select>
+                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora Fin (Opcional)</label>
+                  <input 
+                    name="endTime" 
+                    type="time" 
+                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                  />
                 </div>
+              </div>
+              <div>
+                <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Prioridad</label>
+                <select 
+                  name="priority" 
+                  className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all appearance-none cursor-pointer"
+                >
+                  <option value="low">Normal</option>
+                  <option value="high">Crítica</option>
+                </select>
               </div>
               <div className="flex justify-between p-2">
                 {[COLORS.primary, COLORS.gold, COLORS.mauve, '#48C9B0', '#5DADE2'].map(c => {
@@ -915,7 +936,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora (Opcional)</label>
+                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora Inicio (Opcional)</label>
                   <input 
                     name="time" 
                     type="time" 
@@ -924,16 +945,25 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Prioridad</label>
-                  <select 
-                    name="priority" 
-                    defaultValue={editingEvent.priority}
-                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="low">Normal</option>
-                    <option value="high">Crítica</option>
-                  </select>
+                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora Fin (Opcional)</label>
+                  <input 
+                    name="endTime" 
+                    type="time" 
+                    defaultValue={editingEvent.endTime || ''}
+                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                  />
                 </div>
+              </div>
+              <div>
+                <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Prioridad</label>
+                <select 
+                  name="priority" 
+                  defaultValue={editingEvent.priority}
+                  className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all appearance-none cursor-pointer"
+                >
+                  <option value="low">Normal</option>
+                  <option value="high">Crítica</option>
+                </select>
               </div>
               <div className="flex justify-between p-2">
                 {[COLORS.primary, COLORS.gold, COLORS.mauve, '#48C9B0', '#5DADE2'].map(c => {

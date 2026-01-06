@@ -92,6 +92,7 @@ export interface CustomCalendarEvent {
   description?: string;
   date: string; // ISO
   time?: string;
+  endTime?: string;
   color: string;
   priority: 'low' | 'high';
 }

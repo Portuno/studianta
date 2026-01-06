@@ -802,6 +802,7 @@ export class SupabaseService {
         description: row.description,
         date: row.date,
         time: row.time,
+        endTime: row.end_time,
         color: row.color,
         priority: row.priority,
       }));
@@ -827,6 +828,7 @@ export class SupabaseService {
             description: event.description,
             date: event.date,
             time: event.time,
+            end_time: event.endTime,
             color: event.color,
             priority: event.priority,
             user_id: userId,
@@ -854,6 +856,7 @@ export class SupabaseService {
         description: data.description,
         date: data.date,
         time: data.time,
+        endTime: data.end_time,
         color: data.color,
         priority: data.priority,
       };
@@ -874,6 +877,7 @@ export class SupabaseService {
         description: event.description,
         date: event.date,
         time: event.time,
+        end_time: event.endTime,
         color: event.color,
         priority: event.priority
       })
@@ -883,7 +887,16 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
-    return data;
+    return {
+      id: data.id,
+      title: data.title,
+      description: data.description,
+      date: data.date,
+      time: data.time,
+      endTime: data.end_time,
+      color: data.color,
+      priority: data.priority,
+    };
   }
 
   async deleteCalendarEvent(userId: string, eventId: string) {

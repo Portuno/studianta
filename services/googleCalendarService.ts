@@ -407,7 +407,7 @@ export class GoogleCalendarService {
   /**
    * Valida y formatea una fecha para Google Calendar
    */
-  private validateAndFormatDate(dateStr: string, timeStr?: string): { isValid: boolean; dateTime?: string; date?: string; error?: string } {
+  private validateAndFormatDate(dateStr: string, timeStr?: string, endTimeStr?: string): { isValid: boolean; dateTime?: string; endDateTime?: string; date?: string; error?: string } {
     if (!dateStr) {
       return { isValid: false, error: 'Fecha vacía' };
     }
@@ -687,22 +687,40 @@ export class GoogleCalendarService {
         let googleEvent: GoogleCalendarEvent;
 
         if (event.time && validation.dateTime) {
-          // Evento con hora
-          // Calcular fecha de fin sumando 2 horas directamente en el string (sin conversión UTC)
-          const [datePart, timePart] = validation.dateTime.split('T');
-          const [hours, minutes] = timePart.split(':').map(Number);
-          let endHours = hours + 2;
-          let endDatePart = datePart;
-          
-          // Manejar cambio de día si las horas exceden 24
-          if (endHours >= 24) {
-            endHours = endHours - 24;
-            endDatePart = this.getNextDay(datePart);
+          // Usar endTime si está disponible, sino calcular sumando 2 horas
+          let endDateTime: string;
+          if (event.endTime) {
+            const endValidation = this.validateAndFormatDate(event.date, event.endTime);
+            if (endValidation.isValid && endValidation.dateTime) {
+              endDateTime = endValidation.dateTime;
+            } else {
+              // Si endTime es inválido, calcular sumando 2 horas
+              const [datePart, timePart] = validation.dateTime.split('T');
+              const [hours, minutes] = timePart.split(':').map(Number);
+              let endHours = hours + 2;
+              let endDatePart = datePart;
+              if (endHours >= 24) {
+                endHours = endHours - 24;
+                endDatePart = this.getNextDay(datePart);
+              }
+              const endHoursStr = endHours.toString().padStart(2, '0');
+              const endMinutesStr = minutes.toString().padStart(2, '0');
+              endDateTime = `${endDatePart}T${endHoursStr}:${endMinutesStr}:00`;
+            }
+          } else {
+            // Calcular fecha de fin sumando 2 horas directamente en el string (sin conversión UTC)
+            const [datePart, timePart] = validation.dateTime.split('T');
+            const [hours, minutes] = timePart.split(':').map(Number);
+            let endHours = hours + 2;
+            let endDatePart = datePart;
+            if (endHours >= 24) {
+              endHours = endHours - 24;
+              endDatePart = this.getNextDay(datePart);
+            }
+            const endHoursStr = endHours.toString().padStart(2, '0');
+            const endMinutesStr = minutes.toString().padStart(2, '0');
+            endDateTime = `${endDatePart}T${endHoursStr}:${endMinutesStr}:00`;
           }
-          
-          const endHoursStr = endHours.toString().padStart(2, '0');
-          const endMinutesStr = minutes.toString().padStart(2, '0');
-          const endDateTime = `${endDatePart}T${endHoursStr}:${endMinutesStr}:00`;
 
           googleEvent = {
             summary: `[Studianta] ${event.title}`,
@@ -877,23 +895,44 @@ export class GoogleCalendarService {
       let googleEvent: GoogleCalendarEvent;
 
       if (event.time && validation.dateTime) {
-        // Calcular fecha de fin sumando 2 horas directamente en el string (sin conversión UTC)
-        const [datePart, timePart] = validation.dateTime.split('T');
-        const [hours, minutes] = timePart.split(':').map(Number);
-        let endHours = hours + 2;
-        let endDatePart = datePart;
-        
-        // Manejar cambio de día si las horas exceden 24
-        if (endHours >= 24) {
-          endHours = endHours - 24;
-          const date = new Date(datePart);
-          date.setDate(date.getDate() + 1);
-          endDatePart = date.toISOString().slice(0, 10);
+        // Usar endTime si está disponible, sino calcular sumando 2 horas
+        let endDateTime: string;
+        if (event.endTime) {
+          const endValidation = this.validateAndFormatDate(event.date, event.endTime);
+          if (endValidation.isValid && endValidation.dateTime) {
+            endDateTime = endValidation.dateTime;
+          } else {
+            // Si endTime es inválido, calcular sumando 2 horas
+            const [datePart, timePart] = validation.dateTime.split('T');
+            const [hours, minutes] = timePart.split(':').map(Number);
+            let endHours = hours + 2;
+            let endDatePart = datePart;
+            if (endHours >= 24) {
+              endHours = endHours - 24;
+              const date = new Date(datePart);
+              date.setDate(date.getDate() + 1);
+              endDatePart = date.toISOString().slice(0, 10);
+            }
+            const endHoursStr = endHours.toString().padStart(2, '0');
+            const endMinutesStr = minutes.toString().padStart(2, '0');
+            endDateTime = `${endDatePart}T${endHoursStr}:${endMinutesStr}:00`;
+          }
+        } else {
+          // Calcular fecha de fin sumando 2 horas directamente en el string (sin conversión UTC)
+          const [datePart, timePart] = validation.dateTime.split('T');
+          const [hours, minutes] = timePart.split(':').map(Number);
+          let endHours = hours + 2;
+          let endDatePart = datePart;
+          if (endHours >= 24) {
+            endHours = endHours - 24;
+            const date = new Date(datePart);
+            date.setDate(date.getDate() + 1);
+            endDatePart = date.toISOString().slice(0, 10);
+          }
+          const endHoursStr = endHours.toString().padStart(2, '0');
+          const endMinutesStr = minutes.toString().padStart(2, '0');
+          endDateTime = `${endDatePart}T${endHoursStr}:${endMinutesStr}:00`;
         }
-        
-        const endHoursStr = endHours.toString().padStart(2, '0');
-        const endMinutesStr = minutes.toString().padStart(2, '0');
-        const endDateTime = `${endDatePart}T${endHoursStr}:${endMinutesStr}:00`;
 
         googleEvent = {
           summary: `[Studianta] ${event.title}`,
