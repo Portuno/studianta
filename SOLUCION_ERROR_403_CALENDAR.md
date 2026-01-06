@@ -47,13 +47,32 @@ El token actual tiene el scope antiguo (`calendar.events`). Necesitas obtener un
    - Después de conectar, intenta sincronizar los eventos
    - Debería funcionar correctamente
 
-### Paso 3: Verificar los Permisos en Google Cloud Console
+### Paso 3: Configurar el OAuth Consent Screen (IMPORTANTE)
 
-1. **Verifica el OAuth Consent Screen:**
+El problema es que el OAuth consent screen solo tiene habilitado el scope `calendar.events`. Necesitas agregar el scope completo `calendar`:
+
+1. **Ve a OAuth Consent Screen:**
+   - Abre [Google Cloud Console](https://console.cloud.google.com/)
    - Ve a **APIs & Services** → **OAuth consent screen**
-   - Asegúrate de que el scope `https://www.googleapis.com/auth/calendar` esté en la lista de scopes
+   - Selecciona tu aplicación o crea una nueva
 
-2. **Verifica las Credenciales:**
+2. **Agrega el Scope Completo:**
+   - En la sección **Scopes**, haz clic en **Add or Remove Scopes**
+   - Busca y selecciona: `https://www.googleapis.com/auth/calendar`
+   - **IMPORTANTE**: Debe ser `calendar` completo, NO solo `calendar.events`
+   - Guarda los cambios
+
+3. **Verifica los Scopes Habilitados:**
+   - Debes ver en la lista:
+     - ✅ `https://www.googleapis.com/auth/calendar` (Ver, editar, compartir y eliminar permanentemente todos los calendarios)
+   - NO debe aparecer solo:
+     - ❌ `https://www.googleapis.com/auth/calendar.events` (solo eventos)
+
+4. **Si estás en modo Testing:**
+   - Asegúrate de agregar tu email como usuario de prueba
+   - O cambia a modo "Production" si quieres que todos los usuarios puedan usar la app
+
+5. **Verifica las Credenciales:**
    - Ve a **APIs & Services** → **Credentials**
    - Verifica que tu OAuth 2.0 Client ID esté configurado correctamente
 

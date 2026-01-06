@@ -116,6 +116,10 @@ export class GoogleCalendarService {
       state: this.generateState(),
     });
 
+    // Logging para debug
+    console.log('[Google Calendar] Iniciando OAuth con scope:', GOOGLE_SCOPE);
+    console.log('[Google Calendar] URL completa:', `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+
     // Guardar state y redirect_uri en localStorage para validación
     localStorage.setItem('google_oauth_state', params.get('state') || '');
     localStorage.setItem('google_oauth_redirect_uri', redirectUri);
@@ -387,6 +391,46 @@ export class GoogleCalendarService {
   }
 
   /**
+   * Valida y formatea una fecha para Google Calendar
+   */
+  private validateAndFormatDate(dateStr: string, timeStr?: string): { isValid: boolean; dateTime?: string; date?: string; error?: string } {
+    if (!dateStr) {
+      return { isValid: false, error: 'Fecha vacía' };
+    }
+
+    // Validar formato de fecha (YYYY-MM-DD)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(dateStr)) {
+      return { isValid: false, error: `Formato de fecha inválido: ${dateStr}` };
+    }
+
+    // Si no hay hora, retornar solo la fecha
+    if (!timeStr) {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return { isValid: false, error: `Fecha inválida: ${dateStr}` };
+      }
+      return { isValid: true, date: dateStr };
+    }
+
+    // Validar formato de hora (HH:MM)
+    const timeRegex = /^\d{2}:\d{2}$/;
+    if (!timeRegex.test(timeStr)) {
+      return { isValid: false, error: `Formato de hora inválido: ${timeStr}` };
+    }
+
+    // Construir fecha/hora completa
+    const dateTimeStr = `${dateStr}T${timeStr}:00`;
+    const dateTime = new Date(dateTimeStr);
+    
+    if (isNaN(dateTime.getTime())) {
+      return { isValid: false, error: `Fecha/hora inválida: ${dateTimeStr}` };
+    }
+
+    return { isValid: true, dateTime: dateTime.toISOString() };
+  }
+
+  /**
    * Sincroniza eventos académicos a Google Calendar
    */
   async syncEvents(
@@ -405,62 +449,116 @@ export class GoogleCalendarService {
     const milestoneEvents: GoogleCalendarEvent[] = [];
     subjects.forEach(subject => {
       subject.milestones.forEach(milestone => {
-        const eventDate = new Date(milestone.date);
-        const startDateTime = milestone.time
-          ? `${milestone.date}T${milestone.time}:00`
-          : milestone.date;
+        const validation = this.validateAndFormatDate(milestone.date, milestone.time);
+        
+        if (!validation.isValid) {
+          console.error(`[Google Calendar] Error validando milestone "${milestone.title}": ${validation.error}`);
+          errors++;
+          return;
+        }
 
-        milestoneEvents.push({
-          summary: `[Studianta] ${milestone.type}: ${subject.name}`,
-          description: `Materia: ${subject.name}\nTipo: ${milestone.type}\n${milestone.title}`,
-          start: milestone.time
-            ? { dateTime: startDateTime, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }
-            : { date: milestone.date },
-          end: milestone.time
-            ? { 
-                dateTime: new Date(new Date(startDateTime).getTime() + 2 * 60 * 60 * 1000).toISOString(),
-                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-              }
-            : { date: milestone.date },
-          colorId: milestone.type === 'Examen' ? '6' : '9', // 6 = naranja (examen), 9 = azul (entrega)
-          reminders: {
-            useDefault: false,
-            overrides: [
-              { method: 'popup', minutes: 1440 }, // 1 día antes
-              { method: 'popup', minutes: 60 },  // 1 hora antes
-            ],
-          },
-        });
+        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
+        if (milestone.time && validation.dateTime) {
+          // Evento con hora
+          const startDate = new Date(validation.dateTime);
+          const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 horas
+          
+          if (isNaN(endDate.getTime())) {
+            console.error(`[Google Calendar] Error calculando fecha de fin para milestone "${milestone.title}"`);
+            errors++;
+            return;
+          }
+
+          milestoneEvents.push({
+            summary: `[Studianta] ${milestone.type}: ${subject.name}`,
+            description: `Materia: ${subject.name}\nTipo: ${milestone.type}\n${milestone.title}`,
+            start: { dateTime: validation.dateTime, timeZone },
+            end: { dateTime: endDate.toISOString(), timeZone },
+            colorId: milestone.type === 'Examen' ? '6' : '9', // 6 = naranja (examen), 9 = azul (entrega)
+            reminders: {
+              useDefault: false,
+              overrides: [
+                { method: 'popup', minutes: 1440 }, // 1 día antes
+                { method: 'popup', minutes: 60 },  // 1 hora antes
+              ],
+            },
+          });
+        } else if (validation.date) {
+          // Evento de día completo
+          milestoneEvents.push({
+            summary: `[Studianta] ${milestone.type}: ${subject.name}`,
+            description: `Materia: ${subject.name}\nTipo: ${milestone.type}\n${milestone.title}`,
+            start: { date: validation.date },
+            end: { date: validation.date },
+            colorId: milestone.type === 'Examen' ? '6' : '9',
+            reminders: {
+              useDefault: false,
+              overrides: [
+                { method: 'popup', minutes: 1440 },
+                { method: 'popup', minutes: 60 },
+              ],
+            },
+          });
+        }
       });
     });
 
     // Convertir customEvents a formato Google Calendar
-    const customGoogleEvents: GoogleCalendarEvent[] = customEvents.map(event => {
-      const startDateTime = event.time
-        ? `${event.date}T${event.time}:00`
-        : event.date;
+    const customGoogleEvents: GoogleCalendarEvent[] = [];
+    customEvents.forEach(event => {
+      const validation = this.validateAndFormatDate(event.date, event.time);
+      
+      if (!validation.isValid) {
+        console.error(`[Google Calendar] Error validando evento personalizado "${event.title}": ${validation.error}`);
+        errors++;
+        return;
+      }
 
-      return {
-        summary: `[Studianta] ${event.title}`,
-        description: event.description || '',
-        start: event.time
-          ? { dateTime: startDateTime, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }
-          : { date: event.date },
-        end: event.time
-          ? {
-              dateTime: new Date(new Date(startDateTime).getTime() + 2 * 60 * 60 * 1000).toISOString(),
-              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-            }
-          : { date: event.date },
-        colorId: event.priority === 'high' ? '6' : '1',
-        reminders: {
-          useDefault: false,
-          overrides: [
-            { method: 'popup', minutes: 1440 },
-            { method: 'popup', minutes: 60 },
-          ],
-        },
-      };
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+      if (event.time && validation.dateTime) {
+        // Evento con hora
+        const startDate = new Date(validation.dateTime);
+        const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 horas
+        
+        if (isNaN(endDate.getTime())) {
+          console.error(`[Google Calendar] Error calculando fecha de fin para evento "${event.title}"`);
+          errors++;
+          return;
+        }
+
+        customGoogleEvents.push({
+          summary: `[Studianta] ${event.title}`,
+          description: event.description || '',
+          start: { dateTime: validation.dateTime, timeZone },
+          end: { dateTime: endDate.toISOString(), timeZone },
+          colorId: event.priority === 'high' ? '6' : '1',
+          reminders: {
+            useDefault: false,
+            overrides: [
+              { method: 'popup', minutes: 1440 },
+              { method: 'popup', minutes: 60 },
+            ],
+          },
+        });
+      } else if (validation.date) {
+        // Evento de día completo
+        customGoogleEvents.push({
+          summary: `[Studianta] ${event.title}`,
+          description: event.description || '',
+          start: { date: validation.date },
+          end: { date: validation.date },
+          colorId: event.priority === 'high' ? '6' : '1',
+          reminders: {
+            useDefault: false,
+            overrides: [
+              { method: 'popup', minutes: 1440 },
+              { method: 'popup', minutes: 60 },
+            ],
+          },
+        });
+      }
     });
 
     // Combinar todos los eventos
