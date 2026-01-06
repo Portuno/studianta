@@ -5,7 +5,9 @@ import { Subject, CustomCalendarEvent } from '../types';
 let GOOGLE_CLIENT_ID: string | null = null;
 // Usar solo el origin (sin pathname) para que coincida con Google Cloud Console
 const GOOGLE_REDIRECT_URI = window.location.origin;
-const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+// Scope completo de calendar para permitir crear calendarios y gestionar eventos
+// calendar.events solo permite eventos, pero necesitamos calendar completo para crear calendarios
+const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/calendar';
 const GOOGLE_DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'];
 
 // Obtener la URL base del backend (Vercel en producción, localhost en desarrollo)
@@ -262,6 +264,34 @@ export class GoogleCalendarService {
   }
 
   /**
+   * Verifica si un error es por permisos insuficientes
+   */
+  private isInsufficientPermissionsError(response: Response, error: any): boolean {
+    if (response.status === 403) {
+      return true;
+    }
+    
+    const errorMessage = error?.error?.message || error?.message || '';
+    return (
+      errorMessage.includes('insufficient authentication scopes') ||
+      errorMessage.includes('insufficient permissions') ||
+      errorMessage.includes('Forbidden') ||
+      errorMessage.includes('Access denied')
+    );
+  }
+
+  /**
+   * Limpia los tokens y fuerza reautorización
+   */
+  private clearTokensAndForceReauth(userId: string): void {
+    this.disconnect(userId);
+    throw new Error(
+      'El token actual no tiene los permisos necesarios.\n\n' +
+      'Por favor, vuelve a conectar tu cuenta de Google Calendar para obtener los permisos completos.'
+    );
+  }
+
+  /**
    * Crea o obtiene el calendario "Studianta - Academia"
    */
   async getOrCreateStudiantaCalendar(): Promise<string> {
@@ -275,16 +305,33 @@ export class GoogleCalendarService {
       },
     });
 
-    if (listResponse.ok) {
-      const data = await listResponse.json();
-      const existingCalendar = data.items?.find(
-        (cal: any) => cal.summary === calendarName
-      );
-
-      if (existingCalendar) {
-        this.calendarId = existingCalendar.id;
-        return existingCalendar.id;
+    if (!listResponse.ok) {
+      const error = await listResponse.json().catch(() => ({}));
+      
+      // Si es error de permisos, limpiar tokens y forzar reautorización
+      if (this.isInsufficientPermissionsError(listResponse, error)) {
+        // Intentar obtener userId desde localStorage
+        const userId = this.getUserIdFromStorage();
+        if (userId) {
+          this.clearTokensAndForceReauth(userId);
+        }
+        throw new Error(
+          'Error de permisos: El token no tiene los permisos necesarios para acceder a Google Calendar.\n\n' +
+          'Por favor, desconecta y vuelve a conectar tu cuenta de Google Calendar.'
+        );
       }
+      
+      throw new Error(`Error al listar calendarios: ${error.error?.message || 'Error desconocido'}`);
+    }
+
+    const data = await listResponse.json();
+    const existingCalendar = data.items?.find(
+      (cal: any) => cal.summary === calendarName
+    );
+
+    if (existingCalendar) {
+      this.calendarId = existingCalendar.id;
+      return existingCalendar.id;
     }
 
     // Crear nuevo calendario
@@ -302,13 +349,41 @@ export class GoogleCalendarService {
     });
 
     if (!createResponse.ok) {
-      const error = await createResponse.json();
-      throw new Error(`Error al crear calendario: ${error.error?.message || 'Error desconocido'}`);
+      const error = await createResponse.json().catch(() => ({}));
+      const errorMessage = error.error?.message || 'Error desconocido';
+      
+      // Si es error de permisos, limpiar tokens y forzar reautorización
+      if (this.isInsufficientPermissionsError(createResponse, error)) {
+        const userId = this.getUserIdFromStorage();
+        if (userId) {
+          this.clearTokensAndForceReauth(userId);
+        }
+        throw new Error(
+          'Error de permisos: El token no tiene los permisos necesarios para crear calendarios.\n\n' +
+          'Por favor, desconecta y vuelve a conectar tu cuenta de Google Calendar para obtener los permisos completos.'
+        );
+      }
+      
+      throw new Error(`Error al crear calendario: ${errorMessage}`);
     }
 
     const calendar = await createResponse.json();
     this.calendarId = calendar.id;
     return calendar.id;
+  }
+
+  /**
+   * Obtiene el userId desde localStorage (método auxiliar)
+   */
+  private getUserIdFromStorage(): string | null {
+    // Buscar en todas las claves de localStorage que empiecen con google_calendar_
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('google_calendar_')) {
+        return key.replace('google_calendar_', '');
+      }
+    }
+    return null;
   }
 
   /**
@@ -409,11 +484,28 @@ export class GoogleCalendarService {
         if (response.ok) {
           created++;
         } else {
-          const error = await response.json();
+          const error = await response.json().catch(() => ({}));
+          
+          // Si es error de permisos, lanzar error para que se maneje arriba
+          if (this.isInsufficientPermissionsError(response, error)) {
+            const userId = this.getUserIdFromStorage();
+            if (userId) {
+              this.clearTokensAndForceReauth(userId);
+            }
+            throw new Error(
+              'Error de permisos: El token no tiene los permisos necesarios para crear eventos.\n\n' +
+              'Por favor, desconecta y vuelve a conectar tu cuenta de Google Calendar.'
+            );
+          }
+          
           console.error('Error al crear evento:', error);
           errors++;
         }
-      } catch (error) {
+      } catch (error: any) {
+        // Si es error de permisos, propagarlo
+        if (error.message && error.message.includes('Error de permisos')) {
+          throw error;
+        }
         console.error('Error al crear evento:', error);
         errors++;
       }
