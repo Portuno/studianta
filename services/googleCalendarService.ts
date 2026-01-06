@@ -413,14 +413,29 @@ export class GoogleCalendarService {
       return { isValid: true, date: dateStr };
     }
 
-    // Validar formato de hora (HH:MM)
-    const timeRegex = /^\d{2}:\d{2}$/;
-    if (!timeRegex.test(timeStr)) {
-      return { isValid: false, error: `Formato de hora inválido: ${timeStr}` };
+    // Normalizar formato de hora: aceptar HH:MM o HH:MM:SS y convertir a HH:MM
+    let normalizedTime = timeStr.trim();
+    
+    // Si tiene segundos (HH:MM:SS), eliminarlos
+    if (normalizedTime.includes(':') && normalizedTime.split(':').length === 3) {
+      const parts = normalizedTime.split(':');
+      normalizedTime = `${parts[0]}:${parts[1]}`;
     }
 
-    // Construir fecha/hora completa
-    const dateTimeStr = `${dateStr}T${timeStr}:00`;
+    // Validar formato de hora normalizado (HH:MM)
+    const timeRegex = /^\d{2}:\d{2}$/;
+    if (!timeRegex.test(normalizedTime)) {
+      return { isValid: false, error: `Formato de hora inválido: ${timeStr} (esperado HH:MM o HH:MM:SS)` };
+    }
+
+    // Validar que hora y minutos sean válidos
+    const [hours, minutes] = normalizedTime.split(':').map(Number);
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return { isValid: false, error: `Hora inválida: ${normalizedTime} (hora debe estar entre 00-23, minutos entre 00-59)` };
+    }
+
+    // Construir fecha/hora completa en formato ISO (YYYY-MM-DDTHH:MM:00)
+    const dateTimeStr = `${dateStr}T${normalizedTime}:00`;
     const dateTime = new Date(dateTimeStr);
     
     if (isNaN(dateTime.getTime())) {
