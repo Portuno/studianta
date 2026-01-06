@@ -27,7 +27,8 @@ export default async function handler(req, res) {
   console.log('[Google OAuth] Client ID prefix:', clientId ? clientId.substring(0, 20) + '...' : 'N/A');
   console.log('[Google OAuth] Client Secret presente:', !!clientSecret);
   console.log('[Google OAuth] Client Secret length:', clientSecret?.length || 0);
-  console.log('[Google OAuth] Client Secret prefix:', clientSecret ? clientSecret.substring(0, 10) + '...' : 'N/A');
+  console.log('[Google OAuth] Client Secret prefix:', clientSecret ? clientSecret.substring(0, 15) + '...' : 'N/A');
+  console.log('[Google OAuth] Client Secret primer carácter:', clientSecret ? `"${clientSecret[0]}" (código: ${clientSecret.charCodeAt(0)})` : 'N/A');
 
   // Validar que las credenciales existan
   if (!clientId || !clientSecret) {
@@ -56,27 +57,38 @@ export default async function handler(req, res) {
     });
   }
 
-  // Validar que no tengan espacios al inicio o final (común error al copiar/pegar)
-  const clientIdTrimmed = clientId.trim();
-  const clientSecretTrimmed = clientSecret.trim();
+  // Limpiar credenciales: eliminar espacios y caracteres extra comunes
+  let finalClientId = clientId.trim();
+  let finalClientSecret = clientSecret.trim();
   
-  if (clientId !== clientIdTrimmed || clientSecret !== clientSecretTrimmed) {
-    console.warn('[Google OAuth] Credenciales con espacios extra detectados, usando versión recortada');
-    // Usar las versiones recortadas automáticamente
-    const trimmedClientId = clientIdTrimmed;
-    const trimmedClientSecret = clientSecretTrimmed;
+  // Detectar y limpiar caracteres extra al inicio del Client Secret
+  // Los Client Secrets de Google suelen comenzar con "GOCSPX-" o similar
+  // Si hay un guion o espacio extra al inicio, eliminarlo
+  if (finalClientSecret && !finalClientSecret.match(/^[A-Z0-9]/)) {
+    const originalSecret = finalClientSecret;
+    // Eliminar caracteres no alfanuméricos al inicio (guiones, espacios, etc.)
+    finalClientSecret = finalClientSecret.replace(/^[^A-Z0-9]+/, '');
     
-    // Continuar con las credenciales recortadas (Google validará el formato)
-    // Nota: No validamos el formato específico aquí porque Google puede usar diferentes formatos
-    // Google mismo validará si las credenciales son correctas cuando intentemos usarlas
+    if (originalSecret !== finalClientSecret) {
+      console.warn('[Google OAuth] ⚠️ Caracteres extra detectados al inicio del Client Secret');
+      console.warn('[Google OAuth] Original:', originalSecret.substring(0, 20) + '...');
+      console.warn('[Google OAuth] Limpiado:', finalClientSecret.substring(0, 20) + '...');
+      console.warn('[Google OAuth] ⚠️ IMPORTANTE: Verifica que el Client Secret en Vercel no tenga caracteres extra al inicio o final');
+    }
   }
+  
+  // Detectar espacios o caracteres extra
+  if (clientId !== finalClientId || clientSecret !== finalClientSecret) {
+    console.warn('[Google OAuth] Credenciales limpiadas (se eliminaron espacios o caracteres extra)');
+  }
+  
+  // Logging final de las credenciales que se usarán
+  console.log('[Google OAuth] Credenciales finales a usar:');
+  console.log('[Google OAuth] Client ID:', finalClientId.substring(0, 30) + '...');
+  console.log('[Google OAuth] Client Secret:', finalClientSecret.substring(0, 15) + '...');
 
   try {
-    // Usar versiones recortadas si había espacios
-    const finalClientId = clientId.trim();
-    const finalClientSecret = clientSecret.trim();
-    
-    // Intercambiar código por token
+    // Intercambiar código por token (usando credenciales ya limpiadas)
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -115,21 +127,28 @@ export default async function handler(req, res) {
           status: response.status,
           error: error.error,
           error_description: error.error_description,
-          clientIdPrefix: clientId?.substring(0, 20) + '...',
-          redirect_uri: redirect_uri
+          clientIdPrefix: finalClientId?.substring(0, 20) + '...',
+          clientSecretPrefix: finalClientSecret?.substring(0, 15) + '...',
+          redirect_uri: redirect_uri,
+          originalClientSecretPrefix: clientSecret?.substring(0, 15) + '...'
         });
+        
+        // Detectar si había caracteres extra
+        const hadExtraChars = clientSecret && clientSecret.trim() !== finalClientSecret;
         
         return res.status(401).json({
           error: 'invalid_client',
           message: 'Client ID o Client Secret inválidos. Verifica las credenciales en Vercel.',
-          details: 'Asegúrate de que:\n1. GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET estén configuradas en Vercel\n2. Las credenciales correspondan al mismo OAuth Client ID en Google Cloud Console\n3. No haya espacios extra al copiar/pegar las credenciales\n4. El Client Secret no haya sido regenerado sin actualizar Vercel',
+          details: 'Asegúrate de que:\n1. GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET estén configuradas en Vercel\n2. Las credenciales correspondan al mismo OAuth Client ID en Google Cloud Console\n3. No haya espacios o caracteres extra (como guiones) al inicio o final de las credenciales\n4. El Client Secret no haya sido regenerado sin actualizar Vercel',
+          warning: hadExtraChars ? '⚠️ Se detectaron caracteres extra en el Client Secret. Verifica que en Vercel no haya guiones, espacios u otros caracteres al inicio o final.' : null,
           troubleshooting: [
-            '1. Verifica en Vercel Dashboard → Settings → Environment Variables que ambas variables existan',
-            '2. Compara el Client ID en Vercel con el de Google Cloud Console (deben ser idénticos)',
-            '3. Si regeneraste el Client Secret en Google Cloud Console, actualízalo en Vercel',
-            '4. Asegúrate de que no haya espacios al inicio o final de las credenciales',
-            '5. Haz redeploy después de actualizar las variables',
-            '6. Usa el endpoint /api/google/oauth/debug para verificar que las variables estén disponibles'
+            '1. Ve a Vercel Dashboard → Settings → Environment Variables',
+            '2. Edita GOOGLE_CLIENT_SECRET y verifica que NO tenga caracteres extra al inicio o final',
+            '3. El Client Secret debe comenzar directamente con "GOCSPX-" (sin espacios ni guiones antes)',
+            '4. Compara el Client ID en Vercel con el de Google Cloud Console (deben ser idénticos)',
+            '5. Si regeneraste el Client Secret en Google Cloud Console, actualízalo en Vercel',
+            '6. Haz redeploy después de actualizar las variables',
+            '7. Usa el endpoint /api/google/oauth/debug para verificar que las variables estén disponibles'
           ]
         });
       }

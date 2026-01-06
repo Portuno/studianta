@@ -6,6 +6,17 @@ Error de autenticación: Client ID o Client Secret inválidos.
 /api/google/oauth/token:1 Failed to load resource: the server responded with a status of 401
 ```
 
+### ⚠️ Error Común: Caracteres Extra en Client Secret
+
+Si ves en los logs de Vercel:
+```
+Client Secret prefix: -GOCSPX-fM...
+```
+
+**El problema**: Hay un guion `-` o espacio extra al inicio del Client Secret en Vercel.
+
+**La solución**: El Client Secret debe comenzar directamente con `GOCSPX-` sin caracteres antes.
+
 ## ✅ Solución Paso a Paso
 
 ### Paso 1: Verificar Variables en Vercel
@@ -54,7 +65,12 @@ Error de autenticación: Client ID o Client Secret inválidos.
 2. **Edita el Client Secret**
    - Edita `GOOGLE_CLIENT_SECRET`
    - Pega el Client Secret exacto de Google Cloud Console
-   - **Sin espacios** al inicio o final
+   - **IMPORTANTE**: 
+     - Debe comenzar directamente con `GOCSPX-` (sin guiones, espacios u otros caracteres antes)
+     - **Sin espacios** al inicio o final
+     - **Sin guiones** al inicio o final
+   - Ejemplo correcto: `GOCSPX-abc123def456...`
+   - Ejemplo incorrecto: `-GOCSPX-abc123def456...` (tiene guion extra al inicio)
    - Guarda
 
 3. **Verifica que Coincidan**
