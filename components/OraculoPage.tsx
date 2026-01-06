@@ -6,6 +6,17 @@ import { getIcon } from '../constants';
 import OracleTextRenderer from './OracleTextRenderer';
 import { addSealToPDF } from '../utils/pdfSeal';
 import { jsPDF } from 'jspdf';
+import { processMarkdownToHTML } from '../utils/markdownProcessor';
+
+// Importación dinámica de html2canvas para evitar problemas con esbuild
+let html2canvas: any;
+const loadHtml2Canvas = async () => {
+  if (!html2canvas) {
+    const module = await import('html2canvas');
+    html2canvas = module.default || module;
+  }
+  return html2canvas;
+};
 
 interface Message {
   id: string;
@@ -242,86 +253,251 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
     }
 
     try {
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
+      // Crear un elemento HTML temporal oculto con el contenido estilizado
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '210mm'; // Ancho A4
+      tempDiv.style.backgroundColor = '#FFFFFF';
+      tempDiv.style.fontFamily = "'EB Garamond', 'Times New Roman', serif";
+
+      // Generar el HTML del chat con estilos
+      const chatHTML = messages.map((message) => {
+        const processedText = processMarkdownToHTML(message.content);
+        const roleColor = message.role === 'user' ? '#E35B8F' : '#D4AF37';
+        const roleLabel = message.role === 'user' ? 'Buscadora de Luz' : 'Oráculo de la Logia';
+        
+        return `
+          <div style="margin-bottom: 30px;">
+            <div style="
+              color: ${roleColor};
+              font-family: 'Marcellus', 'Cinzel', serif;
+              font-size: 14pt;
+              font-weight: 700;
+              margin-bottom: 12px;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            ">${roleLabel}:</div>
+            <div style="
+              color: #374151;
+              font-family: 'EB Garamond', 'Times New Roman', serif;
+              font-size: 11.5pt;
+              line-height: 1.8;
+              text-align: justify;
+              padding-left: 12px;
+            ">${processedText}</div>
+          </div>
+        `;
+      }).join('');
+
+      // Crear el HTML completo del pergamino
+      tempDiv.innerHTML = `
+        <div style="
+          background-color: #FFFFFF;
+          position: relative;
+          padding: 15mm 20mm;
+          box-sizing: border-box;
+        ">
+          <!-- Encabezado -->
+          <div style="
+            text-align: center;
+            margin-bottom: 25mm;
+            position: relative;
+            padding-top: 5mm;
+          ">
+            <h1 style="
+              font-family: 'Marcellus', 'Cinzel', 'Times New Roman', serif;
+              color: #4A233E;
+              font-size: 24pt;
+              font-weight: 700;
+              margin: 0;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+            ">ORÁCULO PERSONAL DE LA LOGIA STUDIANTA</h1>
+            
+            <div style="
+              color: #8B5E75;
+              font-family: 'EB Garamond', serif;
+              font-size: 11pt;
+              margin-top: 8px;
+              font-style: italic;
+            ">
+              ${new Date().toLocaleDateString('es-ES', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+              })}
+            </div>
+            
+            <!-- Sello en esquina superior derecha -->
+            <img 
+              src="/seal.png" 
+              alt="Sello de Studianta"
+              style="
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 22mm;
+                height: 22mm;
+                object-fit: contain;
+              "
+              onerror="this.style.display='none'"
+            />
+          </div>
+
+          <!-- Cuerpo del texto -->
+          <div style="
+            color: #374151;
+            font-family: 'EB Garamond', 'Times New Roman', serif;
+            font-size: 11.5pt;
+            line-height: 1.8;
+            text-align: justify;
+          ">
+            ${chatHTML}
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(tempDiv);
+
+      // Esperar a que las fuentes y la imagen se carguen
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Cargar html2canvas dinámicamente
+      const html2canvasLib = await loadHtml2Canvas();
+      
+      // Renderizar el HTML a canvas con html2canvas
+      const canvas = await html2canvasLib(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#FFFFFF',
+        width: 210 * 3.779527559, // Convertir mm a px (1mm = 3.779527559px a 96dpi)
       });
 
-      // Agregar el sello
-      await addSealToPDF(doc);
+      // Limpiar el elemento temporal
+      document.body.removeChild(tempDiv);
 
-      // Configurar estilos
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const maxWidth = pageWidth - (margin * 2);
-      let yPosition = margin + 30; // Espacio para el sello
+      // Crear el PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
 
-      // Título
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(74, 35, 62); // #4A233E
-      doc.text('Oráculo Personal de la Logia Studianta', margin, yPosition);
-      yPosition += 10;
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      // Convertir píxeles a mm (96 DPI: 1px = 0.264583mm)
+      const pxToMm = 0.264583;
+      const imgWidthMm = imgWidth * pxToMm;
+      const imgHeightMm = imgHeight * pxToMm;
+      const scale = pdfWidth / imgWidthMm;
+      const imgScaledWidth = pdfWidth;
+      const imgScaledHeight = imgHeightMm * scale;
 
-      // Fecha
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(139, 94, 117); // #8B5E75
-      doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
-      })}`, margin, yPosition);
-      yPosition += 15;
+      // Calcular cuántas páginas necesitamos basado en el área útil
+      const usableHeightMm = pdfHeight - 20; // Altura útil dentro del recuadro
+      const totalPages = Math.ceil(imgScaledHeight / usableHeightMm);
 
-      // Línea decorativa
-      doc.setDrawColor(212, 175, 55); // #D4AF37
-      doc.setLineWidth(0.5);
-      doc.line(margin, yPosition, pageWidth - margin, yPosition);
-      yPosition += 10;
+      // Agregar el sello en la primera página
+      await addSealToPDF(pdf);
 
-      // Mensajes
-      doc.setFontSize(11);
-      doc.setTextColor(55, 65, 81); // #374151
-
-      for (const message of messages) {
-        // Verificar si necesitamos una nueva página
-        if (yPosition > pageHeight - 30) {
-          doc.addPage();
-          await addSealToPDF(doc);
-          yPosition = margin + 20;
+      // Dividir la imagen en páginas respetando el área del recuadro dorado
+      const usableHeightPx = Math.floor(usableHeightMm / (pxToMm * scale));
+      
+      let sourceY = 0;
+      let pageIndex = 0;
+      
+      while (sourceY < imgHeight && pageIndex < totalPages) {
+        if (pageIndex > 0) {
+          pdf.addPage();
         }
 
-        // Encabezado del mensaje
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(74, 35, 62);
-        const roleLabel = message.role === 'user' ? 'Buscadora de Luz' : 'Oráculo de la Logia';
-        doc.text(roleLabel, margin, yPosition);
-        yPosition += 5;
-
-        // Contenido del mensaje
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(55, 65, 81);
+        // Calcular la altura de la porción para esta página
+        const remainingHeight = imgHeight - sourceY;
+        let currentPageHeightPx = Math.min(usableHeightPx, remainingHeight);
         
-        // Procesar el texto (soporte básico para markdown)
-        const lines = doc.splitTextToSize(message.content, maxWidth);
-        for (const line of lines) {
-          if (yPosition > pageHeight - 20) {
-            doc.addPage();
-            await addSealToPDF(doc);
-            yPosition = margin + 20;
-          }
-          doc.text(line, margin, yPosition);
-          yPosition += 6;
+        // Ajustar para evitar cortes muy pequeños al final (menos de 50px)
+        if (remainingHeight - currentPageHeightPx < 50 && remainingHeight - currentPageHeightPx > 0) {
+          currentPageHeightPx = remainingHeight;
+        }
+        
+        if (currentPageHeightPx <= 0) {
+          break;
+        }
+        
+        // Calcular altura en mm
+        const currentPageHeightMm = (pageIndex === totalPages - 1 && remainingHeight <= usableHeightPx)
+          ? (currentPageHeightPx * pxToMm * scale)
+          : usableHeightMm;
+
+        // Crear un canvas temporal para esta página
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = imgWidth;
+        pageCanvas.height = currentPageHeightPx;
+        const pageCtx = pageCanvas.getContext('2d');
+        
+        if (!pageCtx) {
+          console.error('No se pudo obtener el contexto del canvas');
+          break;
         }
 
-        yPosition += 8; // Espacio entre mensajes
+        // Rellenar el canvas con fondo blanco primero
+        pageCtx.fillStyle = '#FFFFFF';
+        pageCtx.fillRect(0, 0, imgWidth, currentPageHeightPx);
+        
+        // Copiar la porción correspondiente de la imagen original
+        try {
+          pageCtx.drawImage(
+            canvas,
+            0, sourceY, imgWidth, currentPageHeightPx,
+            0, 0, imgWidth, currentPageHeightPx
+          );
+          
+          // Convertir a PNG
+          const pageImgData = pageCanvas.toDataURL('image/png', 1.0);
+          
+          // Agregar la imagen al PDF, posicionada dentro del recuadro (10mm desde arriba)
+          if (pageImgData && pageImgData.startsWith('data:image/png')) {
+            pdf.addImage(pageImgData, 'PNG', 0, 10, imgScaledWidth, currentPageHeightMm);
+          } else {
+            throw new Error('DataURL inválido');
+          }
+        } catch (drawError) {
+          console.error(`Error al procesar página ${pageIndex + 1}:`, drawError);
+          break;
+        }
+
+        sourceY += currentPageHeightPx;
+        pageIndex++;
       }
 
-      // Guardar PDF
-      doc.save(`oraculo-personal-${new Date().toISOString().split('T')[0]}.pdf`);
+      // Agregar numeración de páginas y marco decorativo en cada página
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        
+        // Marco decorativo dorado (se dibuja en cada página, siempre completo)
+        pdf.setDrawColor(212, 175, 55); // #D4AF37
+        pdf.setLineWidth(0.5);
+        pdf.rect(10, 10, pdfWidth - 20, pdfHeight - 20);
+        
+        // Numeración de página (footer, abajo a la derecha)
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(
+          `Página ${i}`,
+          pdfWidth - 15,
+          pdfHeight - 10,
+          { align: 'right' }
+        );
+      }
+
+      pdf.save(`oraculo-personal-${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error('Error al generar PDF:', error);
       alert('Error al generar el pergamino. Por favor, intenta nuevamente.');
