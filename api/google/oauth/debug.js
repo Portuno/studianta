@@ -11,12 +11,13 @@ export default async function handler(req, res) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
-  // Validar formato básico
+  // Validar formato básico del Client ID (más consistente)
+  // Nota: No validamos el formato del Client Secret porque Google puede usar diferentes formatos
   const clientIdPattern = /^[\d]+-[\w]+\.apps\.googleusercontent\.com$/;
-  const clientSecretPattern = /^GOCSPX-[\w-]+$/;
   
-  const clientIdValid = clientId ? clientIdPattern.test(clientId) : false;
-  const clientSecretValid = clientSecret ? clientSecretPattern.test(clientSecret) : false;
+  const clientIdValid = clientId ? clientIdPattern.test(clientId.trim()) : false;
+  // Para el Client Secret, solo verificamos que tenga contenido (Google validará el formato)
+  const clientSecretValid = clientSecret ? clientSecret.trim().length > 0 : false;
 
   // Verificar espacios al inicio o final
   const clientIdHasSpaces = clientId ? (clientId !== clientId.trim()) : false;
@@ -42,9 +43,9 @@ export default async function handler(req, res) {
       !clientId && '❌ GOOGLE_CLIENT_ID no está configurado',
       !clientSecret && '❌ GOOGLE_CLIENT_SECRET no está configurado',
       clientId && !clientIdValid && '⚠️ GOOGLE_CLIENT_ID tiene formato inválido (debe ser: número-string.apps.googleusercontent.com)',
-      clientSecret && !clientSecretValid && '⚠️ GOOGLE_CLIENT_SECRET tiene formato inválido (debe comenzar con: GOCSPX-)',
-      clientIdHasSpaces && '⚠️ GOOGLE_CLIENT_ID tiene espacios al inicio o final',
-      clientSecretHasSpaces && '⚠️ GOOGLE_CLIENT_SECRET tiene espacios al inicio o final'
+      clientSecret && !clientSecretValid && '⚠️ GOOGLE_CLIENT_SECRET está vacío o inválido',
+      clientIdHasSpaces && '⚠️ GOOGLE_CLIENT_ID tiene espacios al inicio o final (se recortarán automáticamente)',
+      clientSecretHasSpaces && '⚠️ GOOGLE_CLIENT_SECRET tiene espacios al inicio o final (se recortarán automáticamente)'
     ].filter(Boolean)
   });
 }

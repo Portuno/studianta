@@ -56,43 +56,34 @@ export default async function handler(req, res) {
     });
   }
 
-  // Validar formato básico de las credenciales
-  const clientIdPattern = /^[\d]+-[\w]+\.apps\.googleusercontent\.com$/;
-  const clientSecretPattern = /^GOCSPX-[\w-]+$/;
+  // Validar que no tengan espacios al inicio o final (común error al copiar/pegar)
+  const clientIdTrimmed = clientId.trim();
+  const clientSecretTrimmed = clientSecret.trim();
   
-  if (!clientIdPattern.test(clientId)) {
-    console.error('[Google OAuth] Client ID con formato inválido:', {
-      clientIdPrefix: clientId.substring(0, 30) + '...',
-      expectedFormat: 'number-string.apps.googleusercontent.com'
-    });
-    return res.status(500).json({
-      error: 'Client ID con formato inválido',
-      message: 'El Client ID no tiene el formato esperado de Google OAuth.',
-      hint: 'El formato debe ser: número-string.apps.googleusercontent.com'
-    });
-  }
-
-  if (!clientSecretPattern.test(clientSecret)) {
-    console.error('[Google OAuth] Client Secret con formato inválido:', {
-      clientSecretPrefix: clientSecret.substring(0, 15) + '...',
-      expectedFormat: 'GOCSPX-...'
-    });
-    return res.status(500).json({
-      error: 'Client Secret con formato inválido',
-      message: 'El Client Secret no tiene el formato esperado de Google OAuth.',
-      hint: 'El formato debe comenzar con: GOCSPX-'
-    });
+  if (clientId !== clientIdTrimmed || clientSecret !== clientSecretTrimmed) {
+    console.warn('[Google OAuth] Credenciales con espacios extra detectados, usando versión recortada');
+    // Usar las versiones recortadas automáticamente
+    const trimmedClientId = clientIdTrimmed;
+    const trimmedClientSecret = clientSecretTrimmed;
+    
+    // Continuar con las credenciales recortadas (Google validará el formato)
+    // Nota: No validamos el formato específico aquí porque Google puede usar diferentes formatos
+    // Google mismo validará si las credenciales son correctas cuando intentemos usarlas
   }
 
   try {
+    // Usar versiones recortadas si había espacios
+    const finalClientId = clientId.trim();
+    const finalClientSecret = clientSecret.trim();
+    
     // Intercambiar código por token
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
-        client_id: clientId,
-        client_secret: clientSecret,
+        client_id: finalClientId,
+        client_secret: finalClientSecret,
         redirect_uri,
         grant_type: 'authorization_code',
       }),
