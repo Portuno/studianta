@@ -3,7 +3,8 @@ import { Subject, CustomCalendarEvent } from '../types';
 // Configuración de OAuth2 de Google Calendar
 // El Client ID se obtiene del backend para no exponer credenciales
 let GOOGLE_CLIENT_ID: string | null = null;
-const GOOGLE_REDIRECT_URI = window.location.origin + window.location.pathname;
+// Usar solo el origin (sin pathname) para que coincida con Google Cloud Console
+const GOOGLE_REDIRECT_URI = window.location.origin;
 const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 const GOOGLE_DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'];
 
@@ -93,10 +94,9 @@ export class GoogleCalendarService {
       throw new Error('No se pudo obtener el Google Client ID desde el servidor');
     }
 
-    // Construir redirect_uri dinámicamente basado en la URL actual
-    const currentOrigin = window.location.origin;
-    const currentPath = window.location.pathname;
-    const redirectUri = currentOrigin + currentPath;
+    // Usar solo el origin (sin pathname) para que coincida con Google Cloud Console
+    // El callback se maneja en cualquier página y luego se limpia la URL
+    const redirectUri = window.location.origin;
 
     // Log para debugging (solo en desarrollo)
     if (import.meta.env.DEV) {
