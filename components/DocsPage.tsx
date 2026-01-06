@@ -155,39 +155,17 @@ const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
       {isMobile ? (
         /* Mobile Layout - Vertical Structure */
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Mobile Search */}
-          <div className="flex-none border-b border-[#D4AF37]/30 bg-[#fafafa] px-4 py-3">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                {getIcon('search', 'w-4 h-4 text-[#666]')}
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar en documentación..."
-                className="w-full pl-9 pr-4 py-2.5 border-2 border-[#D4AF37]/30 rounded-lg bg-white text-[#1a1a1a] placeholder:text-[#999] focus:outline-none focus:border-[#D4AF37] transition-colors font-inter text-base touch-manipulation"
-              />
-            </div>
-            {searchQuery && (
-              <p className="text-xs text-[#666] mt-2 font-inter">
-                {filteredSections.length} resultado{filteredSections.length !== 1 ? 's' : ''}
-              </p>
-            )}
-          </div>
-
           {/* Mobile Navigation - Dropdown/Select Style */}
-          <div className="flex-none border-b-2 border-[#D4AF37] bg-white px-4 py-3">
+          <div className="flex-none border-b-2 border-[#D4AF37] bg-white px-4 py-2">
             <div className="relative">
               <select
                 value={selectedSection}
                 onChange={(e) => {
                   setSelectedSection(e.target.value);
-                  setSearchQuery('');
                 }}
                 className="w-full px-3 py-2.5 border-2 border-[#D4AF37]/30 rounded-lg bg-white text-[#1a1a1a] focus:outline-none focus:border-[#D4AF37] transition-colors font-inter text-base touch-manipulation appearance-none pr-10"
               >
-                {filteredSections.map((section) => (
+                {sections.map((section) => (
                   <option key={section.id} value={section.id}>
                     {section.title}
                   </option>
@@ -201,8 +179,52 @@ const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
 
           {/* Mobile Content */}
           <main className="flex-1 overflow-y-auto bg-white">
-            <div className="px-4 py-6">
+            <div className="px-4 py-3">
               <CurrentContent isMobile={isMobile} />
+              
+              {/* Navigation Buttons */}
+              <div className="mt-6 pt-4 border-t border-[#D4AF37]/20 flex flex-col gap-2">
+                {(() => {
+                  const currentIndex = sections.findIndex(s => s.id === selectedSection);
+                  const prevSection = currentIndex > 0 ? sections[currentIndex - 1] : null;
+                  const nextSection = currentIndex < sections.length - 1 ? sections[currentIndex + 1] : null;
+                  
+                  return (
+                    <>
+                      {prevSection && (
+                        <button
+                          onClick={() => setSelectedSection(prevSection.id)}
+                          className="w-full flex items-center justify-between px-4 py-3 bg-white border-2 border-[#D4AF37]/30 rounded-lg hover:border-[#D4AF37] hover:bg-[#D4AF37]/5 transition-all touch-manipulation"
+                          tabIndex={0}
+                        >
+                          <div className="flex items-center gap-3">
+                            {getIcon('chevron', 'w-5 h-5 text-[#D4AF37] rotate-180')}
+                            <div className="text-left">
+                              <div className="text-xs text-[#666] font-inter mb-1">Anterior</div>
+                              <div className="font-cinzel font-semibold text-[#1a1a1a]">{prevSection.title}</div>
+                            </div>
+                          </div>
+                        </button>
+                      )}
+                      {nextSection && (
+                        <button
+                          onClick={() => setSelectedSection(nextSection.id)}
+                          className="w-full flex items-center justify-between px-4 py-3 bg-white border-2 border-[#D4AF37]/30 rounded-lg hover:border-[#D4AF37] hover:bg-[#D4AF37]/5 transition-all touch-manipulation"
+                          tabIndex={0}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="text-left">
+                              <div className="text-xs text-[#666] font-inter mb-1">Siguiente</div>
+                              <div className="font-cinzel font-semibold text-[#1a1a1a]">{nextSection.title}</div>
+                            </div>
+                          </div>
+                          {getIcon('chevron', 'w-5 h-5 text-[#D4AF37]')}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           </main>
         </div>
@@ -275,13 +297,13 @@ const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
 // Sección de Esencia
 const EssenceSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Sistema de Esencia
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           La <strong className="text-[#D4AF37] font-semibold">Esencia</strong> es el sistema de gamificación de Studianta. 
           Representa tu energía y dedicación en el camino académico. Comenzarás con <strong className="text-[#D4AF37] font-semibold">0 esencia</strong> 
           y podrás ganarla a través de diversas actividades en la plataforma.
@@ -381,13 +403,13 @@ const EssenceSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) 
 // Sección de Dashboard
 const DashboardSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Atanor (Dashboard)
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           El <strong className="text-[#D4AF37] font-semibold">Atanor</strong> es tu centro de control. Desde aquí puedes acceder 
           a todos los módulos de Studianta. El diseño tipo "tablero mágico" te permite visualizar y activar 
           cada sección de forma intuitiva.
@@ -406,13 +428,13 @@ const DashboardSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }
 // Sección de Asignaturas
 const SubjectsSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Asignaturas
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           En <strong className="text-[#D4AF37] font-semibold">Asignaturas</strong> gestionas todas tus materias, horarios, 
           apuntes y materiales de estudio.
         </p>
@@ -453,13 +475,13 @@ const SubjectsSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false })
 // Sección de Calendario
 const CalendarSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Calendario
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           El <strong className="text-[#D4AF37] font-semibold">Calendario</strong> integra todos tus eventos académicos, 
           financieros y personales en una vista unificada.
         </p>
@@ -509,13 +531,13 @@ const CalendarSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false })
 // Sección de Enfoque
 const FocusSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Enfoque
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           <strong className="text-[#D4AF37] font-semibold">Enfoque</strong> es tu herramienta de productividad basada en 
           la técnica Pomodoro. Gestiona sesiones de estudio enfocadas y gana esencia por tu dedicación.
         </p>
@@ -552,13 +574,13 @@ const FocusSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =>
 // Sección de Diario
 const DiarySection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Diario
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           El <strong className="text-[#D4AF37] font-semibold">Diario</strong> es tu espacio personal para registrar estados 
           emocionales, reflexiones y momentos importantes de tu camino académico.
         </p>
@@ -595,13 +617,13 @@ const DiarySection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =>
 // Sección de Finanzas
 const FinanceSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Balanza (Finanzas)
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           La <strong className="text-[#D4AF37] font-semibold">Balanza</strong> te ayuda a gestionar tus finanzas académicas, 
           controlar ingresos y gastos, y mantener un presupuesto saludable.
         </p>
@@ -638,13 +660,13 @@ const FinanceSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) 
 // Sección de Oráculo
 const OracleSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Oráculo Personal
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           El <strong className="text-[#D4AF37] font-semibold">Oráculo Personal</strong> es tu asistente IA que conoce todo 
           sobre tu situación académica. Utiliza tu perfil completo para darte consejos personalizados y 
           ayudarte a tomar decisiones informadas.
@@ -688,13 +710,13 @@ const OracleSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =
 // Sección de Bazar
 const BazarSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Bazar de Artefactos
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           El <strong className="text-[#D4AF37] font-semibold">Bazar de Artefactos</strong> es donde puedes gastar tu esencia 
           en mejoras y artefactos que potencian tu experiencia en Studianta.
         </p>
@@ -717,13 +739,13 @@ const BazarSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =>
 // Sección de Perfil
 const ProfileSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Perfil
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           Tu <strong className="text-[#D4AF37] font-semibold">Perfil</strong> contiene toda tu información personal y académica, 
           así como tus estadísticas y progreso en Studianta.
         </p>
@@ -760,13 +782,13 @@ const ProfileSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) 
 // Sección de Seguridad
 const SecuritySection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Seguridad
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           El módulo de <strong className="text-[#D4AF37] font-semibold">Seguridad</strong> te permite proteger tus entradas 
           del Diario con un PIN personal.
         </p>
@@ -800,13 +822,13 @@ const SecuritySection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false })
 // Sección de Social
 const SocialSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
   return (
-    <div className={`${isMobile ? 'space-y-5' : 'space-y-6 md:space-y-8'}`}>
+    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
       <div>
         <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
           Social
         </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-4 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-4' : 'mb-4 md:mb-6'}`}>
+        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
+        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           El módulo <strong className="text-[#D4AF37] font-semibold">Social</strong> te permite conectar con otros estudiantes 
           y compartir experiencias académicas.
         </p>
