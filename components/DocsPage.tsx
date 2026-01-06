@@ -179,11 +179,11 @@ const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
 
           {/* Mobile Content */}
           <main className="flex-1 overflow-y-auto bg-white">
-            <div className="px-4 py-3">
+            <div className="px-4 pt-3 pb-2">
               <CurrentContent isMobile={isMobile} />
               
               {/* Navigation Buttons */}
-              <div className="mt-6 pt-4 border-t border-[#D4AF37]/20 flex flex-col gap-2">
+              <div className="mt-4 pt-3 border-t border-[#D4AF37]/20 flex flex-col gap-2 pb-1">
                 {(() => {
                   const currentIndex = sections.findIndex(s => s.id === selectedSection);
                   const prevSection = currentIndex > 0 ? sections[currentIndex - 1] : null;
