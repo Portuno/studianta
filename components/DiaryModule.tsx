@@ -222,6 +222,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
   const [pinError, setPinError] = useState('');
   const [pendingEntryToView, setPendingEntryToView] = useState<JournalEntry | null>(null);
   const [unlockedEntries, setUnlockedEntries] = useState<Set<string>>(new Set()); // IDs de entradas desbloqueadas en esta sesión
+  const [showStories, setShowStories] = useState(false); // Toggle entre editor e historias
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const randomPrompt = useMemo(() => PROMPTS[Math.floor(Math.random() * PROMPTS.length)], []);
@@ -501,73 +502,191 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
         </header>
 
         <main className="flex-1 min-h-0 overflow-hidden p-6 relative bg-white/20">
-          <div className="relative h-full flex flex-col">
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={randomPrompt}
-              className="w-full h-full bg-transparent text-xl font-garamond leading-relaxed text-[#4A233E] placeholder:italic placeholder:opacity-20 focus:outline-none resize-none overflow-y-auto"
-              style={{
-                backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
-                backgroundColor: '#FFFEF7'
-              }}
-            />
-            {photo && (
-              <div 
-                className="mt-4 w-36 h-36 p-2 bg-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] relative self-end mb-20"
-                style={{ 
-                  transform: `rotate(${photoRotation}deg)`,
-                  boxShadow: '0 8px 16px rgba(0,0,0,0.15), 0 0 0 8px white, 0 0 0 10px rgba(248,200,220,0.3)'
+          {!showStories ? (
+            <div className="relative h-full flex flex-col">
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder={randomPrompt}
+                className="w-full h-full bg-transparent text-xl font-garamond leading-relaxed text-[#4A233E] placeholder:italic placeholder:opacity-20 focus:outline-none resize-none overflow-y-auto"
+                style={{
+                  backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
+                  backgroundColor: '#FFFEF7'
                 }}
-              >
-                <img src={photo} alt="Daily Moment" className="w-full h-full object-cover" />
-                <button onClick={() => setPhoto(null)} className="absolute -top-2 -right-2 bg-red-400 text-white p-1 rounded-full shadow-lg z-10">{getIcon('trash', 'w-3 h-3')}</button>
+              />
+              {photo && (
+                <div 
+                  className="mt-4 w-36 h-36 p-2 bg-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] relative self-end mb-20"
+                  style={{ 
+                    transform: `rotate(${photoRotation}deg)`,
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.15), 0 0 0 8px white, 0 0 0 10px rgba(248,200,220,0.3)'
+                  }}
+                >
+                  <img src={photo} alt="Daily Moment" className="w-full h-full object-cover" />
+                  <button onClick={() => setPhoto(null)} className="absolute -top-2 -right-2 bg-red-400 text-white p-1 rounded-full shadow-lg z-10">{getIcon('trash', 'w-3 h-3')}</button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div 
+              className="h-full overflow-y-auto overflow-x-hidden space-y-6 pb-20" 
+              style={{ 
+                backgroundImage: 'url("https://www.transparenttextures.com/patterns/old-map.png")', 
+                backgroundColor: '#FFF9FB', 
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'auto',
+                touchAction: 'pan-y'
+              }}
+            >
+              {/* Buscador */}
+              <div className="sticky top-0 z-10 mb-4 bg-white/90 backdrop-blur-sm rounded-2xl p-3 border border-[#D4AF37]/20 shadow-sm">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar en el cuaderno..."
+                    className="w-full bg-transparent px-4 py-2 pr-10 text-sm font-garamond text-[#4A233E] placeholder:text-[#8B5E75]/50 focus:outline-none border border-[#F8C8DC] rounded-xl"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8B5E75]/50">
+                    {getIcon('search', 'w-4 h-4') || (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+                {searchQuery && (
+                  <p className="text-xs text-[#8B5E75] mt-2 px-1">
+                    {filteredEntries.length} {filteredEntries.length === 1 ? 'entrada encontrada' : 'entradas encontradas'}
+                  </p>
+                )}
               </div>
-            )}
-          </div>
+              {filteredEntries.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-[#8B5E75] font-garamond italic">No se encontraron entradas que coincidan con tu búsqueda.</p>
+                </div>
+              ) : (
+                filteredEntries.map(entry => {
+                const mood = MOODS.find(m => m.type === entry.mood);
+                const entryPhotoRotation = getEntryPhotoRotation(entry.id);
+                return (
+                  <div 
+                    key={entry.id} 
+                    onClick={() => handleViewEntry(entry)}
+                    className="relative p-7 border-2 border-[#D4AF37]/30 shadow-sm overflow-hidden bg-white/80 backdrop-blur-sm cursor-pointer hover:shadow-md transition-all"
+                    style={{
+                      borderImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(212,175,55,0.3) 8px, rgba(212,175,55,0.3) 16px) 1',
+                      borderStyle: 'solid',
+                      clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
+                    }}
+                  >
+                    <div className="flex justify-between items-start mb-4 relative z-20">
+                       <div className="flex items-center gap-4">
+                          <div className="p-2.5 rounded-xl bg-[#FFF0F5] text-[#D4AF37] shadow-inner border border-[#F8C8DC]">
+                            {mood && <MoodIcon type={mood.type} className="w-4 h-4" />}
+                          </div>
+                          <div>
+                             <p className="text-[12px] font-serif font-bold text-[#4A233E] tracking-wide italic" style={{ fontFamily: 'Georgia, serif' }}>
+                               {new Date(entry.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                             </p>
+                             <p className="text-[9px] text-[#8B5E75] uppercase font-black tracking-[0.2em] opacity-60">{entry.mood}</p>
+                          </div>
+                       </div>
+                       <button 
+                         onClick={(e) => handleDeleteClick(entry.id, e)} 
+                         className="text-[#8B5E75]/40 hover:text-red-400 transition-colors p-2 relative z-30"
+                       >
+                         {getIcon('trash', 'w-4 h-4')}
+                       </button>
+                    </div>
+                    {entry.photo && (
+                      <div className="mb-4 flex justify-center">
+                        <div 
+                          className="w-32 h-32 p-2 bg-white"
+                          style={{ 
+                            transform: `rotate(${entryPhotoRotation}deg)`,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
+                          }}
+                        >
+                          <img src={entry.photo} alt="Memoria" className="w-full h-full object-cover" />
+                        </div>
+                      </div>
+                    )}
+                    {entry.isLocked && securityModuleActive ? (
+                      <div className="text-center py-4">
+                        <div className="inline-flex items-center gap-2 text-[#8B5E75] font-garamond italic text-sm">
+                          {getIcon('lock', 'w-5 h-5')}
+                          <span>Contenido protegido - Toca para desbloquear</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[17px] text-[#4A233E] font-garamond leading-relaxed italic opacity-90 first-letter:text-3xl first-letter:font-marcellus first-letter:mr-1 line-clamp-3">{entry.content}</p>
+                    )}
+                  </div>
+                );
+              }))}
+            </div>
+          )}
         </main>
 
         <div className="fixed bottom-28 left-4 right-4 z-[120] flex justify-between items-center pointer-events-none">
            <div className="flex gap-2 pointer-events-auto">
-             <button onClick={insertQuote} className="w-11 h-11 bg-white border border-[#D4AF37] text-[#D4AF37] rounded-full flex items-center justify-center shadow-lg active:scale-90">
-               <span className="font-serif font-bold text-lg">“</span>
-             </button>
-             <button onClick={() => fileInputRef.current?.click()} className="w-11 h-11 bg-white border border-[#F8C8DC] text-[#8B5E75] rounded-full flex items-center justify-center shadow-lg active:scale-90">
-               {getIcon('camera', 'w-4 h-4')}
-             </button>
-             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+             {!showStories && (
+               <>
+                 <button onClick={insertQuote} className="w-11 h-11 bg-white border border-[#D4AF37] text-[#D4AF37] rounded-full flex items-center justify-center shadow-lg active:scale-90">
+                   <span className="font-serif font-bold text-lg">"</span>
+                 </button>
+                 <button onClick={() => fileInputRef.current?.click()} className="w-11 h-11 bg-white border border-[#F8C8DC] text-[#8B5E75] rounded-full flex items-center justify-center shadow-lg active:scale-90">
+                   {getIcon('camera', 'w-4 h-4')}
+                 </button>
+                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+               </>
+             )}
            </div>
-           <div className="pointer-events-auto">
+           <div className="flex gap-3 items-center pointer-events-auto">
              <button 
-               onClick={handleSave}
-               className="w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(227,91,143,0.5),inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)] active:scale-95 transition-all relative"
-               style={{
-                 background: 'linear-gradient(135deg, #E35B8F 0%, #C94A7A 100%)',
-                 filter: 'drop-shadow(0 4px 8px rgba(212,175,55,0.4))'
-               }}
+               onClick={() => setShowStories(!showStories)}
+               className="px-4 py-2.5 bg-white border-2 border-[#D4AF37] text-[#4A233E] rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all font-cinzel text-[10px] font-black uppercase tracking-widest"
              >
-               <StudiantaSeal className="w-10 h-10" />
+               {showStories ? 'Escribir' : 'Ver Historias'}
              </button>
+             {!showStories && (
+               <button 
+                 onClick={handleSave}
+                 className="w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(227,91,143,0.5),inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)] active:scale-95 transition-all relative"
+                 style={{
+                   background: 'linear-gradient(135deg, #E35B8F 0%, #C94A7A 100%)',
+                   filter: 'drop-shadow(0 4px 8px rgba(212,175,55,0.4))'
+                 }}
+               >
+                 <StudiantaSeal className="w-10 h-10" />
+               </button>
+             )}
            </div>
         </div>
 
-        <div className={`fixed inset-x-0 bottom-0 z-[150] bg-white rounded-t-[3.5rem] shadow-[0_-20px_50px_rgba(74,35,62,0.2)] border-t border-[#F8C8DC] transition-all duration-500 ease-in-out ${isGrimorioOpen ? 'h-[85vh]' : 'h-20'}`}>
-          <div className="w-full h-full flex flex-col relative overflow-hidden">
-            <div onClick={() => setIsGrimorioOpen(!isGrimorioOpen)} className="flex-none py-5 px-10 flex items-center justify-between cursor-pointer group">
+        <div className={`fixed inset-x-0 bottom-0 z-[150] bg-white rounded-t-[3.5rem] shadow-[0_-20px_50px_rgba(74,35,62,0.2)] border-t border-[#F8C8DC] transition-all duration-500 ease-in-out hidden`}>
+          <div className="w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
+            <div onClick={() => setIsGrimorioOpen(!isGrimorioOpen)} className="flex-none py-5 px-10 flex items-center justify-between cursor-pointer group shrink-0">
               <h3 className="font-marcellus text-[11px] font-black text-[#4A233E] uppercase tracking-[0.4em]">Grimorio de Memorias</h3>
               <div className={`transition-all duration-500 text-[#D4AF37] ${isGrimorioOpen ? 'rotate-180 scale-125' : 'animate-bounce'}`}>
                 {getIcon('chevron', 'w-4 h-4')}
               </div>
             </div>
             <div 
-              className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 pb-10 min-h-0" 
+              className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 pb-10" 
               style={{ 
                 backgroundImage: 'url("https://www.transparenttextures.com/patterns/old-map.png")', 
                 backgroundColor: '#FFF9FB', 
                 WebkitOverflowScrolling: 'touch',
-                overscrollBehavior: 'contain',
+                overscrollBehavior: 'auto',
                 touchAction: 'pan-y',
-                maxHeight: '100%'
+                position: 'relative',
+                minHeight: 0,
+                maxHeight: '100%',
+                willChange: 'scroll-position',
+                transform: 'translateZ(0)'
               }}
             >
               {/* Buscador */}
