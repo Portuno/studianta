@@ -59,3 +59,4 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ user, userProfile, onProfil
 
 export default MobileTopBar;
 
+
