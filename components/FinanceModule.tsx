@@ -8,6 +8,7 @@ import TreasuryChronicles from './TreasuryChronicles';
 import { addSealToPDF } from '../utils/pdfSeal';
 import { processMarkdownToHTML } from '../utils/markdownProcessor';
 import { parseOracleText } from '../utils/oracleTextParser';
+import PetAnimation from './PetAnimation';
 
 // Importación dinámica de html2canvas para evitar problemas con esbuild
 let html2canvas: any;
@@ -51,6 +52,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
   const [tempBudget, setTempBudget] = useState(budget.toString());
   const [transType, setTransType] = useState<'Ingreso' | 'Gasto'>('Gasto');
   const [rightPanelTab, setRightPanelTab] = useState<'history' | 'oracle'>('history');
+  const [showPetFirstTime, setShowPetFirstTime] = useState(true);
 
   const totalSpent = transactions.filter(t => t.type === 'Gasto').reduce((acc, curr) => acc + curr.amount, 0);
   const totalIncome = transactions.filter(t => t.type === 'Ingreso').reduce((acc, curr) => acc + curr.amount, 0);
@@ -312,6 +314,10 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
     const diagnosis = await geminiService.analyzeFinancialHealth(budget, transactions);
     setOracleDiagnosis(diagnosis || '');
     setLoadingOracle(false);
+    // Después de la primera consulta, no mostrar la mascota de nuevo
+    if (showPetFirstTime) {
+      setShowPetFirstTime(false);
+    }
   };
 
   const handleAddTransaction = (e: React.FormEvent<HTMLFormElement>) => {
@@ -450,7 +456,14 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
       {/* Oracle Modal Overlay */}
       {loadingOracle && (
         <div className="fixed inset-0 z-[400] bg-[#FFF0F5]/90 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center">
-           <div className="w-24 h-24 border-[6px] border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin mb-10 shadow-2xl" />
+          {showPetFirstTime && (
+            <div className="mb-8">
+              <PetAnimation show={true} size="xlarge" />
+            </div>
+          )}
+          {!showPetFirstTime && (
+            <div className="w-24 h-24 border-[6px] border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin mb-10 shadow-2xl" />
+          )}
            <p className="font-marcellus text-lg font-black text-[#4A233E] tracking-[0.4em] uppercase animate-pulse">Consultando los Pesos Celestiales...</p>
         </div>
       )}

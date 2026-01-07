@@ -7,6 +7,7 @@ import OracleTextRenderer from './OracleTextRenderer';
 import { addSealToPDF } from '../utils/pdfSeal';
 import { jsPDF } from 'jspdf';
 import { processMarkdownToHTML } from '../utils/markdownProcessor';
+import PetAnimation from './PetAnimation';
 
 // Importación dinámica de html2canvas para evitar problemas con esbuild
 let html2canvas: any;
@@ -143,6 +144,7 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPetFirstTime, setShowPetFirstTime] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -205,6 +207,10 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
       };
 
       setMessages(prev => [...prev, oracleMessage]);
+      // Después de la primera respuesta, no mostrar la mascota de nuevo
+      if (showPetFirstTime) {
+        setShowPetFirstTime(false);
+      }
     } catch (error: any) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -213,6 +219,10 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
+      // Después de la primera respuesta (incluso si es error), no mostrar la mascota de nuevo
+      if (showPetFirstTime) {
+        setShowPetFirstTime(false);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -575,9 +585,18 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-[#FFF9FB] border border-[#D4AF37]/30 rounded-2xl p-4 md:p-6">
-                      <WritingQuill />
-                      <EssenceParticles />
+                    <div className="bg-[#FFF9FB] border border-[#D4AF37]/30 rounded-2xl p-4 md:p-6 relative">
+                      {showPetFirstTime ? (
+                        <div className="flex flex-col items-center justify-center py-4 gap-4">
+                          <PetAnimation show={true} />
+                          <WritingQuill />
+                        </div>
+                      ) : (
+                        <>
+                          <WritingQuill />
+                          <EssenceParticles />
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

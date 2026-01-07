@@ -7,6 +7,7 @@ import { jsPDF } from 'jspdf';
 import OracleTextRenderer from './OracleTextRenderer';
 import { addSealToPDF } from '../utils/pdfSeal';
 import { processMarkdownToHTML } from '../utils/markdownProcessor';
+import PetAnimation from './PetAnimation';
 
 // Importación dinámica de html2canvas para evitar problemas con esbuild
 let html2canvas: any;
@@ -235,6 +236,7 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
   const [selectedContextIds, setSelectedContextIds] = useState<string[]>([]);
   const [chatDownloaded, setChatDownloaded] = useState(false);
   const [showChatWarning, setShowChatWarning] = useState(false);
+  const [showPetFirstTime, setShowPetFirstTime] = useState(true);
   
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -371,6 +373,10 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
     const res = await geminiService.queryAcademicOracle(subject.name, query, contextStr, studentProfileContext);
     setChatHistory(prev => [...prev, { role: 'ia', text: res || '' }]);
     setLoadingIa(false);
+    // Después de la primera respuesta, no mostrar la mascota de nuevo
+    if (showPetFirstTime) {
+      setShowPetFirstTime(false);
+    }
   };
 
   const handleDownloadChat = async () => {
@@ -1197,9 +1203,17 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
               ))}
               {loadingIa && (
                 <div className="flex justify-start">
-                  <div className="bg-white p-4 rounded-[1.5rem] rounded-tl-none animate-pulse flex items-center gap-3 border border-[#F8C8DC]">
-                     <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce" />
-                     <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="bg-white p-4 rounded-[1.5rem] rounded-tl-none border border-[#F8C8DC]">
+                    {showPetFirstTime ? (
+                      <div className="flex items-center justify-center py-2">
+                        <PetAnimation show={true} />
+                      </div>
+                    ) : (
+                      <div className="animate-pulse flex items-center gap-3">
+                        <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce" />
+                        <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce [animation-delay:0.2s]" />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
