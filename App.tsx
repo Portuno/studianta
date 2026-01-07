@@ -6,6 +6,7 @@ import { googleCalendarService } from './services/googleCalendarService';
 import { Analytics } from '@vercel/analytics/react';
 import { useInteractionAggregator } from './hooks/useInteractionAggregator';
 import Navigation from './components/Navigation';
+import MobileTopBar from './components/MobileTopBar';
 import Dashboard from './components/Dashboard';
 import SubjectsModule from './components/SubjectsModule';
 import CalendarModule from './components/CalendarModule';
@@ -914,24 +915,36 @@ const App: React.FC = () => {
   // Ocultar navegación en páginas de políticas y docs
   const isPolicyPage = activeView === NavView.PRIVACY_POLICY || activeView === NavView.TERMS_OF_SERVICE || activeView === NavView.DOCS;
 
+  const handleNavigationClick = (view: NavView) => {
+    // Si no hay usuario y se intenta acceder a un módulo que no sea Dashboard, mostrar login
+    if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE && view !== NavView.DOCS) {
+      setShowLoginModal(true);
+    } else {
+      // Usar handleViewChange para políticas y docs, setActiveView normal para otras vistas
+      if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE || view === NavView.DOCS) {
+        handleViewChange(view);
+      } else {
+        setActiveView(view);
+      }
+    }
+  };
+
   return (
     <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} h-screen w-screen overflow-hidden`}>
+      {/* Mobile Top Bar - Solo visible en mobile */}
+      {isMobile && !isPolicyPage && (
+        <MobileTopBar
+          user={user}
+          userProfile={userProfile}
+          onProfileClick={() => handleNavigationClick(NavView.PROFILE)}
+        />
+      )}
+
+      {/* Desktop Sidebar - Oculto en mobile */}
       {!isMobile && !isPolicyPage && (
         <Navigation 
           activeView={activeView} 
-          setActiveView={(view) => {
-            // Si no hay usuario y se intenta acceder a un módulo que no sea Dashboard, mostrar login
-            if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE && view !== NavView.DOCS) {
-              setShowLoginModal(true);
-            } else {
-              // Usar handleViewChange para políticas y docs, setActiveView normal para otras vistas
-              if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE || view === NavView.DOCS) {
-                handleViewChange(view);
-              } else {
-                setActiveView(view);
-              }
-            }
-          }} 
+          setActiveView={handleNavigationClick} 
           essence={user ? essence : 0} 
           isMobile={false}
           modules={modules}
@@ -940,29 +953,18 @@ const App: React.FC = () => {
         />
       )}
       
-      <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'pb-28' : ''}`}>
-        <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pb-32' : ''}`}>
+      {/* Área de contenido principal */}
+      <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'pt-16 pb-28' : ''}`}>
+        <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pt-4' : ''}`}>
           {renderView()}
         </main>
-        {activeView === NavView.DASHBOARD && <Footer setActiveView={handleViewChange} isMobile={isMobile} />}
       </div>
 
+      {/* Mobile Bottom Navigation - Solo visible en mobile */}
       {isMobile && !isPolicyPage && (
         <Navigation 
           activeView={activeView}
-          setActiveView={(view) => {
-            // Si no hay usuario y se intenta acceder a un módulo que no sea Dashboard, mostrar login
-            if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE && view !== NavView.DOCS) {
-              setShowLoginModal(true);
-            } else {
-              // Usar handleViewChange para políticas y docs, setActiveView normal para otras vistas
-              if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE || view === NavView.DOCS) {
-                handleViewChange(view);
-              } else {
-                setActiveView(view);
-              }
-            }
-          }} 
+          setActiveView={handleNavigationClick} 
           essence={user ? essence : 0} 
           isMobile={true}
           modules={modules}

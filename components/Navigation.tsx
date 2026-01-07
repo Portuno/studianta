@@ -23,7 +23,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
 
   if (isMobile) {
     return (
-      <nav className="fixed bottom-0 left-0 right-0 h-28 glass-card border-t-2 border-[#F8C8DC] flex items-center justify-between px-3 pb-safe z-[150] rounded-t-[2.5rem] shadow-[0_-8px_25px_rgba(74,35,62,0.15)] safe-area-inset-bottom">
+      <nav className="fixed bottom-0 left-0 right-0 h-28 bg-[#FFF9FB] border-t-2 border-[#F8C8DC] flex items-center justify-between px-3 pb-safe z-[150] rounded-t-[2.5rem] shadow-[0_-8px_25px_rgba(74,35,62,0.15)] safe-area-inset-bottom">
         <div className="flex flex-1 justify-around items-center max-w-full">
           <NavButton 
             id={NavView.SUBJECTS} 

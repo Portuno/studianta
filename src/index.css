@@ -234,3 +234,45 @@ body {
   animation: pulse-glow 3s ease-in-out infinite;
 }
 
+/* Estilos para el editor de notas con contentEditable */
+[contenteditable][data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: rgba(139, 94, 117, 0.4);
+  pointer-events: none;
+}
+
+[contenteditable] h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 1rem 0 0.5rem 0;
+  color: #4A233E;
+}
+
+[contenteditable] h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0.75rem 0 0.5rem 0;
+  color: #4A233E;
+}
+
+[contenteditable] h3 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin: 0.5rem 0 0.25rem 0;
+  color: #4A233E;
+}
+
+[contenteditable] hr {
+  border: none;
+  border-top: 2px solid rgba(212, 175, 55, 0.3);
+  margin: 1rem 0;
+}
+
+[contenteditable] strong {
+  font-weight: bold;
+}
+
+[contenteditable] em {
+  font-style: italic;
+}
+

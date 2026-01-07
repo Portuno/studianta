@@ -232,42 +232,6 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
             <h2 className="font-marcellus text-2xl font-bold text-[#4A233E] mb-1">{displayName}</h2>
             <p className="font-garamond text-[#8B5E75] text-sm italic mb-4">{displayEmail}</p>
-            
-              {/* Enlaces Legales - Debajo de la foto de perfil - Mobile */}
-            {setActiveView && (
-              <div className="mt-4 pt-4 border-t border-[#F8C8DC]/50">
-                <div className="flex flex-col gap-2">
-                  <a
-                    href="/privacidad"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (setActiveView) {
-                        setActiveView(NavView.PRIVACY_POLICY);
-                      } else {
-                        window.location.href = '/privacidad';
-                      }
-                    }}
-                    className="font-garamond text-xs text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-                  >
-                    Política de Privacidad
-                  </a>
-                  <a
-                    href="/terminosycondiciones"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (setActiveView) {
-                        setActiveView(NavView.TERMS_OF_SERVICE);
-                      } else {
-                        window.location.href = '/terminosycondiciones';
-                      }
-                    }}
-                    className="font-garamond text-xs text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-                  >
-                    Términos y Condiciones
-                  </a>
-                </div>
-              </div>
-            )}
           </div>
           <div className="space-y-4">
             <div>

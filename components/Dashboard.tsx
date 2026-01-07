@@ -77,7 +77,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     return (
       <>
         <div className="h-full flex flex-col gap-4 sm:gap-6 pb-32 animate-fade-in px-3 sm:px-4 overflow-y-auto no-scrollbar safe-area-inset-bottom">
-          <section className="text-center pt-8 mb-4">
+          <section className="text-center pt-2 mb-4">
             <h1 className="font-cinzel text-4xl font-black text-[#4A233E] tracking-[0.25em] uppercase">El Atanor</h1>
             <div className="h-0.5 w-12 bg-[#D4AF37] mx-auto mt-2 opacity-50 rounded-full" />
           </section>
@@ -138,49 +138,9 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </section>
 
-          {/* Footer con enlace a Política de Privacidad - Mobile - Solo para usuarios autenticados */}
-          {user && (
-            <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30 px-2">
-              <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
-                <a
-                  href="/privacidad"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveView(NavView.PRIVACY_POLICY);
-                  }}
-                  className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-                >
-                  Política de Privacidad
-                </a>
-                <span className="text-[#F8C8DC]">•</span>
-                <a
-                  href="/terminosycondiciones"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveView(NavView.TERMS_OF_SERVICE);
-                  }}
-                  className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-                >
-                  Términos y Condiciones
-                </a>
-              </div>
-            </div>
-          )}
-          
-          {/* Enlaces Legales - Mobile - Visible para usuarios no autenticados */}
-          {!user && (
-            <div className="mt-6 mb-4 flex flex-wrap items-center justify-center gap-3 text-sm px-2">
-              <a
-                href="/privacidad"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveView(NavView.PRIVACY_POLICY);
-                }}
-                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-              >
-                Política de Privacidad
-              </a>
-              <span className="text-[#F8C8DC]">•</span>
+          {/* Términos y Condiciones - Mobile - Al final de los módulos */}
+          <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30 px-2">
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
               <a
                 href="/terminosycondiciones"
                 onClick={(e) => {
@@ -192,18 +152,15 @@ const Dashboard: React.FC<DashboardProps> = ({
                 Términos y Condiciones
               </a>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Modal de Login Mobile */}
         {showLoginModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowLoginModal(false)}>
-            <div className="glass-card rounded-3xl p-6 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h2 className="font-cinzel text-xl text-[#4A233E] mb-1">Iniciar Sesión</h2>
-                  <p className="font-garamond italic text-[#8B5E75] text-xs">Para transmutar módulos necesitas una cuenta</p>
-                </div>
+            <div className="glass-card rounded-3xl p-5 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              {/* Botón de cerrar - Solo en mobile */}
+              <div className="flex justify-end mb-3">
                 <button
                   onClick={() => setShowLoginModal(false)}
                   className="text-[#8B5E75] hover:text-[#E35B8F] transition-colors p-2"
@@ -216,7 +173,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                 onAuthSuccess={() => {
                   onAuthSuccess();
                   setShowLoginModal(false);
-                }} 
+                }}
+                isMobile={true}
               />
             </div>
           </div>
@@ -283,30 +241,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                   Iniciar Sesión
                 </button>
               </div>
-            </div>
-            {/* Enlaces Legales - Visible para usuarios no autenticados */}
-            <div className="mb-4 flex flex-wrap items-center justify-center gap-3 text-sm">
-              <a
-                href="/privacidad"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveView(NavView.PRIVACY_POLICY);
-                }}
-                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline text-base"
-              >
-                Política de Privacidad
-              </a>
-              <span className="text-[#F8C8DC]">•</span>
-              <a
-                href="/terminosycondiciones"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveView(NavView.TERMS_OF_SERVICE);
-                }}
-                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline text-base"
-              >
-                Términos y Condiciones
-              </a>
             </div>
           </>
         )}
@@ -387,34 +321,21 @@ const Dashboard: React.FC<DashboardProps> = ({
           </section>
         </div>
 
-        {/* Footer con enlace a Política de Privacidad - Solo para usuarios autenticados */}
-        {user && (
-          <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30">
-            <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
-              <a
-                href="/privacidad"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveView(NavView.PRIVACY_POLICY);
-                }}
-                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-              >
-                Política de Privacidad
-              </a>
-              <span className="text-[#F8C8DC]">•</span>
-              <a
-                href="/terminosycondiciones"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveView(NavView.TERMS_OF_SERVICE);
-                }}
-                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-              >
-                Términos y Condiciones
-              </a>
-            </div>
+        {/* Términos y Condiciones - Desktop - Al final de los módulos */}
+        <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
+            <a
+              href="/terminosycondiciones"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveView(NavView.TERMS_OF_SERVICE);
+              }}
+              className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+            >
+              Términos y Condiciones
+            </a>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Modal de Login */}

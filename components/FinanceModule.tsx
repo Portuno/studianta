@@ -346,7 +346,8 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
       {/* Header Compacto */}
       <header className="pt-4 pb-2 px-4 flex-shrink-0 bg-[#FFF0F5]/80 backdrop-blur-md border-b border-[#F8C8DC]/30">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="flex justify-between items-center mb-3">
+          {/* Desktop: Título y botón en fila superior */}
+          <div className="hidden md:flex justify-between items-center mb-3">
             <h1 className="font-marcellus text-lg md:text-2xl font-black text-[#4A233E] tracking-widest uppercase">Balanza de Latón</h1>
             <button 
               onClick={handleConsultOracle}
@@ -358,7 +359,9 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
           </div>
 
           {/* Dashboard de Balance Compacto */}
-          <div className="grid grid-cols-2 gap-2 max-w-xl">
+          {/* Mobile: 3 columnas (Presupuesto, Capital, Consultar Oráculo) */}
+          {/* Desktop: 2 columnas (Presupuesto, Capital) + botón arriba */}
+          <div className={`grid gap-2 ${isMobile ? 'grid-cols-3' : 'md:grid-cols-2 max-w-xl'}`}>
             <div className="glass-card p-3 rounded-[1.25rem] border-[#F8C8DC] shadow-sm">
               <p className="text-[7px] md:text-[9px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-0.5 opacity-60">Presupuesto</p>
               {showBudgetInput ? (
@@ -381,6 +384,16 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
               <p className="text-[7px] md:text-[9px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-0.5 opacity-60">Capital Residual</p>
               <h2 className={`font-marcellus text-lg md:text-2xl font-black tracking-tighter ${isCritical ? 'text-red-500' : 'text-[#4A233E]'}`}>${balance}</h2>
             </div>
+            {/* Botón Consultar Oráculo solo visible en mobile */}
+            {isMobile && (
+              <button 
+                onClick={handleConsultOracle}
+                className="glass-card p-3 rounded-[1.25rem] border-[#F8C8DC] shadow-sm bg-[#4A233E] text-[#D4AF37] flex flex-col items-center justify-center font-marcellus text-[7px] font-black uppercase tracking-[0.2em] active:scale-95 transition-all hover:bg-[#321829]"
+              >
+                {getIcon('sparkles', 'w-4 h-4 mb-1')}
+                <span className="text-center leading-tight">Consultar<br />Oráculo</span>
+              </button>
+            )}
           </div>
         </div>
       </header>

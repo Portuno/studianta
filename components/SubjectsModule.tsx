@@ -80,7 +80,7 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
           className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-cinzel text-xs sm:text-sm font-bold shadow-lg min-h-[48px] touch-manipulation active:scale-95"
         >
           {getIcon('plus', 'w-5 h-5')}
-          Inaugurar Cátedra
+          Inaugurar Asignatura
         </button>
       </div>
 
@@ -139,7 +139,7 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
       {subjectToDelete && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4" onClick={() => setSubjectToDelete(null)}>
           <div className="glass-card max-w-sm w-full p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
-             <h2 className="font-cinzel text-xl text-[#4A233E] mb-4 font-bold uppercase tracking-widest">¿Borrar Cátedra?</h2>
+             <h2 className="font-cinzel text-xl text-[#4A233E] mb-4 font-bold uppercase tracking-widest">¿Borrar Asignatura?</h2>
              <p className="text-sm text-[#8B5E75] mb-8 font-garamond italic">Se perderán todos los registros de "{subjectToDelete.name}".</p>
              <div className="flex flex-col gap-3">
                <button onClick={executeDelete} className="bg-red-500 text-white w-full py-4 rounded-2xl font-cinzel text-xs font-bold uppercase">ELIMINAR</button>
@@ -178,13 +178,13 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
       {showAddModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4 safe-area-inset" onClick={() => setShowAddModal(false)}>
           <form onSubmit={handleAdd} className="glass-card w-full max-w-md p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-cinzel text-lg sm:text-xl text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">REGISTRAR CÁTEDRA</h2>
+            <h2 className="font-cinzel text-lg sm:text-xl text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">REGISTRAR ASIGNATURA</h2>
             <div className="space-y-4 font-inter">
               <input 
                 required 
                 name="name" 
                 type="text" 
-                placeholder="Nombre de la Cátedra" 
+                placeholder="Nombre de la Asignatura" 
                 className="w-full bg-white/40 border-2 border-[#F8C8DC] rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#E35B8F] min-h-[48px]" 
               />
               <input 
@@ -1065,7 +1065,8 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                 .filter(n => {
                   const matchesSearch = !noteSearchQuery || 
                     n.title.toLowerCase().includes(noteSearchQuery.toLowerCase()) ||
-                    n.content.toLowerCase().includes(noteSearchQuery.toLowerCase());
+                    // Buscar en el texto plano del HTML (sin etiquetas)
+                    (n.content && n.content.replace(/<[^>]*>/g, '').toLowerCase().includes(noteSearchQuery.toLowerCase()));
                   const matchesImportant = !showImportantOnly || (n.importantFragments && n.importantFragments.length > 0);
                   return matchesSearch && matchesImportant;
                 })
@@ -1120,7 +1121,10 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                             </button>
                           </div>
                         </div>
-                        <p className="font-garamond text-[#4A233E] leading-relaxed text-base line-clamp-3 italic opacity-80">{n.content}</p>
+                        <div 
+                          className="font-garamond text-[#4A233E] leading-relaxed text-base line-clamp-3 opacity-80 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ __html: n.content.replace(/\n/g, '<br>') }}
+                        />
                       </div>
                     </div>
                   );
@@ -1483,13 +1487,21 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
   const [selectedText, setSelectedText] = useState('');
   const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState({ top: 0, left: 0 });
-  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     onFocusChange(true);
+    // Cargar contenido HTML si existe
+    if (contentRef.current && note?.content) {
+      contentRef.current.innerHTML = note.content;
+      setContent(note.content);
+    } else if (contentRef.current && !note) {
+      contentRef.current.innerHTML = '';
+      setContent('');
+    }
     return () => onFocusChange(false);
-  }, [onFocusChange]);
+  }, [onFocusChange, note]);
 
   useEffect(() => {
     // Auto-guardado silencioso cada 3 segundos después de dejar de escribir
@@ -1520,23 +1532,18 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
   }, [content, title, importantFragments]);
 
   const handleTextSelection = () => {
-    const textarea = contentRef.current;
-    if (!textarea) return;
+    const editor = contentRef.current;
+    if (!editor) return;
     
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = content.substring(start, end);
-    
-    if (selected.trim()) {
-      setSelectedText(selected);
-      const rect = textarea.getBoundingClientRect();
-      const scrollTop = textarea.scrollTop;
-      const lineHeight = 32; // Aproximadamente el line-height
-      const lineNumber = Math.floor((textarea.selectionStart - content.substring(0, start).split('\n').length) / 50);
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim()) {
+      setSelectedText(selection.toString());
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
       
       setToolbarPosition({
-        top: rect.top + (lineNumber * lineHeight) - 50,
-        left: rect.left + 20,
+        top: rect.top - 60,
+        left: rect.left + (rect.width / 2) - 100,
       });
       setShowToolbar(true);
     } else {
@@ -1544,42 +1551,114 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
     }
   };
 
+  const handleContentChange = () => {
+    const editor = contentRef.current;
+    if (!editor) return;
+    setContent(editor.innerHTML);
+  };
+
+  const applyFormat = (command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    if (contentRef.current) {
+      setContent(contentRef.current.innerHTML);
+    }
+    contentRef.current?.focus();
+  };
+
+  const insertHeading = (level: number) => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      // Si no hay selección, insertar al final
+      if (contentRef.current) {
+        const heading = document.createElement(`h${level}`);
+        heading.className = `font-cinzel font-bold text-[#4A233E] mb-2 mt-4 ${
+          level === 1 ? 'text-3xl' : level === 2 ? 'text-2xl' : 'text-xl'
+        }`;
+        heading.textContent = 'Título';
+        contentRef.current.appendChild(heading);
+        setContent(contentRef.current.innerHTML);
+        // Mover el cursor dentro del título
+        const range = document.createRange();
+        range.selectNodeContents(heading);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        contentRef.current.focus();
+      }
+      return;
+    }
+    
+    const range = selection.getRangeAt(0);
+    const heading = document.createElement(`h${level}`);
+    heading.className = `font-cinzel font-bold text-[#4A233E] mb-2 mt-4 ${
+      level === 1 ? 'text-3xl' : level === 2 ? 'text-2xl' : 'text-xl'
+    }`;
+    
+    if (range.collapsed) {
+      heading.textContent = 'Título';
+    } else {
+      heading.textContent = range.toString();
+      range.deleteContents();
+    }
+    
+    range.insertNode(heading);
+    // Mover el cursor después del título
+    range.setStartAfter(heading);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    setContent(contentRef.current?.innerHTML || '');
+    contentRef.current?.focus();
+  };
+
+  const insertSeparator = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      // Si no hay selección, insertar al final
+      if (contentRef.current) {
+        const hr = document.createElement('hr');
+        hr.className = 'my-4 border-t-2 border-[#D4AF37]/30';
+        contentRef.current.appendChild(hr);
+        setContent(contentRef.current.innerHTML);
+        contentRef.current.focus();
+      }
+      return;
+    }
+    
+    const range = selection.getRangeAt(0);
+    const hr = document.createElement('hr');
+    hr.className = 'my-4 border-t-2 border-[#D4AF37]/30';
+    
+    range.insertNode(hr);
+    // Mover el cursor después del separador
+    range.setStartAfter(hr);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    setContent(contentRef.current?.innerHTML || '');
+    contentRef.current?.focus();
+  };
+
   const handleMarkImportant = () => {
+    const selection = window.getSelection();
+    const selectedText = selection?.toString() || '';
+    
     if (selectedText && !importantFragments.includes(selectedText)) {
       setImportantFragments([...importantFragments, selectedText]);
     }
     setShowToolbar(false);
-    setSelectedText('');
   };
 
   const handleInsertBullet = () => {
-    const textarea = contentRef.current;
-    if (!textarea) return;
-    
-    const start = textarea.selectionStart;
-    const newContent = content.substring(0, start) + '• ' + content.substring(start);
-    setContent(newContent);
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + 2, start + 2);
-    }, 0);
-    setShowToolbar(false);
+    applyFormat('insertUnorderedList');
+    contentRef.current?.focus();
   };
 
   const handleInsertQuote = () => {
-    const textarea = contentRef.current;
-    if (!textarea) return;
-    
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = content.substring(start, end);
-    const newContent = content.substring(0, start) + `"${selected}"` + content.substring(end);
-    setContent(newContent);
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + 1, start + 1 + selected.length);
-    }, 0);
-    setShowToolbar(false);
+    applyFormat('formatBlock', 'blockquote');
+    contentRef.current?.focus();
   };
 
   const handleSave = () => {
@@ -1619,14 +1698,87 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
             placeholder="Título de la clase..."
           />
           <button onClick={onClose} className="p-2 text-[#8B5E75] hover:bg-[#FFD1DC] rounded-full">
-            {getIcon('close', 'w-6 h-6')}
+            {getIcon('x', 'w-6 h-6')}
+          </button>
+        </div>
+
+        {/* Barra de Herramientas de Formato */}
+        <div className="bg-white/60 border-b border-[#F8C8DC] p-3 flex items-center gap-2 flex-wrap shrink-0">
+          <div className="flex items-center gap-1 border-r border-[#F8C8DC] pr-3">
+            <button
+              onClick={() => insertHeading(1)}
+              className="px-3 py-1.5 bg-white/80 hover:bg-[#FFD1DC] rounded-lg text-xs font-cinzel font-bold text-[#4A233E] transition-all"
+              title="Título 1"
+            >
+              H1
+            </button>
+            <button
+              onClick={() => insertHeading(2)}
+              className="px-3 py-1.5 bg-white/80 hover:bg-[#FFD1DC] rounded-lg text-xs font-cinzel font-bold text-[#4A233E] transition-all"
+              title="Título 2"
+            >
+              H2
+            </button>
+            <button
+              onClick={() => insertHeading(3)}
+              className="px-3 py-1.5 bg-white/80 hover:bg-[#FFD1DC] rounded-lg text-xs font-cinzel font-bold text-[#4A233E] transition-all"
+              title="Título 3"
+            >
+              H3
+            </button>
+          </div>
+          <div className="flex items-center gap-1 border-r border-[#F8C8DC] pr-3">
+            <button
+              onClick={() => applyFormat('bold')}
+              className="px-3 py-1.5 bg-white/80 hover:bg-[#FFD1DC] rounded-lg text-xs font-cinzel font-bold text-[#4A233E] transition-all"
+              title="Negrita"
+            >
+              <strong>B</strong>
+            </button>
+            <button
+              onClick={() => applyFormat('italic')}
+              className="px-3 py-1.5 bg-white/80 hover:bg-[#FFD1DC] rounded-lg text-xs font-cinzel italic text-[#4A233E] transition-all"
+              title="Itálica"
+            >
+              I
+            </button>
+          </div>
+          <div className="flex items-center gap-1 border-r border-[#F8C8DC] pr-3">
+            <button
+              onClick={handleInsertBullet}
+              className="px-3 py-1.5 bg-white/80 hover:bg-[#FFD1DC] rounded-lg text-xs font-cinzel font-bold text-[#4A233E] transition-all"
+              title="Lista de viñetas"
+            >
+              •
+            </button>
+            <button
+              onClick={handleInsertQuote}
+              className="px-3 py-1.5 bg-white/80 hover:bg-[#FFD1DC] rounded-lg text-xs font-cinzel font-bold text-[#4A233E] transition-all"
+              title="Cita literal"
+            >
+              "
+            </button>
+            <button
+              onClick={handleMarkImportant}
+              className="px-3 py-1.5 bg-white/80 hover:bg-[#FFD1DC] rounded-lg text-xs transition-all"
+              title="Marcar como importante"
+            >
+              {getIcon('sparkles', 'w-4 h-4 text-[#D4AF37]')}
+            </button>
+          </div>
+          <button
+            onClick={insertSeparator}
+            className="px-3 py-1.5 bg-white/80 hover:bg-[#FFD1DC] rounded-lg text-xs font-cinzel font-bold text-[#4A233E] transition-all"
+            title="Separador horizontal"
+          >
+            ─
           </button>
         </div>
 
         {/* Lienzo de Escritura con Líneas de Cuaderno */}
-        <div className="flex-1 relative overflow-hidden">
+        <div className="flex-1 relative overflow-auto">
           <div 
-            className="absolute inset-0 bg-gradient-to-b from-[#FFF9FB] to-[#FDF2F7]"
+            className="absolute inset-0 bg-gradient-to-b from-[#FFF9FB] to-[#FDF2F7] pointer-events-none"
             style={{
               backgroundImage: `repeating-linear-gradient(
                 0deg,
@@ -1637,47 +1789,19 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
               )`,
             }}
           />
-          <textarea
+          <div
             ref={contentRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
+            contentEditable
+            onInput={(e) => handleContentChange(e as React.FormEvent<HTMLDivElement>)}
             onSelect={handleTextSelection}
             onBlur={() => setTimeout(() => setShowToolbar(false), 200)}
-            className="absolute inset-0 w-full h-full bg-transparent border-none outline-none p-8 font-garamond text-[20px] leading-[1.6] text-[#4A233E] resize-none"
-            placeholder="Escribe tus apuntes aquí... El conocimiento se consagra con cada palabra."
+            className="relative w-full h-full bg-transparent border-none outline-none p-8 font-garamond text-[20px] leading-[1.6] text-[#4A233E] min-h-full"
             style={{ fontFamily: "'EB Garamond', serif" }}
+            data-placeholder="Escribe tus apuntes aquí... El conocimiento se consagra con cada palabra."
+            suppressContentEditableWarning
           />
         </div>
 
-        {/* Barra de Herramientas Flotante */}
-        {showToolbar && (
-          <div
-            className="fixed z-[500] bg-[#D4AF37] rounded-xl shadow-2xl p-2 flex items-center gap-2 animate-fade-in"
-            style={{ top: `${toolbarPosition.top}px`, left: `${toolbarPosition.left}px` }}
-          >
-            <button
-              onClick={handleMarkImportant}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all"
-              title="Marcar como importante"
-            >
-              {getIcon('sparkles', 'w-5 h-5 text-white')}
-            </button>
-            <button
-              onClick={handleInsertBullet}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all text-white font-bold"
-              title="Lista de viñetas"
-            >
-              •
-            </button>
-            <button
-              onClick={handleInsertQuote}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all text-white font-bold"
-              title="Cita literal"
-            >
-              "
-            </button>
-          </div>
-        )}
 
         {/* Footer con acciones */}
         <div className="bg-white/80 border-t border-[#F8C8DC] p-4 flex justify-between items-center shrink-0">

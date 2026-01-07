@@ -4,9 +4,10 @@ import { getIcon } from '../constants';
 
 interface AuthModuleProps {
   onAuthSuccess: () => void;
+  isMobile?: boolean;
 }
 
-const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
+const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess, isMobile = false }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,13 +56,13 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
 
   return (
     <>
-      <div className="text-center mb-6">
-        <p className="font-garamond italic text-[#8B5E75] text-sm">
-          {isLogin ? 'Bienvenido de vuelta' : 'Crea tu perfil académico'}
+      <div className={`text-center ${isMobile ? 'mb-6' : 'mb-6'}`}>
+        <p className={`font-garamond italic text-[#8B5E75] ${isMobile ? 'text-2xl md:text-sm' : 'text-sm'}`}>
+          {isLogin ? 'Bienvenida nuevamente' : 'Crea tu perfil académico'}
         </p>
       </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className={`${isMobile ? 'space-y-5' : 'space-y-6'}`}>
           {!isLogin && (
             <div>
               <label className="block text-[10px] uppercase font-bold text-[#8B5E75] mb-2 font-inter tracking-widest">
@@ -72,7 +73,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Tu nombre..."
-                className="w-full bg-white/60 border-2 border-[#F8C8DC] rounded-xl px-4 py-3.5 text-base focus:outline-none focus:border-[#E35B8F] min-h-[48px]"
+                className={`w-full bg-white/60 border-2 border-[#F8C8DC] rounded-xl px-4 ${isMobile ? 'py-4 text-lg' : 'py-3.5 text-base'} focus:outline-none focus:border-[#E35B8F] ${isMobile ? 'min-h-[56px]' : 'min-h-[48px]'}`}
                 required={!isLogin}
               />
             </div>
@@ -87,7 +88,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="tu@email.com"
-              className="w-full bg-white/60 border-2 border-[#F8C8DC] rounded-xl px-4 py-3.5 text-base focus:outline-none focus:border-[#E35B8F] min-h-[48px]"
+              className={`w-full bg-white/60 border-2 border-[#F8C8DC] rounded-xl px-4 ${isMobile ? 'py-4 text-lg' : 'py-3.5 text-base'} focus:outline-none focus:border-[#E35B8F] ${isMobile ? 'min-h-[56px]' : 'min-h-[48px]'}`}
               required
             />
           </div>
@@ -101,7 +102,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-white/60 border-2 border-[#F8C8DC] rounded-xl px-4 py-3.5 text-base focus:outline-none focus:border-[#E35B8F] min-h-[48px]"
+              className={`w-full bg-white/60 border-2 border-[#F8C8DC] rounded-xl px-4 ${isMobile ? 'py-4 text-lg' : 'py-3.5 text-base'} focus:outline-none focus:border-[#E35B8F] ${isMobile ? 'min-h-[56px]' : 'min-h-[48px]'}`}
               required
               minLength={6}
             />
@@ -116,7 +117,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full btn-primary py-4 rounded-xl sm:rounded-2xl font-cinzel text-sm font-black uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation active:scale-95"
+            className={`w-full btn-primary ${isMobile ? 'py-5 text-base' : 'py-4 text-sm'} rounded-xl sm:rounded-2xl font-cinzel font-black uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${isMobile ? 'min-h-[56px]' : 'min-h-[48px]'} touch-manipulation active:scale-95`}
           >
             {loading ? (
               <div className="flex items-center justify-center gap-2">
@@ -130,21 +131,12 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
         </form>
 
         {/* Botón de Google Auth */}
-        <div className="mt-6">
-          <div className="relative mb-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#F8C8DC]"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-[#8B5E75] font-garamond">o</span>
-            </div>
-          </div>
-          
+        <div className={isMobile ? 'mt-5' : 'mt-6'}>
           <button
             type="button"
             onClick={handleGoogleSignIn}
             disabled={googleLoading || loading}
-            className="w-full flex items-center justify-center gap-3 py-4 rounded-xl sm:rounded-2xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel text-sm font-black uppercase tracking-widest shadow-lg hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation active:scale-95"
+            className={`w-full flex items-center justify-center gap-3 ${isMobile ? 'py-5 text-base' : 'py-4 text-sm'} rounded-xl sm:rounded-2xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel font-black uppercase tracking-widest shadow-lg hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isMobile ? 'min-h-[56px]' : 'min-h-[48px]'} touch-manipulation active:scale-95`}
           >
             {googleLoading ? (
               <div className="flex items-center justify-center gap-2">
@@ -177,7 +169,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
           </button>
         </div>
 
-        <div className="mt-6 text-center">
+        <div className={isMobile ? 'mt-5 text-center' : 'mt-6 text-center'}>
           <button
             onClick={() => {
               setIsLogin(!isLogin);
@@ -186,7 +178,7 @@ const AuthModule: React.FC<AuthModuleProps> = ({ onAuthSuccess }) => {
               setPassword('');
               setFullName('');
             }}
-            className="text-[#8B5E75] text-sm font-inter hover:text-[#E35B8F] transition-colors"
+            className={`text-[#8B5E75] ${isMobile ? 'text-base' : 'text-sm'} font-inter hover:text-[#E35B8F] transition-colors`}
           >
             {isLogin ? (
               <>
