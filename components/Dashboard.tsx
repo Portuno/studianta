@@ -140,52 +140,54 @@ const Dashboard: React.FC<DashboardProps> = ({
 
           {/* Enlaces Legales - Mobile - Al final de los módulos */}
           <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30 px-2">
-            <div className="flex flex-wrap items-center justify-center gap-3 text-xs mb-4">
-              <a
-                href="/privacidad"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveView(NavView.PRIVACY_POLICY);
-                }}
-                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-              >
-                Política de Privacidad
-              </a>
-              <span className="text-[#F8C8DC]">•</span>
-              <a
-                href="/terminosycondiciones"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveView(NavView.TERMS_OF_SERVICE);
-                }}
-                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-              >
-                Términos y Condiciones
-              </a>
-              <span className="text-[#F8C8DC]">•</span>
-              <a
-                href="/docs"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveView(NavView.DOCS);
-                }}
-                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-              >
-                Documentación
-              </a>
-            </div>
-            <div className="text-center">
-              <p className="font-garamond text-xs text-[#8B5E75]">
-                Studianta es una creación de{' '}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3 text-xs">
                 <a
-                  href="https://www.versaproducciones.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#4A233E] hover:text-[#E35B8F] font-semibold underline-offset-2 hover:underline transition-colors"
+                  href="/privacidad"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveView(NavView.PRIVACY_POLICY);
+                  }}
+                  className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
                 >
-                  Versa Producciones
+                  Política de Privacidad
                 </a>
-              </p>
+                <span className="text-[#F8C8DC]">•</span>
+                <a
+                  href="/terminosycondiciones"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveView(NavView.TERMS_OF_SERVICE);
+                  }}
+                  className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+                >
+                  Términos y Condiciones
+                </a>
+                <span className="text-[#F8C8DC]">•</span>
+                <a
+                  href="/docs"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveView(NavView.DOCS);
+                  }}
+                  className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+                >
+                  Documentación
+                </a>
+              </div>
+              <div className="text-left sm:text-right">
+                <p className="font-garamond text-xs text-[#8B5E75]">
+                  Studianta es una creación de{' '}
+                  <a
+                    href="https://www.versaproducciones.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#4A233E] hover:text-[#E35B8F] font-semibold underline-offset-2 hover:underline transition-colors"
+                  >
+                    Versa Producciones
+                  </a>
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -358,52 +360,54 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Enlaces Legales - Desktop - Al final de los módulos */}
         <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30">
-          <div className="flex flex-wrap items-center justify-center gap-4 text-sm mb-4">
-            <a
-              href="/privacidad"
-              onClick={(e) => {
-                e.preventDefault();
-                setActiveView(NavView.PRIVACY_POLICY);
-              }}
-              className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-            >
-              Política de Privacidad
-            </a>
-            <span className="text-[#F8C8DC]">•</span>
-            <a
-              href="/terminosycondiciones"
-              onClick={(e) => {
-                e.preventDefault();
-                setActiveView(NavView.TERMS_OF_SERVICE);
-              }}
-              className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-            >
-              Términos y Condiciones
-            </a>
-            <span className="text-[#F8C8DC]">•</span>
-            <a
-              href="/docs"
-              onClick={(e) => {
-                e.preventDefault();
-                setActiveView(NavView.DOCS);
-              }}
-              className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
-            >
-              Documentación
-            </a>
-          </div>
-          <div className="text-center">
-            <p className="font-garamond text-sm text-[#8B5E75]">
-              Studianta es una creación de{' '}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4 text-sm">
               <a
-                href="https://www.versaproducciones.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#4A233E] hover:text-[#E35B8F] font-semibold underline-offset-2 hover:underline transition-colors"
+                href="/privacidad"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveView(NavView.PRIVACY_POLICY);
+                }}
+                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
               >
-                Versa Producciones
+                Política de Privacidad
               </a>
-            </p>
+              <span className="text-[#F8C8DC]">•</span>
+              <a
+                href="/terminosycondiciones"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveView(NavView.TERMS_OF_SERVICE);
+                }}
+                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+              >
+                Términos y Condiciones
+              </a>
+              <span className="text-[#F8C8DC]">•</span>
+              <a
+                href="/docs"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveView(NavView.DOCS);
+                }}
+                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+              >
+                Documentación
+              </a>
+            </div>
+            <div className="text-right">
+              <p className="font-garamond text-sm text-[#8B5E75]">
+                Studianta es una creación de{' '}
+                <a
+                  href="https://www.versaproducciones.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#4A233E] hover:text-[#E35B8F] font-semibold underline-offset-2 hover:underline transition-colors"
+                >
+                  Versa Producciones
+                </a>
+              </p>
+            </div>
           </div>
         </div>
       </div>
