@@ -138,9 +138,20 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </section>
 
-          {/* Términos y Condiciones - Mobile - Al final de los módulos */}
+          {/* Enlaces Legales - Mobile - Al final de los módulos */}
           <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30 px-2">
-            <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs mb-4">
+              <a
+                href="/privacidad"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveView(NavView.PRIVACY_POLICY);
+                }}
+                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+              >
+                Política de Privacidad
+              </a>
+              <span className="text-[#F8C8DC]">•</span>
               <a
                 href="/terminosycondiciones"
                 onClick={(e) => {
@@ -151,6 +162,30 @@ const Dashboard: React.FC<DashboardProps> = ({
               >
                 Términos y Condiciones
               </a>
+              <span className="text-[#F8C8DC]">•</span>
+              <a
+                href="/docs"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setActiveView(NavView.DOCS);
+                }}
+                className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+              >
+                Documentación
+              </a>
+            </div>
+            <div className="text-center">
+              <p className="font-garamond text-xs text-[#8B5E75]">
+                Studianta es una creación de{' '}
+                <a
+                  href="https://www.versaproducciones.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#4A233E] hover:text-[#E35B8F] font-semibold underline-offset-2 hover:underline transition-colors"
+                >
+                  Versa Producciones
+                </a>
+              </p>
             </div>
           </div>
         </div>
@@ -321,9 +356,20 @@ const Dashboard: React.FC<DashboardProps> = ({
           </section>
         </div>
 
-        {/* Términos y Condiciones - Desktop - Al final de los módulos */}
+        {/* Enlaces Legales - Desktop - Al final de los módulos */}
         <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30">
-          <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-sm mb-4">
+            <a
+              href="/privacidad"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveView(NavView.PRIVACY_POLICY);
+              }}
+              className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+            >
+              Política de Privacidad
+            </a>
+            <span className="text-[#F8C8DC]">•</span>
             <a
               href="/terminosycondiciones"
               onClick={(e) => {
@@ -334,6 +380,30 @@ const Dashboard: React.FC<DashboardProps> = ({
             >
               Términos y Condiciones
             </a>
+            <span className="text-[#F8C8DC]">•</span>
+            <a
+              href="/docs"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveView(NavView.DOCS);
+              }}
+              className="font-garamond text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+            >
+              Documentación
+            </a>
+          </div>
+          <div className="text-center">
+            <p className="font-garamond text-sm text-[#8B5E75]">
+              Studianta es una creación de{' '}
+              <a
+                href="https://www.versaproducciones.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#4A233E] hover:text-[#E35B8F] font-semibold underline-offset-2 hover:underline transition-colors"
+              >
+                Versa Producciones
+              </a>
+            </p>
           </div>
         </div>
       </div>
