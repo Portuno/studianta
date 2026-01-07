@@ -113,6 +113,22 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
               <li>Sesiones de enfoque y productividad</li>
               <li>Preferencias de usuario</li>
             </ul>
+
+            <h3 className="font-cinzel text-xl font-semibold text-[#4A233E] mb-3 mt-4">
+              2.6. Datos de Google Calendar (Opcional)
+            </h3>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-2">
+              Si autoriza la integración opcional con Google Calendar, recopilamos:
+            </p>
+            <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4">
+              <li>Eventos de calendario (título, descripción, fechas, horas)</li>
+              <li>Tokens de acceso y actualización de Google (almacenados de forma segura y encriptada)</li>
+              <li>Información necesaria para sincronizar eventos entre Studianta y Google Calendar</li>
+            </ul>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mt-2">
+              <strong>Nota:</strong> Esta integración es completamente opcional. Puede utilizar Studianta 
+              sin conectar su cuenta de Google Calendar.
+            </p>
           </section>
 
           {/* Cómo usamos la información */}
@@ -124,11 +140,19 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
               <li>Proporcionar y mejorar nuestros servicios de gestión académica</li>
               <li>Personalizar su experiencia en la aplicación</li>
               <li>Procesar y almacenar sus datos académicos y personales</li>
+              <li>Sincronizar eventos académicos con Google Calendar (si ha autorizado la integración)</li>
               <li>Generar análisis y recomendaciones mediante inteligencia artificial</li>
               <li>Gestionar su cuenta y autenticación</li>
               <li>Comunicarnos con usted sobre actualizaciones y cambios en el servicio</li>
               <li>Cumplir con obligaciones legales y proteger nuestros derechos</li>
             </ul>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mt-4">
+              <strong>Uso de Datos de Google:</strong> Los datos de Google Calendar se utilizan exclusivamente 
+              para proporcionar la funcionalidad de sincronización de calendario. No utilizamos estos datos 
+              para publicidad, marketing, análisis de comportamiento fuera de la funcionalidad del calendario, 
+              ni los compartimos con terceros. Para más detalles, consulte la sección 4.1 sobre Integración 
+              con Google Calendar.
+            </p>
           </section>
 
           {/* Integraciones de terceros */}
@@ -138,18 +162,133 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
             </h2>
             
             <h3 className="font-cinzel text-xl font-semibold text-[#4A233E] mb-3 mt-4">
-              4.1. Google Calendar
+              4.1. Integración con Google Calendar
             </h3>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-2">
-              Cuando autoriza la integración con Google Calendar, accedemos a su calendario para:
+            
+            <h4 className="font-cinzel text-lg font-semibold text-[#4A233E] mb-2 mt-4">
+              4.1.1. Descripción de la Integración
+            </h4>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+              Studianta ofrece la posibilidad de integrar su cuenta de Google Calendar de forma opcional. 
+              Esta integración le permite sincronizar sus eventos académicos entre nuestra aplicación y su 
+              Google Calendar, proporcionando una experiencia unificada de gestión de calendario.
             </p>
-            <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4">
-              <li>Sincronizar eventos académicos</li>
-              <li>Crear recordatorios y notificaciones</li>
-              <li>Gestionar su calendario académico</li>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+              <strong>La integración con Google Calendar es completamente opcional.</strong> Puede utilizar 
+              Studianta sin conectar su cuenta de Google Calendar, y puede desconectar la integración en 
+              cualquier momento desde la configuración de la aplicación o desde su cuenta de Google.
+            </p>
+
+            <h4 className="font-cinzel text-lg font-semibold text-[#4A233E] mb-2 mt-4">
+              4.1.2. Datos de Google Calendar que Accedemos
+            </h4>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-2">
+              Cuando autoriza la integración con Google Calendar, solicitamos acceso a los siguientes datos:
+            </p>
+            <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4 mb-4">
+              <li><strong>Eventos de calendario:</strong> Leemos y creamos eventos en su Google Calendar</li>
+              <li><strong>Información de eventos:</strong> Título, descripción, fecha, hora de inicio y fin de los eventos</li>
+              <li><strong>Tokens de acceso:</strong> Almacenamos tokens de acceso y actualización de forma segura para mantener la sincronización</li>
             </ul>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mt-4">
-              Puede revocar este acceso en cualquier momento desde la configuración de su cuenta de Google.
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+              <strong>No accedemos a:</strong> correos electrónicos, contactos, archivos de Google Drive, 
+              información de perfil personal más allá de lo necesario para la autenticación, ni ningún otro 
+              dato de Google que no esté relacionado con la funcionalidad de calendario.
+            </p>
+
+            <h4 className="font-cinzel text-lg font-semibold text-[#4A233E] mb-2 mt-4">
+              4.1.3. Cómo Utilizamos los Datos de Google Calendar
+            </h4>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-2">
+              Los datos de Google Calendar que accedemos se utilizan exclusivamente para:
+            </p>
+            <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4 mb-4">
+              <li><strong>Sincronizar eventos académicos:</strong> Sincronizar eventos creados en Studianta con su Google Calendar</li>
+              <li><strong>Crear eventos:</strong> Crear nuevos eventos académicos en su Google Calendar cuando los agrega en Studianta</li>
+              <li><strong>Actualizar eventos:</strong> Actualizar eventos existentes cuando realiza modificaciones en Studianta</li>
+              <li><strong>Gestionar calendario académico:</strong> Mantener la coherencia entre los eventos en Studianta y su Google Calendar</li>
+            </ul>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+              Estos datos se utilizan únicamente para proporcionar y mejorar la funcionalidad de sincronización 
+              de calendario dentro de nuestra aplicación. No utilizamos estos datos para ningún otro propósito, 
+              incluyendo publicidad, marketing, análisis de comportamiento fuera de la funcionalidad del calendario, 
+              o cualquier otro uso no relacionado con la gestión de eventos académicos.
+            </p>
+
+            <h4 className="font-cinzel text-lg font-semibold text-[#4A233E] mb-2 mt-4">
+              4.1.4. Compartir, Transferir y Divulgación de Datos de Google
+            </h4>
+            <div className="bg-white/60 rounded-xl p-4 border-2 border-[#E35B8F] mb-4">
+              <p className="font-garamond text-[#4A233E] leading-relaxed mb-3">
+                <strong className="font-cinzel text-lg">IMPORTANTE: No compartimos, transferimos ni divulgamos sus datos de Google Calendar con terceros.</strong>
+              </p>
+              <p className="font-garamond text-[#4A233E] leading-relaxed mb-2">
+                Los datos de Google Calendar que accedemos:
+              </p>
+              <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4">
+                <li><strong>No se venden</strong> a terceros</li>
+                <li><strong>No se alquilan</strong> a terceros</li>
+                <li><strong>No se comparten</strong> con empresas de publicidad, marketing o análisis</li>
+                <li><strong>No se transfieren</strong> a otras aplicaciones o servicios</li>
+                <li><strong>No se divulgan</strong> a terceros para ningún propósito</li>
+              </ul>
+            </div>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+              Los datos de Google Calendar se almacenan y procesan exclusivamente en nuestros servidores 
+              (Supabase) y solo se utilizan para las operaciones de sincronización autorizadas. Los tokens 
+              de acceso de Google se almacenan de forma segura y encriptada en nuestros servidores y solo 
+              se utilizan para realizar las operaciones de sincronización que usted ha autorizado.
+            </p>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+              La única excepción a esta política sería si estuviéramos legalmente obligados a divulgar 
+              información en respuesta a una orden judicial, citación o proceso legal válido, o para proteger 
+              nuestros derechos, propiedad o seguridad, o la de nuestros usuarios.
+            </p>
+
+            <h4 className="font-cinzel text-lg font-semibold text-[#4A233E] mb-2 mt-4">
+              4.1.5. Almacenamiento y Seguridad de Datos de Google
+            </h4>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-2">
+              Los datos de Google Calendar se almacenan de forma segura:
+            </p>
+            <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4 mb-4">
+              <li><strong>Cifrado en tránsito:</strong> Todas las comunicaciones con la API de Google Calendar utilizan conexiones HTTPS encriptadas</li>
+              <li><strong>Cifrado en reposo:</strong> Los tokens de acceso se almacenan encriptados en nuestros servidores</li>
+              <li><strong>Almacenamiento seguro:</strong> Los datos se almacenan en Supabase, que cumple con estándares de seguridad internacionales</li>
+              <li><strong>Acceso restringido:</strong> Solo nuestra aplicación puede acceder a estos datos, y únicamente para las operaciones autorizadas</li>
+            </ul>
+
+            <h4 className="font-cinzel text-lg font-semibold text-[#4A233E] mb-2 mt-4">
+              4.1.6. Retención y Eliminación de Datos de Google
+            </h4>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-2">
+              Conservamos los tokens de acceso de Google Calendar mientras la integración esté activa. 
+              Cuando usted:
+            </p>
+            <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4 mb-4">
+              <li>Desconecta la integración desde la aplicación, eliminamos inmediatamente todos los tokens almacenados</li>
+              <li>Revoca el acceso desde su cuenta de Google, eliminamos los tokens cuando detectamos que el acceso ha sido revocado</li>
+              <li>Elimina su cuenta de Studianta, eliminamos todos los datos asociados, incluyendo los tokens de Google Calendar</li>
+            </ul>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+              Los eventos creados en su Google Calendar permanecerán en su calendario incluso después de 
+              desconectar la integración, ya que fueron creados en su cuenta de Google. Studianta no elimina 
+              eventos de su Google Calendar cuando se desconecta la integración.
+            </p>
+
+            <h4 className="font-cinzel text-lg font-semibold text-[#4A233E] mb-2 mt-4">
+              4.1.7. Revocación del Acceso
+            </h4>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+              Puede revocar el acceso a Google Calendar en cualquier momento de las siguientes formas:
+            </p>
+            <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4 mb-4">
+              <li><strong>Desde Studianta:</strong> Vaya a la configuración del módulo de Calendario y seleccione "Desconectar Google Calendar"</li>
+              <li><strong>Desde Google:</strong> Visite <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-[#E35B8F] hover:text-[#4A233E] font-semibold underline-offset-2 hover:underline transition-colors">myaccount.google.com/permissions</a> y revoque el acceso de Studianta</li>
+            </ul>
+            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+              Una vez que revoque el acceso, Studianta dejará de poder acceder a su Google Calendar y 
+              eliminaremos todos los tokens almacenados. La sincronización se detendrá inmediatamente.
             </p>
 
             <h3 className="font-cinzel text-xl font-semibold text-[#4A233E] mb-3 mt-4">
