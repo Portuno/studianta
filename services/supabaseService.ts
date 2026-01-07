@@ -99,6 +99,7 @@ export interface UserProfile {
   arcane_level?: string; // Nivel arcano (ej: "Buscadora de Luz", "Alquimista Clínica")
   essence: number;
   total_essence_earned?: number; // Esencia histórica total ganada
+  onboarding_completed?: boolean; // Si el usuario completó el onboarding
   created_at: string;
   updated_at: string;
 }
@@ -227,6 +228,7 @@ export class SupabaseService {
         essence: 0,
         total_essence_earned: 0,
         arcane_level: 'Buscadora de Luz',
+        onboarding_completed: false,
       })
       .select()
       .single();
@@ -272,6 +274,7 @@ export class SupabaseService {
         arcane_level: data.arcane_level || 'Buscadora de Luz',
         essence: data.essence || 0,
         total_essence_earned: data.total_essence_earned || 0,
+        onboarding_completed: data.onboarding_completed ?? false,
         created_at: data.created_at,
         updated_at: data.updated_at,
       };
@@ -293,6 +296,7 @@ export class SupabaseService {
     if (updates.arcane_level !== undefined) dbUpdates.arcane_level = updates.arcane_level;
     if (updates.essence !== undefined) dbUpdates.essence = updates.essence;
     if (updates.total_essence_earned !== undefined) dbUpdates.total_essence_earned = updates.total_essence_earned;
+    if (updates.onboarding_completed !== undefined) dbUpdates.onboarding_completed = updates.onboarding_completed;
 
     try {
       const { data, error } = await retryWithBackoff(async () => {
@@ -328,6 +332,7 @@ export class SupabaseService {
         arcane_level: data.arcane_level || 'Buscadora de Luz',
         essence: data.essence || 0,
         total_essence_earned: data.total_essence_earned || 0,
+        onboarding_completed: data.onboarding_completed ?? false,
         created_at: data.created_at,
         updated_at: data.updated_at,
       };

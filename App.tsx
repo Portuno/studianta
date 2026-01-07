@@ -22,6 +22,8 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import DocsPage from './components/DocsPage';
 import Footer from './components/Footer';
+import OnboardingModal from './components/OnboardingModal';
+import EssenceNotification from './components/EssenceNotification';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -96,6 +98,8 @@ const App: React.FC = () => {
   const [customEvents, setCustomEvents] = useState<CustomCalendarEvent[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [securityPin, setSecurityPin] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showEssenceNotification, setShowEssenceNotification] = useState(false);
 
   // Estado global del Focus Timer
   const [focusState, setFocusState] = useState<{
@@ -324,6 +328,10 @@ const App: React.FC = () => {
       if (profile) {
         setEssence(profile.essence);
         setUserProfile(profile);
+        // Verificar si necesita mostrar el onboarding
+        if (!profile.onboarding_completed) {
+          setShowOnboarding(true);
+        }
       }
 
       // Cargar configuración de seguridad (silenciosamente, puede no existir)
@@ -757,6 +765,34 @@ const App: React.FC = () => {
     }
   };
 
+  const handleCompleteOnboarding = async () => {
+    if (!user || !userProfile) return;
+    
+    try {
+      // Otorgar 300 puntos de esencia
+      await supabaseService.addEssence(user.id, 300);
+      
+      // Actualizar el perfil para marcar el onboarding como completo
+      const updatedProfile = await supabaseService.updateProfile(user.id, {
+        onboarding_completed: true,
+      });
+      
+      // Actualizar el estado local
+      if (updatedProfile) {
+        setUserProfile(updatedProfile);
+        setEssence(updatedProfile.essence);
+      }
+      
+      // Cerrar el modal y mostrar la notificación
+      setShowOnboarding(false);
+      setShowEssenceNotification(true);
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      // Aún así cerrar el modal para no bloquear al usuario
+      setShowOnboarding(false);
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await supabaseService.signOut();
@@ -996,6 +1032,23 @@ const App: React.FC = () => {
             setFocusState(prev => ({ ...prev, isActive: false, isPaused: false, sanctuaryMode: false }));
           }}
           onOpen={() => setActiveView(NavView.FOCUS)}
+          isMobile={isMobile}
+        />
+      )}
+
+      {/* Modal de Onboarding */}
+      {showOnboarding && user && (
+        <OnboardingModal
+          onComplete={handleCompleteOnboarding}
+          isMobile={isMobile}
+        />
+      )}
+
+      {/* Notificación de Esencia Ganada */}
+      {showEssenceNotification && (
+        <EssenceNotification
+          amount={300}
+          onClose={() => setShowEssenceNotification(false)}
           isMobile={isMobile}
         />
       )}

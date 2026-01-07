@@ -559,7 +559,17 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                 {getIcon('chevron', 'w-4 h-4')}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-10 min-h-0" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/old-map.png")', backgroundColor: '#FFF9FB', WebkitOverflowScrolling: 'touch' }}>
+            <div 
+              className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-6 pb-10 min-h-0" 
+              style={{ 
+                backgroundImage: 'url("https://www.transparenttextures.com/patterns/old-map.png")', 
+                backgroundColor: '#FFF9FB', 
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
+                touchAction: 'pan-y',
+                maxHeight: '100%'
+              }}
+            >
               {/* Buscador */}
               <div className="sticky top-0 z-10 mb-4 bg-white/90 backdrop-blur-sm rounded-2xl p-3 border border-[#D4AF37]/20 shadow-sm">
                 <div className="relative">
