@@ -81,7 +81,8 @@ export interface JournalEntry {
   date: string;
   mood: MoodType;
   content: string;
-  photo?: string; // base64
+  photo?: string; // base64 - deprecated, usar photos
+  photos?: string[]; // base64 array - hasta 3 fotos
   isLocked: boolean;
   sentiment?: number;
 }

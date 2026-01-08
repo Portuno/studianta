@@ -209,11 +209,11 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
 }) => {
   const [activeMood, setActiveMood] = useState<MoodType | null>(null);
   const [content, setContent] = useState('');
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [isLocked, setIsLocked] = useState(false);
   const [entryDate, setEntryDate] = useState(new Date().toISOString().split('T')[0]);
   const [isGrimorioOpen, setIsGrimorioOpen] = useState(false);
-  const [photoRotation, setPhotoRotation] = useState(0);
+  const [photoRotations, setPhotoRotations] = useState<number[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -255,12 +255,6 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
     });
   }, [entries, searchQuery, securityModuleActive]);
   
-  // Generar rotación aleatoria para fotos Polaroid
-  useEffect(() => {
-    if (photo) {
-      setPhotoRotation(Math.random() * 4 - 2); // Entre -2 y 2 grados
-    }
-  }, [photo]);
 
   // Función para ver entrada completa
   const handleViewEntry = async (entry: JournalEntry) => {
@@ -343,12 +337,34 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPhoto(reader.result as string);
-      reader.readAsDataURL(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    // Limitar a 3 fotos máximo
+    const remainingSlots = 3 - photos.length;
+    if (remainingSlots <= 0) {
+      alert("Ya has alcanzado el límite de 3 fotos por entrada.");
+      return;
     }
+    
+    const filesToProcess = files.slice(0, remainingSlots);
+    const newPhotos: string[] = [];
+    const newRotations: number[] = [];
+    
+    filesToProcess.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPhotos.push(reader.result as string);
+        newRotations.push(Math.random() * 4 - 2); // Entre -2 y 2 grados
+        
+        // Cuando todas las fotos se hayan cargado
+        if (newPhotos.length === filesToProcess.length) {
+          setPhotos(prev => [...prev, ...newPhotos]);
+          setPhotoRotations(prev => [...prev, ...newRotations]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleSave = () => {
@@ -366,7 +382,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
           date: entryDate,
           mood: activeMood,
           content: content,
-          photo: photo || undefined,
+          photos: photos.length > 0 ? photos : undefined,
           isLocked: isLocked
         };
         onUpdateEntry(updatedEntry);
@@ -379,7 +395,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
         date: entryDate,
         mood: activeMood,
         content: content,
-        photo: photo || undefined,
+        photos: photos.length > 0 ? photos : undefined,
         isLocked: isLocked,
         sentiment: 0
       };
@@ -389,7 +405,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
     // Limpiar el formulario
     setActiveMood(null);
     setContent('');
-    setPhoto(null);
+    setPhotos([]);
+    setPhotoRotations([]);
     setIsLocked(false);
     setEntryDate(new Date().toISOString().split('T')[0]);
   };
@@ -403,7 +420,18 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
     setEditingEntryId(entry.id);
     setActiveMood(entry.mood as MoodType);
     setContent(entry.content);
-    setPhoto(entry.photo || null);
+    // Manejar compatibilidad: si tiene photos usar photos, si no tiene photos pero tiene photo (antiguo), convertir a array
+    if (entry.photos && entry.photos.length > 0) {
+      setPhotos(entry.photos);
+      setPhotoRotations(entry.photos.map(() => Math.random() * 4 - 2));
+    } else if (entry.photo) {
+      // Entrada antigua con solo una foto
+      setPhotos([entry.photo]);
+      setPhotoRotations([Math.random() * 4 - 2]);
+    } else {
+      setPhotos([]);
+      setPhotoRotations([]);
+    }
     setIsLocked(entry.isLocked || false);
     setEntryDate(entry.date);
     // Cambiar a la vista del editor
@@ -467,17 +495,20 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
               </div>
             ) : (
               <>
-                {entry.photo && (
-                  <div className="flex justify-center">
-                    <div 
-                      className="w-full max-w-md p-4 bg-white"
-                      style={{ 
-                        transform: `rotate(${entryPhotoRotation}deg)`,
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.2), 0 0 0 12px white, 0 0 0 14px rgba(248,200,220,0.2)'
-                      }}
-                    >
-                      <img src={entry.photo} alt="Memoria" className="w-full h-auto object-cover" />
-                    </div>
+                {((entry.photos && entry.photos.length > 0) || entry.photo) && (
+                  <div className="flex flex-wrap gap-4 justify-center mb-6">
+                    {(entry.photos || (entry.photo ? [entry.photo] : [])).map((photo, index) => (
+                      <div 
+                        key={index}
+                        className="w-full max-w-md p-4 bg-white"
+                        style={{ 
+                          transform: `rotate(${getEntryPhotoRotation(entry.id + index)}deg)`,
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.2), 0 0 0 12px white, 0 0 0 14px rgba(248,200,220,0.2)'
+                        }}
+                      >
+                        <img src={photo} alt={`Memoria ${index + 1}`} className="w-full h-auto object-cover" />
+                      </div>
+                    ))}
                   </div>
                 )}
                 <div className="prose max-w-none">
@@ -547,16 +578,29 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   backgroundColor: '#FFFEF7'
                 }}
               />
-              {photo && (
-                <div 
-                  className="mt-4 w-36 h-36 p-2 bg-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] relative self-end mb-20"
-                  style={{ 
-                    transform: `rotate(${photoRotation}deg)`,
-                    boxShadow: '0 8px 16px rgba(0,0,0,0.15), 0 0 0 8px white, 0 0 0 10px rgba(248,200,220,0.3)'
-                  }}
-                >
-                  <img src={photo} alt="Daily Moment" className="w-full h-full object-cover" />
-                  <button onClick={() => setPhoto(null)} className="absolute -top-2 -right-2 bg-red-400 text-white p-1 rounded-full shadow-lg z-10">{getIcon('trash', 'w-3 h-3')}</button>
+              {photos.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-3 justify-end mb-20">
+                  {photos.map((photo, index) => (
+                    <div 
+                      key={index}
+                      className="w-36 h-36 p-2 bg-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] relative"
+                      style={{ 
+                        transform: `rotate(${photoRotations[index] || 0}deg)`,
+                        boxShadow: '0 8px 16px rgba(0,0,0,0.15), 0 0 0 8px white, 0 0 0 10px rgba(248,200,220,0.3)'
+                      }}
+                    >
+                      <img src={photo} alt={`Memoria ${index + 1}`} className="w-full h-full object-cover" />
+                      <button 
+                        onClick={() => {
+                          setPhotos(prev => prev.filter((_, i) => i !== index));
+                          setPhotoRotations(prev => prev.filter((_, i) => i !== index));
+                        }} 
+                        className="absolute -top-2 -right-2 bg-red-400 text-white p-1 rounded-full shadow-lg z-10"
+                      >
+                        {getIcon('trash', 'w-3 h-3')}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -644,17 +688,20 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                          </button>
                        </div>
                     </div>
-                    {entry.photo && (
-                      <div className="mb-4 flex justify-center">
-                        <div 
-                          className="w-32 h-32 p-2 bg-white"
-                          style={{ 
-                            transform: `rotate(${entryPhotoRotation}deg)`,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
-                          }}
-                        >
-                          <img src={entry.photo} alt="Memoria" className="w-full h-full object-cover" />
-                        </div>
+                    {((entry.photos && entry.photos.length > 0) || entry.photo) && (
+                      <div className="mb-4 flex flex-wrap gap-2 justify-center">
+                        {(entry.photos || (entry.photo ? [entry.photo] : [])).map((photo, index) => (
+                          <div 
+                            key={index}
+                            className="w-32 h-32 p-2 bg-white"
+                            style={{ 
+                              transform: `rotate(${getEntryPhotoRotation(entry.id + index)}deg)`,
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
+                            }}
+                          >
+                            <img src={photo} alt={`Memoria ${index + 1}`} className="w-full h-full object-cover" />
+                          </div>
+                        ))}
                       </div>
                     )}
                     {entry.isLocked && securityModuleActive ? (
@@ -681,10 +728,26 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                  <button onClick={insertQuote} className="w-11 h-11 bg-white border border-[#D4AF37] text-[#D4AF37] rounded-full flex items-center justify-center shadow-lg active:scale-90">
                    <span className="font-serif font-bold text-lg">"</span>
                  </button>
-                 <button onClick={() => fileInputRef.current?.click()} className="w-11 h-11 bg-white border border-[#F8C8DC] text-[#8B5E75] rounded-full flex items-center justify-center shadow-lg active:scale-90">
+                 <button 
+                   onClick={() => fileInputRef.current?.click()} 
+                   className="w-11 h-11 bg-white border border-[#F8C8DC] text-[#8B5E75] rounded-full flex items-center justify-center shadow-lg active:scale-90 relative"
+                   disabled={photos.length >= 3}
+                 >
                    {getIcon('camera', 'w-4 h-4')}
+                   {photos.length > 0 && (
+                     <span className="absolute -top-1 -right-1 bg-[#D4AF37] text-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+                       {photos.length}
+                     </span>
+                   )}
                  </button>
-                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                 <input 
+                   type="file" 
+                   ref={fileInputRef} 
+                   className="hidden" 
+                   accept="image/*" 
+                   multiple
+                   onChange={handlePhotoUpload} 
+                 />
                </>
              )}
            </div>
@@ -697,7 +760,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                    setEditingEntryId(null);
                    setActiveMood(null);
                    setContent('');
-                   setPhoto(null);
+                   setPhotos([]);
+                   setPhotoRotations([]);
                    setIsLocked(false);
                    setEntryDate(new Date().toISOString().split('T')[0]);
                  }
@@ -813,17 +877,20 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                          {getIcon('trash', 'w-4 h-4')}
                        </button>
                     </div>
-                    {entry.photo && (
-                      <div className="mb-4 flex justify-center">
-                        <div 
-                          className="w-32 h-32 p-2 bg-white"
-                          style={{ 
-                            transform: `rotate(${entryPhotoRotation}deg)`,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
-                          }}
-                        >
-                          <img src={entry.photo} alt="Memoria" className="w-full h-full object-cover" />
-                        </div>
+                    {((entry.photos && entry.photos.length > 0) || entry.photo) && (
+                      <div className="mb-4 flex flex-wrap gap-2 justify-center">
+                        {(entry.photos || (entry.photo ? [entry.photo] : [])).map((photo, index) => (
+                          <div 
+                            key={index}
+                            className="w-32 h-32 p-2 bg-white"
+                            style={{ 
+                              transform: `rotate(${getEntryPhotoRotation(entry.id + index)}deg)`,
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
+                            }}
+                          >
+                            <img src={photo} alt={`Memoria ${index + 1}`} className="w-full h-full object-cover" />
+                          </div>
+                        ))}
                       </div>
                     )}
                     {entry.isLocked && securityModuleActive ? (
@@ -947,16 +1014,29 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   backgroundColor: '#FFFEF7'
                 }}
               />
-              {photo && (
-                <div 
-                  className="absolute bottom-6 right-6 lg:bottom-10 lg:right-10 w-40 h-40 lg:w-64 lg:h-64 p-3 bg-white"
-                  style={{ 
-                    transform: `rotate(${photoRotation}deg)`,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.2), 0 0 0 12px white, 0 0 0 14px rgba(248,200,220,0.2)'
-                  }}
-                >
-                   <img src={photo} alt="Daily Moment" className="w-full h-full object-cover" />
-                   <button onClick={() => setPhoto(null)} className="absolute -top-3 -right-3 bg-red-400 text-white p-2 rounded-full shadow-lg z-10">{getIcon('trash', 'w-4 h-4')}</button>
+              {photos.length > 0 && (
+                <div className="absolute bottom-6 right-6 lg:bottom-10 lg:right-10 flex flex-wrap gap-3 max-w-[200px] lg:max-w-[300px]">
+                  {photos.map((photo, index) => (
+                    <div 
+                      key={index}
+                      className="w-32 h-32 lg:w-48 lg:h-48 p-3 bg-white relative"
+                      style={{ 
+                        transform: `rotate(${photoRotations[index] || 0}deg)`,
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.2), 0 0 0 12px white, 0 0 0 14px rgba(248,200,220,0.2)'
+                      }}
+                    >
+                      <img src={photo} alt={`Memoria ${index + 1}`} className="w-full h-full object-cover" />
+                      <button 
+                        onClick={() => {
+                          setPhotos(prev => prev.filter((_, i) => i !== index));
+                          setPhotoRotations(prev => prev.filter((_, i) => i !== index));
+                        }} 
+                        className="absolute -top-3 -right-3 bg-red-400 text-white p-2 rounded-full shadow-lg z-10"
+                      >
+                        {getIcon('trash', 'w-4 h-4')}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -966,7 +1046,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                 <button onClick={() => fileInputRef.current?.click()} className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-[#8B5E75] font-inter text-[10px] font-black uppercase tracking-widest border border-[#F8C8DC] hover:bg-[#FFF0F5]">
                   {getIcon('camera', 'w-4 h-4')} <span className="hidden lg:inline">Imagen</span>
                 </button>
-                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handlePhotoUpload} />
                 <button onClick={() => setIsLocked(!isLocked)} className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-inter text-[10px] font-black uppercase tracking-widest border transition-all ${isLocked ? 'bg-[#4A233E] text-[#D4AF37] border-[#4A233E]' : 'bg-white text-[#8B5E75] border-[#F8C8DC] hover:bg-[#FFF0F5]'}`}>
                   {getIcon(isLocked ? 'lock' : 'unlock', 'w-4 h-4')} <span className="hidden lg:inline">{isLocked ? 'Cierre Activo' : 'Biometría'}</span>
                 </button>
