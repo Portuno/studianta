@@ -100,6 +100,9 @@ export interface UserProfile {
   essence: number;
   total_essence_earned?: number; // Esencia histórica total ganada
   onboarding_completed?: boolean; // Si el usuario completó el onboarding
+  academic_stage?: string; // Etapa académica del usuario
+  interests?: string[]; // Array de áreas de interés
+  referral_source?: string; // Cómo nos conoció
   created_at: string;
   updated_at: string;
 }
@@ -275,6 +278,9 @@ export class SupabaseService {
         essence: data.essence || 0,
         total_essence_earned: data.total_essence_earned || 0,
         onboarding_completed: data.onboarding_completed ?? false,
+        academic_stage: data.academic_stage,
+        interests: data.interests || [],
+        referral_source: data.referral_source,
         created_at: data.created_at,
         updated_at: data.updated_at,
       };
@@ -297,6 +303,9 @@ export class SupabaseService {
     if (updates.essence !== undefined) dbUpdates.essence = updates.essence;
     if (updates.total_essence_earned !== undefined) dbUpdates.total_essence_earned = updates.total_essence_earned;
     if (updates.onboarding_completed !== undefined) dbUpdates.onboarding_completed = updates.onboarding_completed;
+    if (updates.academic_stage !== undefined) dbUpdates.academic_stage = updates.academic_stage;
+    if (updates.interests !== undefined) dbUpdates.interests = updates.interests;
+    if (updates.referral_source !== undefined) dbUpdates.referral_source = updates.referral_source;
 
     try {
       const { data, error } = await retryWithBackoff(async () => {
@@ -333,6 +342,9 @@ export class SupabaseService {
         essence: data.essence || 0,
         total_essence_earned: data.total_essence_earned || 0,
         onboarding_completed: data.onboarding_completed ?? false,
+        academic_stage: data.academic_stage,
+        interests: data.interests || [],
+        referral_source: data.referral_source,
         created_at: data.created_at,
         updated_at: data.updated_at,
       };

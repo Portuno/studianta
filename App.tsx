@@ -765,27 +765,78 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCompleteOnboarding = async () => {
+  const handleCompleteOnboarding = async (
+    onboardingData?: {
+      fullName: string;
+      academicStage: string;
+      interests: string[];
+      referralSource: string;
+    },
+    completeOnboarding?: boolean
+  ) => {
     if (!user || !userProfile) return;
     
     try {
-      // Otorgar 300 puntos de esencia
-      await supabaseService.addEssence(user.id, 300);
+      // Preparar actualizaciones del perfil
+      const profileUpdates: any = {};
       
-      // Actualizar el perfil para marcar el onboarding como completo
-      const updatedProfile = await supabaseService.updateProfile(user.id, {
-        onboarding_completed: true,
-      });
-      
-      // Actualizar el estado local
-      if (updatedProfile) {
-        setUserProfile(updatedProfile);
-        setEssence(updatedProfile.essence);
+      // Si es el final del Acto II, marcar como completado
+      if (completeOnboarding) {
+        profileUpdates.onboarding_completed = true;
+        
+        // Actualizar el perfil para marcar como completado
+        await supabaseService.updateProfile(user.id, profileUpdates);
+        
+        // Recargar el perfil actualizado
+        const finalProfile = await supabaseService.getProfile(user.id);
+        
+        // Actualizar el estado local
+        if (finalProfile) {
+          setUserProfile(finalProfile);
+          setEssence(finalProfile.essence);
+        }
+        
+        // Cerrar el modal y navegar al Dashboard
+        setShowOnboarding(false);
+        setActiveView(NavView.DASHBOARD);
+        setShowEssenceNotification(true);
+        return;
       }
       
-      // Cerrar el modal y mostrar la notificación
-      setShowOnboarding(false);
-      setShowEssenceNotification(true);
+      // Si es el final del Acto I, guardar datos pero no marcar como completado
+      if (onboardingData) {
+        if (onboardingData.fullName) {
+          profileUpdates.full_name = onboardingData.fullName;
+        }
+        if (onboardingData.academicStage) {
+          profileUpdates.academic_stage = onboardingData.academicStage;
+          // También guardar en career para compatibilidad
+          profileUpdates.career = onboardingData.academicStage;
+        }
+        if (onboardingData.interests && onboardingData.interests.length > 0) {
+          profileUpdates.interests = onboardingData.interests;
+        }
+        if (onboardingData.referralSource) {
+          profileUpdates.referral_source = onboardingData.referralSource;
+        }
+        
+        // Actualizar el perfil con los datos del Acto I
+        await supabaseService.updateProfile(user.id, profileUpdates);
+        
+        // Otorgar 300 puntos de esencia
+        await supabaseService.addEssence(user.id, 300);
+        
+        // Recargar el perfil actualizado
+        const updatedProfile = await supabaseService.getProfile(user.id);
+        
+        // Actualizar el estado local
+        if (updatedProfile) {
+          setUserProfile(updatedProfile);
+          setEssence(updatedProfile.essence);
+        }
+      }
+      
+      // No cerrar el modal aquí, solo actualizar datos (el modal continuará al Acto II)
     } catch (error) {
       console.error('Error completing onboarding:', error);
       // Aún así cerrar el modal para no bloquear al usuario
