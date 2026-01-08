@@ -223,6 +223,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
   const [pendingEntryToView, setPendingEntryToView] = useState<JournalEntry | null>(null);
   const [unlockedEntries, setUnlockedEntries] = useState<Set<string>>(new Set()); // IDs de entradas desbloqueadas en esta sesión
   const [showStories, setShowStories] = useState(false); // Toggle entre editor e historias
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null); // ID de la entrada que se está editando
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const randomPrompt = useMemo(() => PROMPTS[Math.floor(Math.random() * PROMPTS.length)], []);
@@ -356,25 +357,57 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
       return;
     }
     
-    const newEntry: JournalEntry = {
-      id: Math.random().toString(36).substring(7),
-      date: entryDate,
-      mood: activeMood,
-      content: content,
-      photo: photo || undefined,
-      isLocked: isLocked,
-      sentiment: 0
-    };
+    if (editingEntryId) {
+      // Estamos editando una entrada existente
+      const existingEntry = entries.find(e => e.id === editingEntryId);
+      if (existingEntry) {
+        const updatedEntry: JournalEntry = {
+          ...existingEntry,
+          date: entryDate,
+          mood: activeMood,
+          content: content,
+          photo: photo || undefined,
+          isLocked: isLocked
+        };
+        onUpdateEntry(updatedEntry);
+      }
+      setEditingEntryId(null);
+    } else {
+      // Estamos creando una nueva entrada
+      const newEntry: JournalEntry = {
+        id: Math.random().toString(36).substring(7),
+        date: entryDate,
+        mood: activeMood,
+        content: content,
+        photo: photo || undefined,
+        isLocked: isLocked,
+        sentiment: 0
+      };
+      onAddEntry(newEntry);
+    }
 
-    onAddEntry(newEntry);
+    // Limpiar el formulario
     setActiveMood(null);
     setContent('');
     setPhoto(null);
     setIsLocked(false);
+    setEntryDate(new Date().toISOString().split('T')[0]);
   };
 
   const insertQuote = () => {
     setContent(prev => prev + '\n"Revelación: ..."\n');
+  };
+
+  const handleEdit = (entry: JournalEntry) => {
+    // Cargar los datos de la entrada en el editor
+    setEditingEntryId(entry.id);
+    setActiveMood(entry.mood as MoodType);
+    setContent(entry.content);
+    setPhoto(entry.photo || null);
+    setIsLocked(entry.isLocked || false);
+    setEntryDate(entry.date);
+    // Cambiar a la vista del editor
+    setShowStories(false);
   };
 
   // Componente Modal de Pantalla Completa
