@@ -2,6 +2,7 @@
 import React, { useState, useRef, useMemo, useEffect, useId } from 'react';
 import { JournalEntry, MoodType } from '../types';
 import { getIcon, COLORS } from '../constants';
+import { supabaseService } from '../services/supabaseService';
 
 interface DiaryModuleProps {
   entries: JournalEntry[];
@@ -209,7 +210,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
 }) => {
   const [activeMood, setActiveMood] = useState<MoodType | null>(null);
   const [content, setContent] = useState('');
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<string[]>([]); // URLs de las fotos (para mostrar)
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]); // Archivos originales (para subir)
   const [isLocked, setIsLocked] = useState(false);
   const [entryDate, setEntryDate] = useState(new Date().toISOString().split('T')[0]);
   const [isGrimorioOpen, setIsGrimorioOpen] = useState(false);
@@ -228,6 +230,19 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const randomPrompt = useMemo(() => PROMPTS[Math.floor(Math.random() * PROMPTS.length)], []);
   
+  // Debug: Log para ver qué fotos tienen las entradas
+  useEffect(() => {
+    if (entries.length > 0) {
+      entries.forEach(entry => {
+        if (entry.photos && entry.photos.length > 0) {
+          console.log('Entry photos:', entry.id, entry.photos);
+        } else if (entry.photo) {
+          console.log('Entry photo (old format):', entry.id, entry.photo);
+        }
+      });
+    }
+  }, [entries]);
+
   // Filtrar entradas basado en búsqueda semántica
   const filteredEntries = useMemo(() => {
     if (!searchQuery.trim()) return entries;
@@ -351,10 +366,13 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
     const newPhotos: string[] = [];
     const newRotations: number[] = [];
     
+    // Guardar los archivos File para subirlos después
+    setPhotoFiles(prev => [...prev, ...filesToProcess]);
+    
     filesToProcess.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        newPhotos.push(reader.result as string);
+        newPhotos.push(reader.result as string); // Base64 para preview
         newRotations.push(Math.random() * 4 - 2); // Entre -2 y 2 grados
         
         // Cuando todas las fotos se hayan cargado
@@ -367,48 +385,143 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!activeMood) {
       alert("Por favor, selecciona un cristal de ánimo antes de sellar tu memoria.");
       return;
     }
     
-    if (editingEntryId) {
-      // Estamos editando una entrada existente
-      const existingEntry = entries.find(e => e.id === editingEntryId);
-      if (existingEntry) {
-        const updatedEntry: JournalEntry = {
-          ...existingEntry,
+    try {
+      // Obtener el usuario actual
+      const user = await supabaseService.getCurrentUser();
+      if (!user) {
+        alert("Debes estar autenticado para guardar entradas.");
+        return;
+      }
+
+      let photoUrls: string[] = [];
+
+      // Si hay fotos nuevas para subir (photoFiles), subirlas al bucket
+      if (photoFiles.length > 0) {
+        if (editingEntryId) {
+          // Editar: subir nuevas fotos usando el entryId existente
+          for (let i = 0; i < photoFiles.length; i++) {
+            const url = await supabaseService.uploadJournalPhoto(
+              user.id,
+              editingEntryId,
+              photoFiles[i],
+              i
+            );
+            photoUrls.push(url);
+          }
+        } else {
+          // Crear: primero crear la entrada para obtener el ID, luego subir fotos
+          const tempEntry: JournalEntry = {
+            id: Math.random().toString(36).substring(7),
+            date: entryDate,
+            mood: activeMood,
+            content: content,
+            isLocked: isLocked,
+            sentiment: 0
+          };
+          
+          // Crear entrada sin fotos primero
+          const createdEntry = await supabaseService.createJournalEntry(user.id, {
+            date: tempEntry.date,
+            mood: tempEntry.mood,
+            content: tempEntry.content,
+            isLocked: tempEntry.isLocked,
+            sentiment: tempEntry.sentiment
+          });
+
+          // Subir fotos usando el ID de la entrada creada
+          for (let i = 0; i < photoFiles.length; i++) {
+            const url = await supabaseService.uploadJournalPhoto(
+              user.id,
+              createdEntry.id,
+              photoFiles[i],
+              i
+            );
+            photoUrls.push(url);
+          }
+
+          // Actualizar la entrada con las URLs de las fotos
+          const updatedEntry = await supabaseService.updateJournalEntry(
+            user.id,
+            createdEntry.id,
+            { photos: photoUrls }
+          );
+
+          // Llamar al callback con la entrada completa
+          onAddEntry(updatedEntry);
+
+          // Limpiar el formulario
+          setActiveMood(null);
+          setContent('');
+          setPhotos([]);
+          setPhotoFiles([]);
+          setPhotoRotations([]);
+          setIsLocked(false);
+          setEntryDate(new Date().toISOString().split('T')[0]);
+          return;
+        }
+      }
+
+      // Si estamos editando
+      if (editingEntryId) {
+        const existingEntry = entries.find(e => e.id === editingEntryId);
+        if (existingEntry) {
+          // Obtener fotos existentes que ya son URLs (no base64)
+          const existingPhotos = existingEntry.photos || (existingEntry.photo ? [existingEntry.photo] : []);
+          const existingUrls = existingPhotos.filter((p: string) => p && p.startsWith('http'));
+          
+          // Combinar URLs existentes con nuevas fotos subidas
+          const allPhotoUrls = [...existingUrls, ...photoUrls];
+          
+          // Si hay fotos, usar el array; si no, usar undefined para que se maneje correctamente
+          const finalPhotos = allPhotoUrls.length > 0 ? allPhotoUrls : undefined;
+          
+          const updatedEntry: JournalEntry = {
+            ...existingEntry,
+            date: entryDate,
+            mood: activeMood,
+            content: content,
+            photos: finalPhotos,
+            isLocked: isLocked
+          };
+          onUpdateEntry(updatedEntry);
+        }
+        setEditingEntryId(null);
+      } else if (photoFiles.length === 0) {
+        // Crear entrada sin fotos
+        const newEntry: JournalEntry = {
+          id: Math.random().toString(36).substring(7),
           date: entryDate,
           mood: activeMood,
           content: content,
-          photos: photos.length > 0 ? photos : undefined,
-          isLocked: isLocked
+          isLocked: isLocked,
+          sentiment: 0
         };
-        onUpdateEntry(updatedEntry);
+        onAddEntry(newEntry);
       }
-      setEditingEntryId(null);
-    } else {
-      // Estamos creando una nueva entrada
-      const newEntry: JournalEntry = {
-        id: Math.random().toString(36).substring(7),
-        date: entryDate,
-        mood: activeMood,
-        content: content,
-        photos: photos.length > 0 ? photos : undefined,
-        isLocked: isLocked,
-        sentiment: 0
-      };
-      onAddEntry(newEntry);
-    }
 
-    // Limpiar el formulario
-    setActiveMood(null);
-    setContent('');
-    setPhotos([]);
-    setPhotoRotations([]);
-    setIsLocked(false);
-    setEntryDate(new Date().toISOString().split('T')[0]);
+      // Limpiar el formulario
+      setActiveMood(null);
+      setContent('');
+      setPhotos([]);
+      setPhotoFiles([]);
+      setPhotoRotations([]);
+      setIsLocked(false);
+      setEntryDate(new Date().toISOString().split('T')[0]);
+    } catch (error: any) {
+      console.error('Error guardando entrada:', error);
+      const errorMessage = error?.message || 'Error desconocido';
+      if (errorMessage.includes('column "photos"') || errorMessage.includes('does not exist')) {
+        alert('Error: La base de datos no tiene el campo "photos". Por favor, ejecuta el script SQL 19_add_photos_array_to_journal_entries.sql en Supabase.');
+      } else {
+        alert(`Error al guardar la entrada: ${errorMessage}. Por favor, intenta nuevamente.`);
+      }
+    }
   };
 
   const insertQuote = () => {
@@ -422,14 +535,19 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
     setContent(entry.content);
     // Manejar compatibilidad: si tiene photos usar photos, si no tiene photos pero tiene photo (antiguo), convertir a array
     if (entry.photos && entry.photos.length > 0) {
+      // Si son URLs (empiezan con http), usarlas directamente
+      // Si son base64 (antiguas), también usarlas para preview
       setPhotos(entry.photos);
       setPhotoRotations(entry.photos.map(() => Math.random() * 4 - 2));
+      setPhotoFiles([]); // No hay archivos nuevos, solo URLs existentes
     } else if (entry.photo) {
-      // Entrada antigua con solo una foto
+      // Entrada antigua con solo una foto (puede ser base64 o URL)
       setPhotos([entry.photo]);
       setPhotoRotations([Math.random() * 4 - 2]);
+      setPhotoFiles([]);
     } else {
       setPhotos([]);
+      setPhotoFiles([]);
       setPhotoRotations([]);
     }
     setIsLocked(entry.isLocked || false);
@@ -495,27 +613,51 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
               </div>
             ) : (
               <>
-                {((entry.photos && entry.photos.length > 0) || entry.photo) && (
-                  <div className="flex flex-wrap gap-4 justify-center mb-6">
-                    {(entry.photos || (entry.photo ? [entry.photo] : [])).map((photo, index) => (
-                      <div 
-                        key={index}
-                        className="w-full max-w-md p-4 bg-white"
-                        style={{ 
-                          transform: `rotate(${getEntryPhotoRotation(entry.id + index)}deg)`,
-                          boxShadow: '0 8px 24px rgba(0,0,0,0.2), 0 0 0 12px white, 0 0 0 14px rgba(248,200,220,0.2)'
-                        }}
-                      >
-                        <img src={photo} alt={`Memoria ${index + 1}`} className="w-full h-auto object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                )}
                 <div className="prose max-w-none">
                   <p className="text-xl text-[#4A233E] font-garamond leading-relaxed italic first-letter:text-4xl first-letter:font-marcellus first-letter:mr-2">
                     {entry.content}
                   </p>
                 </div>
+                {(() => {
+                  // Obtener todas las fotos disponibles
+                  const allPhotos = entry.photos || (entry.photo ? [entry.photo] : []);
+                  // Filtrar solo valores válidos
+                  const validPhotos = allPhotos.filter((photo: any) => {
+                    if (!photo) return false;
+                    if (typeof photo !== 'string') return false;
+                    return photo.trim() !== '';
+                  });
+                  
+                  if (validPhotos.length === 0) return null;
+                  
+                  return (
+                    <div className="flex flex-wrap gap-4 justify-center mt-6">
+                      {validPhotos.map((photo: string, index: number) => (
+                        <div 
+                          key={`${entry.id}-modal-photo-${index}`}
+                          className="w-full max-w-md p-4 bg-white"
+                          style={{ 
+                            transform: `rotate(${getEntryPhotoRotation(entry.id + index)}deg)`,
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.2), 0 0 0 12px white, 0 0 0 14px rgba(248,200,220,0.2)'
+                          }}
+                        >
+                          <img 
+                            src={photo} 
+                            alt={`Memoria ${index + 1}`} 
+                            className="w-full h-auto object-cover"
+                            onError={(e) => {
+                              console.error('Error cargando imagen en modal:', photo, 'Entry ID:', entry.id);
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                            onLoad={() => {
+                              console.log('Imagen cargada en modal:', photo.substring(0, 50) + '...');
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </>
             )}
           </div>
@@ -593,6 +735,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                       <button 
                         onClick={() => {
                           setPhotos(prev => prev.filter((_, i) => i !== index));
+                          setPhotoFiles(prev => prev.filter((_, i) => i !== index));
                           setPhotoRotations(prev => prev.filter((_, i) => i !== index));
                         }} 
                         className="absolute -top-2 -right-2 bg-red-400 text-white p-1 rounded-full shadow-lg z-10"
@@ -688,22 +831,6 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                          </button>
                        </div>
                     </div>
-                    {((entry.photos && entry.photos.length > 0) || entry.photo) && (
-                      <div className="mb-4 flex flex-wrap gap-2 justify-center">
-                        {(entry.photos || (entry.photo ? [entry.photo] : [])).map((photo, index) => (
-                          <div 
-                            key={index}
-                            className="w-32 h-32 p-2 bg-white"
-                            style={{ 
-                              transform: `rotate(${getEntryPhotoRotation(entry.id + index)}deg)`,
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
-                            }}
-                          >
-                            <img src={photo} alt={`Memoria ${index + 1}`} className="w-full h-full object-cover" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
                     {entry.isLocked && securityModuleActive ? (
                       <div className="text-center py-4">
                         <div className="inline-flex items-center gap-2 text-[#8B5E75] font-garamond italic text-sm">
@@ -714,6 +841,46 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                     ) : (
                       <p className="text-[17px] text-[#4A233E] font-garamond leading-relaxed italic opacity-90 first-letter:text-3xl first-letter:font-marcellus first-letter:mr-1 line-clamp-3">{entry.content}</p>
                     )}
+                    {(() => {
+                      // Obtener todas las fotos disponibles
+                      const allPhotos = entry.photos || (entry.photo ? [entry.photo] : []);
+                      // Filtrar solo valores válidos (no null, no undefined, no strings vacíos)
+                      const validPhotos = allPhotos.filter((photo: any) => {
+                        if (!photo) return false;
+                        if (typeof photo !== 'string') return false;
+                        return photo.trim() !== '';
+                      });
+                      
+                      if (validPhotos.length === 0) return null;
+                      
+                      return (
+                        <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                          {validPhotos.map((photo: string, index: number) => (
+                            <div 
+                              key={`${entry.id}-photo-${index}`}
+                              className="w-32 h-32 p-2 bg-white"
+                              style={{ 
+                                transform: `rotate(${getEntryPhotoRotation(entry.id + index)}deg)`,
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
+                              }}
+                            >
+                              <img 
+                                src={photo} 
+                                alt={`Memoria ${index + 1}`} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  console.error('Error cargando imagen:', photo, 'Entry ID:', entry.id);
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                                onLoad={() => {
+                                  console.log('Imagen cargada exitosamente:', photo.substring(0, 50) + '...');
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               }))}
@@ -761,6 +928,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                    setActiveMood(null);
                    setContent('');
                    setPhotos([]);
+                   setPhotoFiles([]);
                    setPhotoRotations([]);
                    setIsLocked(false);
                    setEntryDate(new Date().toISOString().split('T')[0]);
@@ -877,22 +1045,6 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                          {getIcon('trash', 'w-4 h-4')}
                        </button>
                     </div>
-                    {((entry.photos && entry.photos.length > 0) || entry.photo) && (
-                      <div className="mb-4 flex flex-wrap gap-2 justify-center">
-                        {(entry.photos || (entry.photo ? [entry.photo] : [])).map((photo, index) => (
-                          <div 
-                            key={index}
-                            className="w-32 h-32 p-2 bg-white"
-                            style={{ 
-                              transform: `rotate(${getEntryPhotoRotation(entry.id + index)}deg)`,
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
-                            }}
-                          >
-                            <img src={photo} alt={`Memoria ${index + 1}`} className="w-full h-full object-cover" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
                     {entry.isLocked && securityModuleActive ? (
                       <div className="text-center py-4">
                         <div className="inline-flex items-center gap-2 text-[#8B5E75] font-garamond italic text-sm">
@@ -902,6 +1054,30 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                       </div>
                     ) : (
                       <p className="text-[17px] text-[#4A233E] font-garamond leading-relaxed italic opacity-90 first-letter:text-3xl first-letter:font-marcellus first-letter:mr-1 line-clamp-3">{entry.content}</p>
+                    )}
+                    {((entry.photos && entry.photos.length > 0) || entry.photo) && (
+                      <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                        {(entry.photos || (entry.photo ? [entry.photo] : [])).filter((photo: string) => photo).map((photo: string, index: number) => (
+                          <div 
+                            key={index}
+                            className="w-32 h-32 p-2 bg-white"
+                            style={{ 
+                              transform: `rotate(${getEntryPhotoRotation(entry.id + index)}deg)`,
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
+                            }}
+                          >
+                            <img 
+                              src={photo} 
+                              alt={`Memoria ${index + 1}`} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                console.error('Error cargando imagen:', photo);
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 );
@@ -1140,19 +1316,6 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                         </button>
                       </div>
                     </div>
-                    {entry.photo && (
-                      <div className="mb-3 flex justify-center">
-                        <div 
-                          className="w-24 h-24 lg:w-32 lg:h-32 p-2 bg-white"
-                          style={{ 
-                            transform: `rotate(${entryPhotoRotation}deg)`,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
-                          }}
-                        >
-                          <img src={entry.photo} alt="Memoria" className="w-full h-full object-cover" />
-                        </div>
-                      </div>
-                    )}
                     {entry.isLocked && securityModuleActive ? (
                       <div className="text-center py-2">
                         <div className="inline-flex items-center gap-2 text-[#8B5E75] font-garamond italic text-xs">
@@ -1163,6 +1326,46 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                     ) : (
                       <p className="text-sm lg:text-base text-[#4A233E] font-garamond italic line-clamp-3 leading-relaxed opacity-80">{entry.content}</p>
                     )}
+                    {(() => {
+                      // Obtener todas las fotos disponibles
+                      const allPhotos = entry.photos || (entry.photo ? [entry.photo] : []);
+                      // Filtrar solo valores válidos
+                      const validPhotos = allPhotos.filter((photo: any) => {
+                        if (!photo) return false;
+                        if (typeof photo !== 'string') return false;
+                        return photo.trim() !== '';
+                      });
+                      
+                      if (validPhotos.length === 0) return null;
+                      
+                      return (
+                        <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                          {validPhotos.map((photo: string, index: number) => (
+                            <div 
+                              key={`${entry.id}-desktop-photo-${index}`}
+                              className="w-24 h-24 lg:w-32 lg:h-32 p-2 bg-white"
+                              style={{ 
+                                transform: `rotate(${getEntryPhotoRotation(entry.id + index)}deg)`,
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
+                              }}
+                            >
+                              <img 
+                                src={photo} 
+                                alt={`Memoria ${index + 1}`} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  console.error('Error cargando imagen en desktop:', photo, 'Entry ID:', entry.id);
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                                onLoad={() => {
+                                  console.log('Imagen cargada en desktop:', photo.substring(0, 50) + '...');
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               }))}

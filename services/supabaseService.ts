@@ -684,15 +684,32 @@ export class SupabaseService {
       }
       if (!data) return [];
       
-      return data.map((row: any) => ({
-        id: row.id,
-        date: row.date,
-        mood: row.mood,
-        content: row.content,
-        photo: row.photo,
-        isLocked: row.is_locked,
-        sentiment: row.sentiment ? parseFloat(row.sentiment) : undefined,
-      }));
+      return data.map((row: any) => {
+        // Manejar photos: si es un array con elementos, usarlo; si es null/undefined pero hay photo, convertir a array
+        let photos: string[] | undefined = undefined;
+        if (row.photos && Array.isArray(row.photos) && row.photos.length > 0) {
+          // Filtrar valores null/undefined del array
+          photos = row.photos.filter((p: any) => p && p.trim && p.trim() !== '');
+        } else if (row.photo) {
+          photos = [row.photo];
+        }
+        
+        // Debug: log para ver qué datos se están recibiendo
+        if (photos && photos.length > 0) {
+          console.log('Entry photos loaded:', row.id, photos);
+        }
+        
+        return {
+          id: row.id,
+          date: row.date,
+          mood: row.mood,
+          content: row.content,
+          photo: row.photo, // Mantener para compatibilidad
+          photos: photos, // Array de URLs
+          isLocked: row.is_locked,
+          sentiment: row.sentiment ? parseFloat(row.sentiment) : undefined,
+        };
+      });
     } catch (error: any) {
       if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
         return [];
@@ -706,17 +723,22 @@ export class SupabaseService {
   }
 
   async createJournalEntry(userId: string, entry: Omit<JournalEntry, 'id'>): Promise<JournalEntry> {
+    const insertData: any = {
+      date: entry.date,
+      mood: entry.mood,
+      content: entry.content,
+      is_locked: entry.isLocked,
+      user_id: userId,
+    };
+    
+    // Solo incluir campos opcionales si tienen valor
+    if (entry.photo !== undefined) insertData.photo = entry.photo;
+    if (entry.photos !== undefined && entry.photos.length > 0) insertData.photos = entry.photos;
+    if (entry.sentiment !== undefined) insertData.sentiment = entry.sentiment;
+
     const { data, error } = await supabase
       .from('journal_entries')
-      .insert({
-        date: entry.date,
-        mood: entry.mood,
-        content: entry.content,
-        photo: entry.photo,
-        is_locked: entry.isLocked,
-        sentiment: entry.sentiment,
-        user_id: userId,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -727,6 +749,7 @@ export class SupabaseService {
       mood: data.mood,
       content: data.content,
       photo: data.photo,
+      photos: data.photos || (data.photo ? [data.photo] : undefined),
       isLocked: data.is_locked,
       sentiment: data.sentiment ? parseFloat(data.sentiment) : undefined,
     };
@@ -737,9 +760,17 @@ export class SupabaseService {
     if (updates.date !== undefined) dbUpdates.date = updates.date;
     if (updates.mood !== undefined) dbUpdates.mood = updates.mood;
     if (updates.content !== undefined) dbUpdates.content = updates.content;
-    if (updates.photo !== undefined) dbUpdates.photo = updates.photo;
     if (updates.isLocked !== undefined) dbUpdates.is_locked = updates.isLocked;
     if (updates.sentiment !== undefined) dbUpdates.sentiment = updates.sentiment;
+    
+    // Manejar photo y photos - si photos está definido, usar photos; si photo está definido, usar photo
+    if (updates.photos !== undefined) {
+      // Si photos es un array vacío o undefined, establecerlo como null
+      dbUpdates.photos = updates.photos && updates.photos.length > 0 ? updates.photos : null;
+    }
+    if (updates.photo !== undefined) {
+      dbUpdates.photo = updates.photo;
+    }
 
     const { data, error } = await supabase
       .from('journal_entries')
@@ -756,6 +787,7 @@ export class SupabaseService {
       mood: data.mood,
       content: data.content,
       photo: data.photo,
+      photos: data.photos || (data.photo ? [data.photo] : undefined),
       isLocked: data.is_locked,
       sentiment: data.sentiment ? parseFloat(data.sentiment) : undefined,
     };
@@ -1101,6 +1133,29 @@ export class SupabaseService {
     const { data: urlData } = supabase.storage
       .from('avatars')
       .getPublicUrl(`${userId}/${fileName}`);
+    
+    return urlData.publicUrl;
+  }
+
+  async uploadJournalPhoto(userId: string, entryId: string, file: File, photoIndex: number): Promise<string> {
+    // Subir foto del diario al bucket 'journal-photos'
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const fileName = `${entryId}_${photoIndex}.${fileExt}`;
+    const path = `${userId}/${entryId}/${fileName}`;
+    
+    const { data, error } = await supabase.storage
+      .from('journal-photos')
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+
+    if (error) throw error;
+    
+    // Obtener URL pública
+    const { data: urlData } = supabase.storage
+      .from('journal-photos')
+      .getPublicUrl(path);
     
     return urlData.publicUrl;
   }
