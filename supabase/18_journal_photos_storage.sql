@@ -6,7 +6,14 @@
 -- Crear el bucket 'journal-photos' si no existe
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('journal-photos', 'journal-photos', true)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Eliminar políticas existentes si existen
+DROP POLICY IF EXISTS "Users can upload own journal photos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can view own journal photos" ON storage.objects;
+DROP POLICY IF EXISTS "Public can view journal photos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own journal photos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own journal photos" ON storage.objects;
 
 -- Política: Los usuarios pueden subir sus propias fotos del diario
 CREATE POLICY "Users can upload own journal photos"
@@ -17,14 +24,11 @@ CREATE POLICY "Users can upload own journal photos"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
--- Política: Los usuarios pueden ver sus propias fotos del diario
-CREATE POLICY "Users can view own journal photos"
+-- Política: Permitir acceso público a las fotos del diario (bucket público)
+CREATE POLICY "Public can view journal photos"
   ON storage.objects
   FOR SELECT
-  USING (
-    bucket_id = 'journal-photos' AND
-    auth.uid()::text = (storage.foldername(name))[1]
-  );
+  USING (bucket_id = 'journal-photos');
 
 -- Política: Los usuarios pueden actualizar sus propias fotos del diario
 CREATE POLICY "Users can update own journal photos"
