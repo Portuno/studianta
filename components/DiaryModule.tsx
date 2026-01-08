@@ -560,7 +560,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                 </div>
               )}
             </div>
-          ) : (
+              ) : (
             <div 
               className="h-full overflow-y-auto overflow-x-hidden space-y-6 pb-20" 
               style={{ 
@@ -626,12 +626,23 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                              <p className="text-[9px] text-[#8B5E75] uppercase font-black tracking-[0.2em] opacity-60">{entry.mood}</p>
                           </div>
                        </div>
-                       <button 
-                         onClick={(e) => handleDeleteClick(entry.id, e)} 
-                         className="text-[#8B5E75]/40 hover:text-red-400 transition-colors p-2 relative z-30"
-                       >
-                         {getIcon('trash', 'w-4 h-4')}
-                       </button>
+                       <div className="flex gap-2 items-center">
+                         <button 
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             handleEdit(entry);
+                           }} 
+                           className="px-3 py-1.5 bg-[#D4AF37] text-white rounded-lg text-[10px] font-cinzel font-black uppercase tracking-wider shadow-md hover:bg-[#C49F2F] transition-colors relative z-30"
+                         >
+                           EDITAR
+                         </button>
+                         <button 
+                           onClick={(e) => handleDeleteClick(entry.id, e)} 
+                           className="text-[#8B5E75]/40 hover:text-red-400 transition-colors p-2 relative z-30"
+                         >
+                           {getIcon('trash', 'w-4 h-4')}
+                         </button>
+                       </div>
                     </div>
                     {entry.photo && (
                       <div className="mb-4 flex justify-center">
@@ -679,22 +690,40 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
            </div>
            <div className="flex gap-3 items-center pointer-events-auto">
              <button 
-               onClick={() => setShowStories(!showStories)}
+               onClick={() => {
+                 setShowStories(!showStories);
+                 // Limpiar estado de edición al cambiar de vista
+                 if (editingEntryId) {
+                   setEditingEntryId(null);
+                   setActiveMood(null);
+                   setContent('');
+                   setPhoto(null);
+                   setIsLocked(false);
+                   setEntryDate(new Date().toISOString().split('T')[0]);
+                 }
+               }}
                className="px-4 py-2.5 bg-white border-2 border-[#D4AF37] text-[#4A233E] rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all font-cinzel text-[10px] font-black uppercase tracking-widest"
              >
                {showStories ? 'Escribir' : 'Ver Historias'}
              </button>
              {!showStories && (
-               <button 
-                 onClick={handleSave}
-                 className="w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(227,91,143,0.5),inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)] active:scale-95 transition-all relative"
-                 style={{
-                   background: 'linear-gradient(135deg, #E35B8F 0%, #C94A7A 100%)',
-                   filter: 'drop-shadow(0 4px 8px rgba(212,175,55,0.4))'
-                 }}
-               >
-                 <StudiantaSeal className="w-10 h-10" />
-               </button>
+               <div className="flex flex-col items-center gap-1">
+                 <button 
+                   onClick={handleSave}
+                   className="w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(227,91,143,0.5),inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)] active:scale-95 transition-all relative"
+                   style={{
+                     background: 'linear-gradient(135deg, #E35B8F 0%, #C94A7A 100%)',
+                     filter: 'drop-shadow(0 4px 8px rgba(212,175,55,0.4))'
+                   }}
+                 >
+                   <StudiantaSeal className="w-10 h-10" />
+                 </button>
+                 {editingEntryId && (
+                   <span className="text-[8px] font-cinzel font-black text-[#D4AF37] uppercase tracking-wider">
+                     Editando
+                   </span>
+                 )}
+               </div>
              )}
            </div>
         </div>
@@ -1010,15 +1039,26 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                             <p className="text-[8px] text-[#8B5E75] uppercase font-black tracking-widest opacity-60">{entry.mood}</p>
                          </div>
                       </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteClick(entry.id, e);
-                        }} 
-                        className="text-[#8B5E75]/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-2 relative z-30"
-                      >
-                        {getIcon('trash', 'w-3 h-3')}
-                      </button>
+                      <div className="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-all">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(entry);
+                          }} 
+                          className="px-2 py-1 bg-[#D4AF37] text-white rounded text-[9px] font-cinzel font-black uppercase tracking-wider shadow-md hover:bg-[#C49F2F] transition-colors relative z-30"
+                        >
+                          EDITAR
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(entry.id, e);
+                          }} 
+                          className="text-[#8B5E75]/40 hover:text-red-500 transition-colors p-2 relative z-30"
+                        >
+                          {getIcon('trash', 'w-3 h-3')}
+                        </button>
+                      </div>
                     </div>
                     {entry.photo && (
                       <div className="mb-3 flex justify-center">
