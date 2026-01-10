@@ -173,14 +173,38 @@ const Dashboard: React.FC<DashboardProps> = ({
       return;
     }
 
-    // Reordenar módulos
-    const newOrder = [...moduleOrder];
-    const [removed] = newOrder.splice(draggedIndex, 1);
-    newOrder.splice(targetIndex, 0, removed);
-    setModuleOrder(newOrder);
+    // Separar módulos activos e inactivos
+    const pendingModules = moduleOrder.filter(moduleId => {
+      const module = modules.find(m => m.id === moduleId);
+      return module && !module.active;
+    });
+    
+    const activeModules = moduleOrder.filter(moduleId => {
+      const module = modules.find(m => m.id === moduleId);
+      return module && module.active;
+    });
+    
+    // Calcular índices en el array de módulos activos
+    const draggedIndexInActive = activeModules.indexOf(draggedModule);
+    const targetIndexInActive = targetIndex - pendingModules.length;
+    
+    // Solo reordenar si ambos índices son válidos y diferentes
+    if (draggedIndexInActive !== -1 && targetIndexInActive >= 0 && targetIndexInActive < activeModules.length && draggedIndexInActive !== targetIndexInActive) {
+      // Crear nuevo orden: remover el módulo arrastrado
+      const newActiveModules = [...activeModules];
+      const [removedModule] = newActiveModules.splice(draggedIndexInActive, 1);
+      
+      // Insertar en la nueva posición
+      newActiveModules.splice(targetIndexInActive, 0, removedModule);
+      
+      // Combinar: pendientes primero, luego activos reordenados
+      const newOrder = [...pendingModules, ...newActiveModules];
+      
+      setModuleOrder(newOrder);
 
-    // Guardar todas las posiciones de una vez
-    saveAllModulePositions(newOrder);
+      // Guardar todas las posiciones de una vez
+      saveAllModulePositions(newOrder);
+    }
 
     setDragOverIndex(null);
     
@@ -247,6 +271,10 @@ const Dashboard: React.FC<DashboardProps> = ({
     
     if (element) {
       element.style.transition = 'none';
+      // Guardar la posición inicial del elemento
+      const rect = element.getBoundingClientRect();
+      element.dataset.initialX = rect.left.toString();
+      element.dataset.initialY = rect.top.toString();
     }
 
     // Capturar valores actuales para los closures
@@ -254,6 +282,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     const currentModuleId = moduleId;
     const currentElement = element;
     let isCurrentlyDragging = false;
+    const currentOrder = [...moduleOrder]; // Capturar el orden actual
 
     // Función de limpieza
     const cleanup = () => {
@@ -281,20 +310,26 @@ const Dashboard: React.FC<DashboardProps> = ({
       const deltaY = touch.clientY - currentStartPos.y;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
       
-      // Solo activar drag si hay un movimiento significativo (más de 10px)
-      if (distance > 10) {
+      // Solo activar drag si hay un movimiento significativo (más de 8px)
+      if (distance > 8) {
         if (!isCurrentlyDragging) {
           isCurrentlyDragging = true;
           setIsDragging(true);
           e.preventDefault();
+          e.stopPropagation();
+          
+          // Prevenir scroll del body mientras se arrastra
+          document.body.style.overflow = 'hidden';
           
           if (currentElement) {
-            currentElement.style.opacity = '0.6';
-            currentElement.style.transform = 'scale(1.05)';
+            currentElement.style.opacity = '0.7';
+            currentElement.style.transform = 'scale(1.08)';
             currentElement.style.zIndex = '1000';
+            currentElement.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.3)';
           }
         } else {
           e.preventDefault();
+          e.stopPropagation();
         }
         
         setTouchCurrentPos({ x: touch.clientX, y: touch.clientY });
@@ -303,17 +338,41 @@ const Dashboard: React.FC<DashboardProps> = ({
           currentElement.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(1.05)`;
         }
         
-        // Encontrar el elemento sobre el que estamos
+        // Encontrar el elemento sobre el que estamos (similar a desktop)
+        if (currentElement) {
+          currentElement.style.pointerEvents = 'none';
+        }
+        
         const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        if (currentElement) {
+          currentElement.style.pointerEvents = '';
+        }
+        
+        // Limpiar estilos anteriores
+        document.querySelectorAll('[data-module-id]').forEach((el) => {
+          if (el instanceof HTMLElement && el !== currentElement) {
+            el.style.borderColor = '';
+            el.style.borderWidth = '';
+            el.style.backgroundColor = '';
+          }
+        });
+        
         if (elementBelow) {
           const cardElement = elementBelow.closest('[data-module-id]') as HTMLElement;
           if (cardElement && cardElement.dataset.moduleId && cardElement !== currentElement) {
             const targetModuleId = cardElement.dataset.moduleId;
-            const targetIndex = orderedModules.findIndex(m => m.id === targetModuleId);
+            const targetIndex = currentOrder.findIndex(id => id === targetModuleId);
+            
             if (targetIndex !== -1 && targetModuleId !== currentModuleId) {
-              setDragOverIndex(targetIndex);
-              cardElement.style.borderColor = 'rgba(212, 175, 55, 0.6)';
-              cardElement.style.backgroundColor = 'rgba(212, 175, 55, 0.1)';
+              const targetModule = modules.find(m => m.id === targetModuleId);
+              // Solo mostrar feedback si es un módulo activo
+              if (targetModule?.active) {
+                setDragOverIndex(targetIndex);
+                cardElement.style.borderColor = 'rgba(212, 175, 55, 0.8)';
+                cardElement.style.borderWidth = '3px';
+                cardElement.style.backgroundColor = 'rgba(212, 175, 55, 0.15)';
+              }
             }
           }
         }
@@ -327,12 +386,15 @@ const Dashboard: React.FC<DashboardProps> = ({
         return;
       }
 
+      // Restaurar scroll del body
+      document.body.style.overflow = '';
+
       const touch = e.changedTouches[0];
       const deltaX = touch.clientX - currentStartPos.x;
       const deltaY = touch.clientY - currentStartPos.y;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
       
-      if (isCurrentlyDragging && distance > 15) {
+      if (isCurrentlyDragging && distance > 12) {
         // Limpiar estilos de todos los elementos primero
         document.querySelectorAll('[data-module-id]').forEach((el) => {
           if (el instanceof HTMLElement && el !== currentElement) {
@@ -347,7 +409,14 @@ const Dashboard: React.FC<DashboardProps> = ({
           currentElement.style.opacity = '0.3';
         }
 
-        // Encontrar el módulo objetivo basándose en la posición del touch
+        // Calcular la posición del grid basándose en la posición del touch
+        // No necesitamos buscar un módulo objetivo específico, solo calcular la posición del grid
+
+        // Encontrar el módulo objetivo (similar a desktop)
+        if (currentElement) {
+          currentElement.style.pointerEvents = 'none';
+        }
+        
         const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
         let targetModuleId: string | null = null;
         
@@ -357,115 +426,97 @@ const Dashboard: React.FC<DashboardProps> = ({
             targetModuleId = cardElement.dataset.moduleId;
           }
         }
-
-        // Restaurar el elemento arrastrado
+        
         if (currentElement) {
           currentElement.style.pointerEvents = '';
-          currentElement.style.opacity = '';
         }
-
-        // Si no encontramos un módulo objetivo directamente, buscar el más cercano basándose en la posición
-        if (!targetModuleId) {
-          // Obtener todos los elementos de módulos activos
-          const allModuleElements = Array.from(document.querySelectorAll('[data-module-id]')) as HTMLElement[];
-          const activeModuleElements = allModuleElements.filter(el => {
-            const moduleId = el.dataset.moduleId;
-            if (!moduleId || el === currentElement) return false;
-            const module = modules.find(m => m.id === moduleId);
-            return module?.active && moduleId !== currentModuleId;
-          });
-
-          // Encontrar el elemento más cercano al punto de release
-          let closestElement: HTMLElement | null = null;
-          let minDistance = Infinity;
-
-          activeModuleElements.forEach(el => {
-            const rect = el.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const distance = Math.sqrt(
-              Math.pow(touch.clientX - centerX, 2) + 
-              Math.pow(touch.clientY - centerY, 2)
-            );
-            if (distance < minDistance) {
-              minDistance = distance;
-              closestElement = el;
+        
+        // Reordenar módulos (igual que desktop)
+        const draggedIndex = currentOrder.indexOf(currentModuleId);
+        
+        if (draggedIndex === -1) {
+          cleanup();
+          return;
+        }
+        
+        let targetIndex = draggedIndex; // Por defecto, mantener la misma posición
+        
+        if (targetModuleId) {
+          // Si hay un módulo objetivo, usar su índice
+          const foundIndex = currentOrder.indexOf(targetModuleId);
+          if (foundIndex !== -1) {
+            const targetModule = modules.find(m => m.id === targetModuleId);
+            // Solo reordenar si el objetivo es un módulo activo
+            if (targetModule?.active) {
+              targetIndex = foundIndex;
             }
-          });
-
-          // Si encontramos un elemento cercano (dentro de 200px), usarlo como objetivo
-          if (closestElement && minDistance < 200 && closestElement.dataset.moduleId) {
-            targetModuleId = closestElement.dataset.moduleId;
           }
-        }
-
-        // Reordenar y guardar posiciones
-        setModuleOrder((prevOrder) => {
-          const draggedIndex = prevOrder.indexOf(currentModuleId);
-          let finalOrder = prevOrder;
+        } else {
+          // Si no hay módulo objetivo, calcular la posición basándose en el grid
+          const gridContainer = currentElement?.closest('[data-grid-container="true"]') as HTMLElement || 
+                                currentElement?.closest('.grid') as HTMLElement;
           
-          // Si encontramos un módulo objetivo válido, reordenar
-          if (targetModuleId) {
-            const targetIndex = prevOrder.indexOf(targetModuleId);
+          if (gridContainer) {
+            const gridRect = gridContainer.getBoundingClientRect();
+            const relativeX = touch.clientX - gridRect.left;
+            const relativeY = touch.clientY - gridRect.top;
             
-            if (draggedIndex !== -1 && targetIndex !== -1 && draggedIndex !== targetIndex) {
-              const newOrder = [...prevOrder];
-              const [removed] = newOrder.splice(draggedIndex, 1);
-              newOrder.splice(targetIndex, 0, removed);
-              finalOrder = newOrder;
-            }
+            const GRID_COLS = 3;
+            const computedStyle = window.getComputedStyle(gridContainer);
+            const paddingLeft = parseFloat(computedStyle.paddingLeft) || 12;
+            const paddingTop = parseFloat(computedStyle.paddingTop) || 0;
+            const gap = parseFloat(computedStyle.gap) || 12;
+            
+            const availableWidth = gridRect.width - paddingLeft - (parseFloat(computedStyle.paddingRight) || 12);
+            const cellWidth = (availableWidth - (gap * (GRID_COLS - 1))) / GRID_COLS;
+            const cellHeight = cellWidth;
+            
+            const adjustedX = relativeX - paddingLeft;
+            const adjustedY = relativeY - paddingTop;
+            const col = Math.max(0, Math.min(GRID_COLS - 1, Math.floor(adjustedX / (cellWidth + gap))));
+            const row = Math.max(0, Math.floor(adjustedY / (cellHeight + gap)));
+            
+            // Calcular el índice objetivo
+            const pendingCount = currentOrder.filter(moduleId => {
+              const module = modules.find(m => m.id === moduleId);
+              return module && !module.active;
+            }).length;
+            
+            const calculatedIndex = pendingCount + (row * GRID_COLS + col);
+            const maxIndex = currentOrder.length - 1;
+            targetIndex = Math.max(pendingCount, Math.min(maxIndex, calculatedIndex));
           }
-          // Si no encontramos un objetivo específico, intentar calcular la posición basándose en el grid
-          else if (!targetModuleId && draggedIndex !== -1) {
-            const gridContainer = currentElement?.closest('.grid') as HTMLElement;
-            if (gridContainer) {
-              const gridRect = gridContainer.getBoundingClientRect();
-              const relativeX = touch.clientX - gridRect.left;
-              const relativeY = touch.clientY - gridRect.top;
-              
-              // Calcular posición en el grid (3 columnas)
-              const GRID_COLS = 3;
-              const cardWidth = gridRect.width / GRID_COLS;
-              const col = Math.max(0, Math.min(GRID_COLS - 1, Math.floor(relativeX / cardWidth)));
-              const row = Math.floor(relativeY / cardWidth);
-              
-              // Calcular el índice objetivo basándose en la posición del grid
-              const pendingCount = prevOrder.filter(moduleId => {
-                const module = modules.find(m => m.id === moduleId);
-                return module && !module.active;
-              }).length;
-              
-              const activeCount = prevOrder.filter(moduleId => {
-                const module = modules.find(m => m.id === moduleId);
-                return module?.active;
-              }).length;
-              
-              const calculatedIndex = Math.min(pendingCount + row * GRID_COLS + col, pendingCount + activeCount - 1);
-              
-              if (calculatedIndex >= 0 && calculatedIndex !== draggedIndex) {
-                const newOrder = [...prevOrder];
-                const [removed] = newOrder.splice(draggedIndex, 1);
-                newOrder.splice(calculatedIndex, 0, removed);
-                finalOrder = newOrder;
-              }
-            }
-          }
+        }
+        
+        // Solo reordenar si la posición cambió
+        if (targetIndex !== draggedIndex) {
+          const newOrder = [...currentOrder];
+          const [removed] = newOrder.splice(draggedIndex, 1);
+          newOrder.splice(targetIndex, 0, removed);
           
-          // Guardar todas las posiciones de una vez con el orden final
-          if (user && finalOrder !== prevOrder) {
-            saveAllModulePositions(finalOrder);
-          }
+          // Actualizar el estado con el nuevo orden
+          setModuleOrder(newOrder);
           
-          return finalOrder;
-        });
+          // Guardar todas las posiciones de una vez
+          if (user) {
+            saveAllModulePositions(newOrder);
+          }
+        }
+        
+        cleanup();
       } else {
-        // Si no hubo arrastre significativo, limpiar estilos
+        // Si no hubo arrastre significativo, limpiar estilos y resetear estado
         document.querySelectorAll('[data-module-id]').forEach((el) => {
           if (el instanceof HTMLElement) {
             el.style.borderColor = '';
+            el.style.borderWidth = '';
             el.style.backgroundColor = '';
           }
         });
+        // Resetear el estado de arrastre
+        setDraggedModule(null);
+        setDragOverIndex(null);
+        setIsDragging(false);
       }
       
       cleanup();
@@ -480,15 +531,24 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const resetTouchState = () => {
+    // Restaurar scroll del body si estaba bloqueado
+    document.body.style.overflow = '';
+    
     if (draggedElement) {
       draggedElement.style.opacity = '';
       draggedElement.style.transform = '';
       draggedElement.style.zIndex = '';
       draggedElement.style.transition = '';
+      draggedElement.style.pointerEvents = '';
+      draggedElement.style.boxShadow = '';
+      // Limpiar datos temporales
+      delete draggedElement.dataset.initialX;
+      delete draggedElement.dataset.initialY;
     }
     document.querySelectorAll('[data-module-id]').forEach((el) => {
       if (el instanceof HTMLElement) {
         el.style.borderColor = '';
+        el.style.borderWidth = '';
         el.style.backgroundColor = '';
       }
     });
@@ -557,7 +617,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </p>
               )}
             </div>
-            <div className="grid grid-cols-3 gap-3 sm:gap-4 pb-12">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4 pb-12" data-grid-container="true">
               {orderedModules.map((mod, index) => {
                 const isActive = mod.active;
                 const isPending = !isActive;

@@ -719,15 +719,27 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1">
               <div className="flex justify-between items-center mb-2 px-1">
-                <span className="text-[9px] font-black uppercase tracking-widest text-[#8B5E75]">Estado Vital</span>
-                <span className="text-[9px] font-black text-[#E35B8F] uppercase tracking-widest">{activeMood || ''}</span>
+                <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-500 ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>Estado Vital</span>
+                <span className={`text-[9px] font-black uppercase tracking-widest transition-colors duration-500 ${
+                  isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
+                }`}>{activeMood || ''}</span>
               </div>
               <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
                 {MOODS.map(mood => (
                   <button
                     key={mood.type}
                     onClick={() => setActiveMood(mood.type)}
-                    className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${activeMood === mood.type ? 'bg-[#E35B8F] text-white border-[#E35B8F] shadow-md scale-105' : 'bg-white/60 text-[#8B5E75] border-[#F8C8DC]'}`}
+                    className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all border ${
+                      activeMood === mood.type 
+                        ? isNightMode
+                          ? 'bg-[#C77DFF] text-white border-[#C77DFF] shadow-md scale-105'
+                          : 'bg-[#E35B8F] text-white border-[#E35B8F] shadow-md scale-105'
+                        : isNightMode
+                          ? 'bg-[rgba(48,43,79,0.6)] text-[#7A748E] border-[#A68A56]/40'
+                          : 'bg-white/60 text-[#8B5E75] border-[#F8C8DC]'
+                    }`}
                   >
                     <MoodIcon type={mood.type} className="w-5 h-5" />
                   </button>
@@ -736,28 +748,40 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
             </div>
 
             <div className="flex-none w-32">
-              <span className="text-[9px] font-black uppercase tracking-widest text-[#8B5E75] mb-2 block px-1">Sello Cronológico</span>
-              <div className="relative border-[0.5px] border-[#D4AF37] rounded-xl overflow-hidden shadow-inner bg-white/60">
+              <span className={`text-[9px] font-black uppercase tracking-widest mb-2 block px-1 transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>Sello Cronológico</span>
+              <div className={`relative border-[0.5px] rounded-xl overflow-hidden shadow-inner transition-colors duration-500 ${
+                isNightMode 
+                  ? 'border-[#A68A56] bg-[rgba(48,43,79,0.6)]' 
+                  : 'border-[#D4AF37] bg-white/60'
+              }`}>
                 <input 
                   type="date" 
                   value={entryDate}
                   onChange={(e) => setEntryDate(e.target.value)}
-                  className="w-full bg-transparent px-3 py-2 text-[10px] font-garamond font-bold text-[#4A233E] outline-none"
+                  className={`w-full bg-transparent px-3 py-2 text-[10px] font-garamond font-bold outline-none transition-colors duration-500 ${
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  }`}
                 />
               </div>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 min-h-0 overflow-hidden p-6 relative bg-white/20">
+        <main className={`flex-1 min-h-0 overflow-hidden p-6 relative transition-colors duration-500 ${
+          isNightMode ? 'bg-[rgba(26,26,46,0.3)]' : 'bg-white/20'
+        }`}>
           {!showStories ? (
             <div className="relative h-full flex flex-col">
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder={randomPrompt}
-                className="w-full h-full bg-transparent text-xl font-garamond leading-relaxed text-[#4A233E] placeholder:italic placeholder:opacity-20 focus:outline-none resize-none overflow-y-auto"
-                style={{
+                className={`w-full h-full bg-transparent text-xl font-garamond leading-relaxed placeholder:italic placeholder:opacity-20 focus:outline-none resize-none overflow-y-auto transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                }`}
+                style={isNightMode ? {} : {
                   backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
                   backgroundColor: '#FFFEF7'
                 }}
@@ -767,10 +791,14 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   {photos.map((photo, index) => (
                     <div 
                       key={index}
-                      className="w-36 h-36 p-2 bg-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] relative"
+                      className={`w-36 h-36 p-2 relative transition-colors duration-500 ${
+                        isNightMode ? 'bg-[rgba(48,43,79,0.8)]' : 'bg-white'
+                      }`}
                       style={{ 
                         transform: `rotate(${photoRotations[index] || 0}deg)`,
-                        boxShadow: '0 8px 16px rgba(0,0,0,0.15), 0 0 0 8px white, 0 0 0 10px rgba(248,200,220,0.3)'
+                        boxShadow: isNightMode 
+                          ? '0 8px 16px rgba(0,0,0,0.4), 0 0 0 8px rgba(48,43,79,0.8), 0 0 0 10px rgba(166,138,86,0.3)'
+                          : '0 8px 16px rgba(0,0,0,0.15), 0 0 0 8px white, 0 0 0 10px rgba(248,200,220,0.3)'
                       }}
                     >
                       <img src={photo} alt={`Memoria ${index + 1}`} className="w-full h-full object-cover" />
@@ -791,8 +819,12 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
             </div>
               ) : (
             <div 
-              className="h-full overflow-y-auto overflow-x-hidden space-y-6 pb-20" 
-              style={{ 
+              className="h-full overflow-y-auto overflow-x-hidden space-y-6 pb-20 transition-colors duration-500" 
+              style={isNightMode ? {
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'auto',
+                touchAction: 'pan-y'
+              } : {
                 backgroundImage: 'url("https://www.transparenttextures.com/patterns/old-map.png")', 
                 backgroundColor: '#FFF9FB', 
                 WebkitOverflowScrolling: 'touch',
@@ -801,16 +833,26 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
               }}
             >
               {/* Buscador */}
-              <div className="sticky top-0 z-10 mb-4 bg-white/90 backdrop-blur-sm rounded-2xl p-3 border border-[#D4AF37]/20 shadow-sm">
+              <div className={`sticky top-0 z-10 mb-4 backdrop-blur-sm rounded-2xl p-3 border shadow-sm transition-colors duration-500 ${
+                isNightMode 
+                  ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40' 
+                  : 'bg-white/90 border-[#D4AF37]/20'
+              }`}>
                 <div className="relative">
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar en el cuaderno..."
-                    className="w-full bg-transparent px-4 py-2 pr-10 text-sm font-garamond text-[#4A233E] placeholder:text-[#8B5E75]/50 focus:outline-none border border-[#F8C8DC] rounded-xl"
+                    className={`w-full bg-transparent px-4 py-2 pr-10 text-sm font-garamond focus:outline-none border rounded-xl transition-colors duration-500 ${
+                      isNightMode 
+                        ? 'text-[#E0E1DD] placeholder:text-[#7A748E]/50 border-[#A68A56]/40' 
+                        : 'text-[#4A233E] placeholder:text-[#8B5E75]/50 border-[#F8C8DC]'
+                    }`}
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8B5E75]/50">
+                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]/50' : 'text-[#8B5E75]/50'
+                  }`}>
                     {getIcon('search', 'w-4 h-4') || (
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -819,14 +861,18 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   </div>
                 </div>
                 {searchQuery && (
-                  <p className="text-xs text-[#8B5E75] mt-2 px-1">
+                  <p className={`text-xs mt-2 px-1 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>
                     {filteredEntries.length} {filteredEntries.length === 1 ? 'entrada encontrada' : 'entradas encontradas'}
                   </p>
                 )}
               </div>
               {filteredEntries.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-[#8B5E75] font-garamond italic">No se encontraron entradas que coincidan con tu búsqueda.</p>
+                  <p className={`font-garamond italic transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>No se encontraron entradas que coincidan con tu búsqueda.</p>
                 </div>
               ) : (
                 filteredEntries.map(entry => {
@@ -836,23 +882,37 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   <div 
                     key={entry.id} 
                     onClick={() => handleViewEntry(entry)}
-                    className="relative p-7 border-2 border-[#D4AF37]/30 shadow-sm overflow-hidden bg-white/80 backdrop-blur-sm cursor-pointer hover:shadow-md transition-all"
+                    className={`relative p-7 border-2 shadow-sm overflow-hidden backdrop-blur-sm cursor-pointer hover:shadow-md transition-all ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40' 
+                        : 'bg-white/80 border-[#D4AF37]/30'
+                    }`}
                     style={{
-                      borderImage: 'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(212,175,55,0.3) 8px, rgba(212,175,55,0.3) 16px) 1',
+                      borderImage: isNightMode 
+                        ? 'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(166,138,86,0.4) 8px, rgba(166,138,86,0.4) 16px) 1'
+                        : 'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(212,175,55,0.3) 8px, rgba(212,175,55,0.3) 16px) 1',
                       borderStyle: 'solid',
                       clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
                     }}
                   >
                     <div className="flex justify-between items-start mb-4 relative z-20">
                        <div className="flex items-center gap-4">
-                          <div className="p-2.5 rounded-xl bg-[#FFF0F5] text-[#D4AF37] shadow-inner border border-[#F8C8DC]">
+                          <div className={`p-2.5 rounded-xl shadow-inner border transition-colors duration-500 ${
+                            isNightMode 
+                              ? 'bg-[rgba(199,125,255,0.2)] text-[#A68A56] border-[#A68A56]/40' 
+                              : 'bg-[#FFF0F5] text-[#D4AF37] border-[#F8C8DC]'
+                          }`}>
                             {mood && <MoodIcon type={mood.type} className="w-4 h-4" />}
                           </div>
                           <div>
-                             <p className="text-[12px] font-serif font-bold text-[#4A233E] tracking-wide italic" style={{ fontFamily: 'Georgia, serif' }}>
+                             <p className={`text-[12px] font-serif font-bold tracking-wide italic transition-colors duration-500 ${
+                               isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                             }`} style={{ fontFamily: 'Georgia, serif' }}>
                                {new Date(entry.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                              </p>
-                             <p className="text-[9px] text-[#8B5E75] uppercase font-black tracking-[0.2em] opacity-60">{entry.mood}</p>
+                             <p className={`text-[9px] uppercase font-black tracking-[0.2em] opacity-60 transition-colors duration-500 ${
+                               isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                             }`}>{entry.mood}</p>
                           </div>
                        </div>
                        <div className="flex gap-2 items-center">
@@ -861,13 +921,21 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                              e.stopPropagation();
                              handleEdit(entry);
                            }} 
-                           className="px-3 py-1.5 bg-[#D4AF37] text-white rounded-lg text-[10px] font-cinzel font-black uppercase tracking-wider shadow-md hover:bg-[#C49F2F] transition-colors relative z-30"
+                           className={`px-3 py-1.5 rounded-lg text-[10px] font-cinzel font-black uppercase tracking-wider shadow-md transition-colors relative z-30 ${
+                             isNightMode 
+                               ? 'bg-[#C77DFF] text-white hover:bg-[#B56DFF]' 
+                               : 'bg-[#D4AF37] text-white hover:bg-[#C49F2F]'
+                           }`}
                          >
                            EDITAR
                          </button>
                          <button 
                            onClick={(e) => handleDeleteClick(entry.id, e)} 
-                           className="text-[#8B5E75]/40 hover:text-red-400 transition-colors p-2 relative z-30"
+                           className={`transition-colors p-2 relative z-30 ${
+                             isNightMode 
+                               ? 'text-[#7A748E]/40 hover:text-red-400' 
+                               : 'text-[#8B5E75]/40 hover:text-red-400'
+                           }`}
                          >
                            {getIcon('trash', 'w-4 h-4')}
                          </button>
@@ -875,13 +943,17 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                     </div>
                     {entry.isLocked && securityModuleActive ? (
                       <div className="text-center py-4">
-                        <div className="inline-flex items-center gap-2 text-[#8B5E75] font-garamond italic text-sm">
+                        <div className={`inline-flex items-center gap-2 font-garamond italic text-sm transition-colors duration-500 ${
+                          isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                        }`}>
                           {getIcon('lock', 'w-5 h-5')}
                           <span>Contenido protegido - Toca para desbloquear</span>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-[17px] text-[#4A233E] font-garamond leading-relaxed italic opacity-90 first-letter:text-3xl first-letter:font-marcellus first-letter:mr-1 line-clamp-3">{entry.content}</p>
+                      <p className={`text-[17px] font-garamond leading-relaxed italic opacity-90 first-letter:text-3xl first-letter:font-marcellus first-letter:mr-1 line-clamp-3 transition-colors duration-500 ${
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                      }`}>{entry.content}</p>
                     )}
                     {(() => {
                       // Obtener todas las fotos disponibles
@@ -900,10 +972,14 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                           {validPhotos.map((photo: string, index: number) => (
                             <div 
                               key={`${entry.id}-photo-${index}`}
-                              className="w-32 h-32 p-2 bg-white"
+                              className={`w-32 h-32 p-2 transition-colors duration-500 ${
+                                isNightMode ? 'bg-[rgba(48,43,79,0.8)]' : 'bg-white'
+                              }`}
                               style={{ 
                                 transform: `rotate(${getEntryPhotoRotation(entry.id + index)}deg)`,
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
+                                boxShadow: isNightMode 
+                                  ? '0 4px 12px rgba(0,0,0,0.4), 0 0 0 6px rgba(48,43,79,0.8), 0 0 0 8px rgba(166,138,86,0.3)'
+                                  : '0 4px 12px rgba(0,0,0,0.15), 0 0 0 6px white, 0 0 0 8px rgba(248,200,220,0.3)'
                               }}
                             >
                               <img 
@@ -934,17 +1010,27 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
            <div className="flex gap-2 pointer-events-auto">
              {!showStories && (
                <>
-                 <button onClick={insertQuote} className="w-11 h-11 bg-white border border-[#D4AF37] text-[#D4AF37] rounded-full flex items-center justify-center shadow-lg active:scale-90">
+                 <button onClick={insertQuote} className={`w-11 h-11 border rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-colors duration-500 ${
+                   isNightMode 
+                     ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56] text-[#A68A56]' 
+                     : 'bg-white border-[#D4AF37] text-[#D4AF37]'
+                 }`}>
                    <span className="font-serif font-bold text-lg">"</span>
                  </button>
                  <button 
                    onClick={() => fileInputRef.current?.click()} 
-                   className="w-11 h-11 bg-white border border-[#F8C8DC] text-[#8B5E75] rounded-full flex items-center justify-center shadow-lg active:scale-90 relative"
+                   className={`w-11 h-11 border rounded-full flex items-center justify-center shadow-lg active:scale-90 relative transition-colors duration-500 ${
+                     isNightMode 
+                       ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 text-[#7A748E]' 
+                       : 'bg-white border-[#F8C8DC] text-[#8B5E75]'
+                   }`}
                    disabled={photos.length >= 3}
                  >
                    {getIcon('camera', 'w-4 h-4')}
                    {photos.length > 0 && (
-                     <span className="absolute -top-1 -right-1 bg-[#D4AF37] text-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+                     <span className={`absolute -top-1 -right-1 text-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center transition-colors duration-500 ${
+                       isNightMode ? 'bg-[#A68A56]' : 'bg-[#D4AF37]'
+                     }`}>
                        {photos.length}
                      </span>
                    )}
@@ -976,7 +1062,11 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                    setEntryDate(new Date().toISOString().split('T')[0]);
                  }
                }}
-               className="px-4 py-2.5 bg-white border-2 border-[#D4AF37] text-[#4A233E] rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all font-cinzel text-[10px] font-black uppercase tracking-widest"
+               className={`px-4 py-2.5 border-2 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all font-cinzel text-[10px] font-black uppercase tracking-widest ${
+                 isNightMode 
+                   ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56] text-[#E0E1DD]' 
+                   : 'bg-white border-[#D4AF37] text-[#4A233E]'
+               }`}
              >
                {showStories ? 'Escribir' : 'Ver Historias'}
              </button>
@@ -1135,16 +1225,30 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
 
         {/* Modal de Confirmación de Borrado - Mobile */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(null)}>
-            <div className="glass-card rounded-2xl p-6 shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-              <h3 className="font-cinzel text-xl text-[#4A233E] mb-4">Confirmar Eliminación</h3>
-              <p className="font-garamond text-[#8B5E75] mb-6 text-sm">
+          <div className={`fixed inset-0 z-[200] backdrop-blur-sm flex items-center justify-center p-4 transition-colors duration-500 ${
+            isNightMode ? 'bg-[#1A1A2E]/90' : 'bg-black/50'
+          }`} onClick={() => setShowDeleteConfirm(null)}>
+            <div className={`rounded-2xl p-6 shadow-2xl max-w-md w-full backdrop-blur-[15px] transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.95)] border-2 border-[#A68A56]/40 shadow-[0_0_40px_rgba(199,125,255,0.3)]' 
+                : 'glass-card'
+            }`} onClick={(e) => e.stopPropagation()}>
+              <h3 className={`font-cinzel text-xl mb-4 transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              }`}>Confirmar Eliminación</h3>
+              <p className={`font-garamond mb-6 text-sm transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>
                 ¿Estás seguro de que deseas eliminar esta entrada? Esta acción no se puede deshacer.
               </p>
               <div className="flex gap-4 justify-end">
                 <button
                   onClick={() => setShowDeleteConfirm(null)}
-                  className="px-6 py-3 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest border-2 border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5] transition-all"
+                  className={`px-6 py-3 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest border-2 transition-all ${
+                    isNightMode 
+                      ? 'border-[#A68A56]/40 text-[#7A748E] hover:bg-[rgba(48,43,79,1)] hover:text-[#E0E1DD]' 
+                      : 'border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5]'
+                  }`}
                 >
                   Cancelar
                 </button>
