@@ -366,35 +366,53 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     return (
       <div 
         key={date.toDateString()} 
-        className={`flex-1 flex flex-col min-w-[150px] md:min-w-0 border-r border-[#D4AF37]/10 last:border-r-0 ${isToday ? 'bg-[#D4AF37]/5' : ''}`}
+        className={`flex-1 flex flex-col min-w-[150px] md:min-w-0 border-r last:border-r-0 transition-colors duration-500 ${
+          isNightMode 
+            ? `border-[#A68A56]/10 ${isToday ? 'bg-[rgba(166,138,86,0.15)]' : ''}` 
+            : `border-[#D4AF37]/10 ${isToday ? 'bg-[#D4AF37]/5' : ''}`
+        }`}
       >
         <div className={`p-6 text-center border-b transition-colors duration-500 ${
           isNightMode 
             ? `border-[#A68A56]/20 ${isToday ? 'text-[#E0E1DD]' : 'text-[#7A748E]'}` 
             : `border-[#D4AF37]/20 ${isToday ? 'text-[#4A233E]' : 'text-[#8B5E75]'}`
         }`}>
-          <p className="text-[10px] uppercase font-cinzel font-black tracking-[0.2em] opacity-60">
+          <p className={`text-[10px] uppercase font-cinzel font-black tracking-[0.2em] opacity-60 transition-colors duration-500 ${
+            isNightMode ? 'text-[#7A748E]' : ''
+          }`}>
             {date.toLocaleDateString('es-ES', { weekday: 'short' })}
           </p>
           <div className="flex items-center justify-center gap-2 mt-2">
-            <p className={`font-cinzel text-2xl ${isToday ? 'font-black scale-110 text-[#D4AF37] drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]' : ''}`}>
+            <p className={`font-cinzel text-2xl transition-colors duration-500 ${
+              isToday 
+                ? isNightMode
+                  ? 'font-black scale-110 text-[#A68A56] drop-shadow-[0_0_8px_rgba(166,138,86,0.5)]'
+                  : 'font-black scale-110 text-[#D4AF37] drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]'
+                : isNightMode ? 'text-[#7A748E]' : ''
+            }`}>
               {date.getDate()}
             </p>
             {events.find(e => e.type === 'mood') && (
-              <div className="text-[#D4AF37] animate-pulse">
+              <div className={`animate-pulse transition-colors duration-500 ${
+                isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+              }`}>
                 {getIcon(events.find(e => e.type === 'mood')?.moodIcon || 'sun', 'w-4 h-4')}
               </div>
             )}
           </div>
         </div>
-        <div className="flex-1 p-3 space-y-3 overflow-y-auto max-h-[70vh] md:max-h-full no-scrollbar relative">
+        <div className={`flex-1 p-3 space-y-3 overflow-y-auto max-h-[70vh] md:max-h-full no-scrollbar relative transition-colors duration-500 ${
+          isNightMode ? 'bg-[rgba(26,26,46,0.3)]' : ''
+        }`}>
           {/* Watermark in each column for mobile week view */}
           {isMobile && <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03]">
              {getIcon('compass', 'w-32 h-32')}
           </div>}
 
           {events.length === 0 ? (
-             <div className="h-full flex items-center justify-center opacity-10">
+             <div className={`h-full flex items-center justify-center transition-colors duration-500 ${
+               isNightMode ? 'opacity-20 text-[#7A748E]' : 'opacity-10'
+             }`}>
                {getIcon('sparkles', 'w-6 h-6')}
              </div>
           ) : (
@@ -402,10 +420,17 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
               <div 
                 key={event.id} 
                 className={`p-4 rounded-[1.25rem] border-l-2 text-[11px] transition-all active:scale-95 shadow-sm font-inter group relative overflow-hidden ${
-                  event.type === 'mood' ? 'bg-[#FFF0F5]/40 border-l-[#D4AF37]' :
-                  event.priority === 'high' 
-                    ? 'bg-white border-l-[#D4AF37] shadow-md ring-1 ring-[#D4AF37]/10' 
-                    : 'bg-white/60 border-l-[#E35B8F]'
+                  isNightMode
+                    ? event.type === 'mood' 
+                      ? 'bg-[rgba(199,125,255,0.15)] border-l-[#A68A56] shadow-[0_2px_8px_rgba(199,125,255,0.2)]'
+                      : event.priority === 'high' 
+                        ? 'bg-[rgba(48,43,79,0.8)] border-l-[#A68A56] shadow-md ring-1 ring-[#A68A56]/30' 
+                        : 'bg-[rgba(48,43,79,0.6)] border-l-[#C77DFF] shadow-[0_2px_6px_rgba(199,125,255,0.15)]'
+                    : event.type === 'mood' 
+                      ? 'bg-[#FFF0F5]/40 border-l-[#D4AF37]'
+                      : event.priority === 'high' 
+                        ? 'bg-white border-l-[#D4AF37] shadow-md ring-1 ring-[#D4AF37]/10' 
+                        : 'bg-white/60 border-l-[#E35B8F]'
                 }`}
                 style={event.type === 'custom' ? { borderLeftColor: event.color } : {}}
               >
@@ -413,7 +438,11 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                    <span className={`font-bold truncate pr-1 transition-colors duration-500 ${
                     isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
                   }`}>{event.title}</span>
-                   {event.priority === 'high' && <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-ping shrink-0" />}
+                   {event.priority === 'high' && (
+                     <div className={`w-1.5 h-1.5 rounded-full animate-ping shrink-0 transition-colors duration-500 ${
+                       isNightMode ? 'bg-[#A68A56]' : 'bg-[#D4AF37]'
+                     }`} />
+                   )}
                 </div>
                 <div className="flex flex-col gap-0.5">
                   <p className={`text-[9px] font-medium uppercase tracking-wider opacity-80 transition-colors duration-500 ${
@@ -443,7 +472,9 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     });
 
     return (
-      <div className="flex-1 flex overflow-x-auto md:overflow-hidden bg-white/20 relative">
+      <div className={`flex-1 flex overflow-x-auto md:overflow-hidden relative transition-colors duration-500 ${
+        isNightMode ? 'bg-[rgba(26,26,46,0.2)]' : 'bg-white/20'
+      }`}>
         {!isMobile && <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.02]">
            {getIcon('compass', 'w-96 h-96')}
         </div>}
@@ -459,7 +490,9 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     const weeksInMonth = Math.ceil((startDay === 0 ? 6 : startDay - 1 + daysInMonth) / 7);
     
     return (
-      <div className="h-full grid grid-cols-7 border-t border-[#D4AF37]/10 font-inter" style={{ gridTemplateRows: `repeat(${weeksInMonth}, minmax(0, 1fr))` }}>
+      <div className={`h-full grid grid-cols-7 border-t font-inter transition-colors duration-500 ${
+        isNightMode ? 'border-[#A68A56]/10' : 'border-[#D4AF37]/10'
+      }`} style={{ gridTemplateRows: `repeat(${weeksInMonth}, minmax(0, 1fr))` }}>
         {Array.from({ length: 42 }).map((_, i) => {
           const dayNum = i - (startDay === 0 ? 6 : startDay - 1);
           const date = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), dayNum + 1);
@@ -480,7 +513,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
               onClick={() => { if(!isOutside) { setAnchorDate(date); setView('day'); } }}
               className={`p-2 border-r border-b transition-all cursor-pointer group relative ${
                 isNightMode 
-                  ? `border-[#A68A56]/10 ${isOutside ? 'opacity-10 grayscale bg-black/5' : 'hover:bg-[rgba(48,43,79,0.3)]'}` 
+                  ? `border-[#A68A56]/10 ${isOutside ? 'opacity-10 grayscale bg-black/5' : 'bg-[rgba(48,43,79,0.2)] hover:bg-[rgba(48,43,79,0.4)]'}` 
                   : `border-[#D4AF37]/10 ${isOutside ? 'opacity-10 grayscale bg-black/5' : 'hover:bg-[#FFF0F5]/50'}`
               }`}
               title={events.length > 0 ? allEventsText : ''}
@@ -489,7 +522,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 <span className={`text-[10px] md:text-base font-cinzel transition-all ${
                   isToday 
                     ? isNightMode
-                      ? 'border-2 border-[#A68A56] ring-2 ring-[#C77DFF]/20 text-[#E0E1DD] w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(199,125,255,0.3)] font-black'
+                      ? 'border-2 border-[#A68A56] ring-2 ring-[#C77DFF]/20 text-[#E0E1DD] w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(199,125,255,0.3)] font-black bg-[rgba(166,138,86,0.2)]'
                       : 'border-2 border-[#D4AF37] ring-2 ring-[#D4AF37]/20 text-[#4A233E] w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,175,55,0.3)] font-black'
                     : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                 }`}>
@@ -498,7 +531,9 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 <div className="flex gap-1">
                   {moodEvent && (
                     <div 
-                      className="text-[#D4AF37] scale-75 cursor-help" 
+                      className={`scale-75 cursor-help transition-colors duration-500 ${
+                        isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+                      }`}
                       title={`Estado Vital: ${moodEvent.title}`}
                     >
                       {getIcon(moodEvent.moodIcon!, 'w-4 h-4')}
@@ -506,7 +541,9 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                   )}
                   {hasHighPriority && (
                     <div 
-                      className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse cursor-help" 
+                      className={`w-1.5 h-1.5 rounded-full animate-pulse cursor-help transition-colors duration-500 ${
+                        isNightMode ? 'bg-[#A68A56]' : 'bg-[#D4AF37]'
+                      }`}
                       title="Evento de alta prioridad"
                     />
                   )}
@@ -516,7 +553,9 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 {visibleEvents.map(e => (
                   <div 
                     key={e.id} 
-                    className="h-1 w-full rounded-full opacity-60 hover:opacity-100 transition-opacity cursor-help relative group/event" 
+                    className={`h-1 w-full rounded-full hover:opacity-100 transition-opacity cursor-help relative group/event ${
+                      isNightMode ? 'opacity-70' : 'opacity-60'
+                    }`}
                     style={{ backgroundColor: e.color }}
                     title={`${e.time ? `${e.time}${e.endTime ? ` - ${e.endTime}` : ''} • ` : ''}${e.title}${e.subtitle ? ` (${e.subtitle})` : ''}`}
                   />
@@ -555,9 +594,13 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                               className="w-2 h-2 rounded-full shrink-0" 
                               style={{ backgroundColor: e.color }}
                             />
-                            <span className="font-bold text-[#4A233E]">{e.title}</span>
+                            <span className={`font-bold transition-colors duration-500 ${
+                              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                            }`}>{e.title}</span>
                           </div>
-                          <div className="text-[9px] text-[#8B5E75] ml-4">
+                          <div className={`text-[9px] ml-4 transition-colors duration-500 ${
+                            isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                          }`}>
                             {e.time && <span>{e.time} • </span>}
                             {e.subtitle}
                           </div>
@@ -577,23 +620,39 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
   const renderDayFocus = () => {
     const events = getEventsForDate(anchorDate);
     return (
-      <div className="flex-1 p-4 sm:p-6 md:p-12 overflow-y-auto bg-gradient-to-b from-white/30 to-transparent relative no-scrollbar pb-24 sm:pb-12">
+      <div className={`flex-1 p-4 sm:p-6 md:p-12 overflow-y-auto relative no-scrollbar pb-24 sm:pb-12 transition-colors duration-500 ${
+        isNightMode 
+          ? 'bg-gradient-to-b from-[rgba(48,43,79,0.4)] to-[rgba(26,26,46,0.2)]' 
+          : 'bg-gradient-to-b from-white/30 to-transparent'
+      }`}>
         {/* Mystic Watermark */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] overflow-hidden">
            {getIcon('compass', 'w-[80vw] h-[80vw]')}
         </div>
 
-        <div className="mb-8 border-b border-[#D4AF37]/30 pb-4">
-          <h2 className="font-cinzel text-3xl md:text-5xl text-[#4A233E] font-bold tracking-tight text-center md:text-left">{anchorDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric' })}</h2>
-          <p className="text-[9px] text-[#8B5E75] text-center md:text-left uppercase tracking-[0.3em] font-black mt-1.5 opacity-60">Sincronía de Cronos</p>
+        <div className={`mb-8 border-b pb-4 transition-colors duration-500 ${
+          isNightMode ? 'border-[#A68A56]/30' : 'border-[#D4AF37]/30'
+        }`}>
+          <h2 className={`font-cinzel text-3xl md:text-5xl font-bold tracking-tight text-center md:text-left transition-colors duration-500 ${
+            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+          }`}>{anchorDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric' })}</h2>
+          <p className={`text-[9px] text-center md:text-left uppercase tracking-[0.3em] font-black mt-1.5 opacity-60 transition-colors duration-500 ${
+            isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+          }`}>Sincronía de Cronos</p>
         </div>
         
         {events.length === 0 ? (
-          <div className="h-64 md:h-96 flex flex-col items-center justify-center opacity-20 text-center px-10">
-            <div className="w-16 h-16 rounded-full border border-dashed border-[#D4AF37] flex items-center justify-center text-[#D4AF37] mb-6">
+          <div className={`h-64 md:h-96 flex flex-col items-center justify-center text-center px-10 transition-colors duration-500 ${
+            isNightMode ? 'opacity-30 text-[#7A748E]' : 'opacity-20'
+          }`}>
+            <div className={`w-16 h-16 rounded-full border border-dashed flex items-center justify-center mb-6 transition-colors duration-500 ${
+              isNightMode ? 'border-[#A68A56] text-[#A68A56]' : 'border-[#D4AF37] text-[#D4AF37]'
+            }`}>
               {getIcon('compass', 'w-8 h-8')}
             </div>
-            <p className="font-garamond italic text-xl md:text-2xl">"El flujo de este día fluye sin registros marcados."</p>
+            <p className={`font-garamond italic text-xl md:text-2xl transition-colors duration-500 ${
+              isNightMode ? 'text-[#7A748E]' : ''
+            }`}>"El flujo de este día fluye sin registros marcados."</p>
           </div>
         ) : (
           <div className="space-y-4 md:space-y-6">
@@ -602,7 +661,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 key={event.id}
                 className={`p-4 sm:p-6 md:p-8 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] border-l-4 flex flex-col sm:flex-row items-start sm:items-center justify-between group transition-all duration-300 font-inter shadow-md gap-3 sm:gap-4 backdrop-blur-[15px] ${
                   isNightMode 
-                    ? 'bg-[rgba(48,43,79,0.6)] border-l-[#C77DFF] shadow-[0_0_20px_rgba(199,125,255,0.2)]' 
+                    ? 'bg-[rgba(48,43,79,0.7)] border-l-[#C77DFF] shadow-[0_0_20px_rgba(199,125,255,0.25)] hover:bg-[rgba(48,43,79,0.85)]' 
                     : 'glass-card border-l-[#E35B8F]'
                 }`}
                 style={{ borderLeftColor: event.color }}
@@ -616,10 +675,18 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                    </div>
                    <div className="flex-1 min-w-0">
                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                       <h4 className="font-cinzel text-base sm:text-lg md:text-xl font-bold text-[#4A233E] tracking-tight break-words">{event.title}</h4>
-                       {event.time && <span className="text-[9px] sm:text-[8px] bg-[#4A233E]/10 text-[#4A233E] px-3 py-1 rounded-full font-bold uppercase whitespace-nowrap self-start sm:self-auto">{event.time}{event.endTime ? ` - ${event.endTime}` : ''}</span>}
+                       <h4 className={`font-cinzel text-base sm:text-lg md:text-xl font-bold tracking-tight break-words transition-colors duration-500 ${
+                         isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                       }`}>{event.title}</h4>
+                       {event.time && <span className={`text-[9px] sm:text-[8px] px-3 py-1 rounded-full font-bold uppercase whitespace-nowrap self-start sm:self-auto transition-colors duration-500 ${
+                         isNightMode 
+                           ? 'bg-[#A68A56]/20 text-[#A68A56]' 
+                           : 'bg-[#4A233E]/10 text-[#4A233E]'
+                       }`}>{event.time}{event.endTime ? ` - ${event.endTime}` : ''}</span>}
                      </div>
-                     <p className="text-[10px] sm:text-[9px] md:text-xs text-[#8B5E75] font-bold uppercase tracking-wider opacity-60 mt-1 sm:mt-0.5 break-words">{event.subtitle}</p>
+                     <p className={`text-[10px] sm:text-[9px] md:text-xs font-bold uppercase tracking-wider opacity-60 mt-1 sm:mt-0.5 break-words transition-colors duration-500 ${
+                       isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                     }`}>{event.subtitle}</p>
                    </div>
                 </div>
                 {event.type === 'custom' && (
@@ -690,7 +757,9 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
             </button>
           </div>
           <div className="text-center md:text-left flex-1 md:flex-none">
-            <h1 className="font-cinzel text-xl sm:text-2xl md:text-3xl font-bold text-[#4A233E] capitalize tracking-tight">
+            <h1 className={`font-cinzel text-xl sm:text-2xl md:text-3xl font-bold capitalize tracking-tight transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               {anchorDate.toLocaleString('es-ES', { month: 'long' })}
             </h1>
           </div>
@@ -700,18 +769,34 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
           {!isMobile && (
             <button 
               onClick={() => setShowAddEventModal(true)}
-              className="btn-primary flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-cinzel text-xs font-bold uppercase tracking-widest shadow-lg active:scale-95 transition-all min-h-[44px] touch-manipulation"
+              className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-cinzel text-xs font-bold uppercase tracking-widest shadow-lg active:scale-95 transition-all min-h-[44px] touch-manipulation ${
+                isNightMode 
+                  ? 'bg-[#C77DFF] text-white shadow-[#C77DFF]/30 hover:bg-[#B56DE6]' 
+                  : 'btn-primary'
+              }`}
             >
               {getIcon('plus', 'w-5 h-5')} Agregar
             </button>
           )}
           
-          <div className="flex gap-2 bg-white/40 p-1.5 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar shadow-inner border-2 border-[#D4AF37]/20">
+          <div className={`flex gap-2 p-1.5 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar shadow-inner border-2 backdrop-blur-md transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40' 
+              : 'bg-white/40 border-[#D4AF37]/20'
+          }`}>
             {(['month', 'week', 'day'] as const).map(v => (
               <button 
                 key={v}
                 onClick={() => setView(v)}
-                className={`flex-1 sm:flex-none px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-cinzel text-[10px] sm:text-[9px] font-black uppercase tracking-[0.15em] transition-all min-h-[44px] touch-manipulation ${view === v ? 'bg-[#E35B8F] text-white shadow-md scale-105' : 'text-[#8B5E75] active:bg-white/60'}`}
+                className={`flex-1 sm:flex-none px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg font-cinzel text-[10px] sm:text-[9px] font-black uppercase tracking-[0.15em] transition-all min-h-[44px] touch-manipulation ${
+                  view === v 
+                    ? isNightMode
+                      ? 'bg-[#C77DFF] text-white shadow-md shadow-[#C77DFF]/30 scale-105'
+                      : 'bg-[#E35B8F] text-white shadow-md scale-105'
+                    : isNightMode
+                      ? 'text-[#7A748E] active:bg-[rgba(48,43,79,0.6)]'
+                      : 'text-[#8B5E75] active:bg-white/60'
+                }`}
               >
                 {v === 'month' ? 'MES' : v === 'week' ? 'SEMANA' : 'DÍA'}
               </button>
@@ -721,7 +806,11 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
           {/* Botón de Conectividad */}
           <button
             onClick={() => setShowConnectivitySection(!showConnectivitySection)}
-            className="min-w-[48px] min-h-[48px] w-12 h-12 rounded-full glass-card border-2 border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm hover:bg-white/60 touch-manipulation"
+            className={`min-w-[48px] min-h-[48px] w-12 h-12 rounded-full border-2 flex items-center justify-center active:scale-90 transition-all shadow-sm touch-manipulation backdrop-blur-[15px] ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 text-[#C77DFF] hover:bg-[rgba(48,43,79,0.8)]' 
+                : 'glass-card border-[#F8C8DC] text-[#E35B8F] hover:bg-white/60'
+            }`}
             title="Conectividad"
             aria-label="Conectividad"
           >
@@ -738,12 +827,16 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
             : 'glass-card border-[#D4AF37]/30'
         }`}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-cinzel text-lg font-bold text-[#4A233E] uppercase tracking-wider">
+            <h3 className={`font-cinzel text-lg font-bold uppercase tracking-wider transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Conectividad
             </h3>
             <button
               onClick={() => setShowConnectivitySection(false)}
-              className="text-[#8B5E75] hover:text-[#4A233E] transition-colors"
+              className={`transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E] hover:text-[#E0E1DD]' : 'text-[#8B5E75] hover:text-[#4A233E]'
+              }`}
             >
               {getIcon('x', 'w-5 h-5')}
             </button>
@@ -751,40 +844,62 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
 
           <div className="space-y-4">
             {/* Exportar Crónicas (.ics) */}
-            <div className="flex items-center justify-between p-4 bg-white/40 rounded-xl border border-[#F8C8DC]/50">
+            <div className={`flex items-center justify-between p-4 rounded-xl border backdrop-blur-md transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40' 
+                : 'bg-white/40 border-[#F8C8DC]/50'
+            }`}>
               <div className="flex items-center gap-3">
-                {getIcon('download', 'w-5 h-5 text-[#8B5E75]')}
+                {getIcon('download', `w-5 h-5 ${isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'}`)}
                 <div>
-                  <p className="font-cinzel text-sm font-bold text-[#4A233E]">Exportar Crónicas</p>
-                  <p className="text-[9px] text-[#8B5E75] uppercase tracking-wider">Descargar calendario en formato .ics</p>
+                  <p className={`font-cinzel text-sm font-bold transition-colors duration-500 ${
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  }`}>Exportar Crónicas</p>
+                  <p className={`text-[9px] uppercase tracking-wider transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Descargar calendario en formato .ics</p>
                 </div>
               </div>
               <button
                 onClick={handleExportICS}
-                className="px-4 py-2 bg-[#D4AF37]/80 border-2 border-[#D4AF37] text-[#4A233E] rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest hover:bg-[#D4AF37] transition-colors shadow-md"
+                className={`px-4 py-2 border-2 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest transition-colors shadow-md ${
+                  isNightMode 
+                    ? 'bg-[#A68A56]/80 border-[#A68A56] text-[#E0E1DD] hover:bg-[#A68A56]' 
+                    : 'bg-[#D4AF37]/80 border-[#D4AF37] text-[#4A233E] hover:bg-[#D4AF37]'
+                }`}
               >
                 Exportar
               </button>
             </div>
 
             {/* Puente con Google */}
-            <div className="flex items-center justify-between p-4 bg-white/40 rounded-xl border border-[#F8C8DC]/50">
+            <div className={`flex items-center justify-between p-4 rounded-xl border backdrop-blur-md transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40' 
+                : 'bg-white/40 border-[#F8C8DC]/50'
+            }`}>
               <div className="flex items-center gap-3">
                 {isGoogleConnected ? (
                   <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
                     {getIcon('check', 'w-3 h-3 text-white')}
                   </div>
                 ) : (
-                  getIcon('calendar', 'w-5 h-5 text-[#8B5E75]')
+                  getIcon('calendar', `w-5 h-5 ${isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'}`)
                 )}
                 <div>
-                  <p className="font-cinzel text-sm font-bold text-[#4A233E]">
+                  <p className={`font-cinzel text-sm font-bold transition-colors duration-500 ${
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  }`}>
                     Puente con Google
                     {isGoogleConnected && (
-                      <span className="ml-2 text-[10px] text-green-600 font-normal">Sincronizado</span>
+                      <span className={`ml-2 text-[10px] font-normal transition-colors duration-500 ${
+                        isNightMode ? 'text-green-400' : 'text-green-600'
+                      }`}>Sincronizado</span>
                     )}
                   </p>
-                  <p className="text-[9px] text-[#8B5E75] uppercase tracking-wider">
+                  <p className={`text-[9px] uppercase tracking-wider transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>
                     {isGoogleConnected 
                       ? 'Sincronización automática activa' 
                       : 'Conecta tu cuenta de Google Calendar'}
@@ -797,7 +912,11 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                     <button
                       onClick={handleSyncGoogle}
                       disabled={isSyncing}
-                      className="px-4 py-2 bg-[#E35B8F] text-white rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest hover:bg-[#E35B8F]/90 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className={`px-4 py-2 text-white rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                        isNightMode 
+                          ? 'bg-[#C77DFF] hover:bg-[#B56DE6] shadow-[#C77DFF]/30' 
+                          : 'bg-[#E35B8F] hover:bg-[#E35B8F]/90'
+                      }`}
                     >
                       {isSyncing ? (
                         <>
@@ -813,7 +932,11 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                     </button>
                     <button
                       onClick={handleDisconnectGoogle}
-                      className="px-3 py-2 bg-red-100/60 border-2 border-red-300 text-red-700 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest hover:bg-red-200/60 transition-colors"
+                      className={`px-3 py-2 border-2 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest transition-colors ${
+                        isNightMode 
+                          ? 'bg-red-900/40 border-red-700/60 text-red-300 hover:bg-red-900/60' 
+                          : 'bg-red-100/60 border-red-300 text-red-700 hover:bg-red-200/60'
+                      }`}
                       title="Desconectar"
                     >
                       {getIcon('x', 'w-4 h-4')}
@@ -822,7 +945,11 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 ) : (
                   <button
                     onClick={handleConnectGoogle}
-                    className="px-4 py-2 bg-[#4285F4] text-white rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest hover:bg-[#4285F4]/90 transition-colors shadow-md flex items-center gap-2"
+                    className={`px-4 py-2 text-white rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest transition-colors shadow-md flex items-center gap-2 ${
+                      isNightMode 
+                        ? 'bg-[#4285F4]/80 hover:bg-[#4285F4] shadow-[#4285F4]/30' 
+                        : 'bg-[#4285F4] hover:bg-[#4285F4]/90'
+                    }`}
                   >
                     {getIcon('calendar', 'w-4 h-4')}
                     Vincular
@@ -834,13 +961,23 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
         </div>
       )}
 
-      <div className="flex-1 glass-card rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden flex flex-col shadow-xl relative border-[#D4AF37]/10">
+      <div className={`flex-1 rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden flex flex-col shadow-xl relative transition-colors duration-500 ${
+        isNightMode 
+          ? 'bg-[rgba(48,43,79,0.4)] border-2 border-[#A68A56]/30 shadow-[0_0_30px_rgba(199,125,255,0.15)]' 
+          : 'glass-card border-[#D4AF37]/10'
+      }`}>
         {view === 'month' ? (
           <>
             {/* Elegant Table Header for Month */}
-            <div className="grid grid-cols-7 glass-card border-b border-[#D4AF37]/30 py-3 shadow-sm z-10 shrink-0">
+            <div className={`grid grid-cols-7 border-b py-3 shadow-sm z-10 shrink-0 backdrop-blur-[15px] transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/30' 
+                : 'glass-card border-[#D4AF37]/30'
+            }`}>
                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => (
-                 <div key={d} className="text-center text-[10px] uppercase tracking-[0.2em] font-cinzel font-black text-[#8B5E75]">{d}</div>
+                 <div key={d} className={`text-center text-[10px] uppercase tracking-[0.2em] font-cinzel font-black transition-colors duration-500 ${
+                   isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                 }`}>{d}</div>
                ))}
             </div>
             <div className="flex-1 overflow-hidden min-h-0">
@@ -858,10 +995,18 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
       {isMobile && (
         <button 
           onClick={() => setShowAddEventModal(true)}
-          className="fixed bottom-32 right-4 sm:right-6 w-16 h-16 bg-[#E35B8F] border-3 border-[#D4AF37] rounded-full flex items-center justify-center shadow-[0_10px_25px_rgba(227,91,143,0.4)] z-[100] hover:scale-110 active:scale-90 transition-all overflow-hidden touch-manipulation safe-area-inset-bottom"
+          className={`fixed bottom-32 right-4 sm:right-6 w-16 h-16 border-3 rounded-full flex items-center justify-center z-[100] hover:scale-110 active:scale-90 transition-all overflow-hidden touch-manipulation safe-area-inset-bottom ${
+            isNightMode 
+              ? 'bg-[#C77DFF] border-[#A68A56] shadow-[0_10px_25px_rgba(199,125,255,0.5)]' 
+              : 'bg-[#E35B8F] border-[#D4AF37] shadow-[0_10px_25px_rgba(227,91,143,0.4)]'
+          }`}
           aria-label="Agregar evento"
         >
-          <div className="absolute inset-0 bg-gradient-to-tr from-[#E35B8F] to-[#FFD1DC] opacity-50"></div>
+          <div className={`absolute inset-0 bg-gradient-to-tr opacity-50 transition-colors duration-500 ${
+            isNightMode 
+              ? 'from-[#C77DFF] to-[#A68A56]' 
+              : 'from-[#E35B8F] to-[#FFD1DC]'
+          }`}></div>
           <div className="relative z-10 text-white drop-shadow-md">
             {getIcon('plus', "w-7 h-7")}
           </div>
@@ -870,52 +1015,90 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
 
       {/* Form Modal for Manual Event */}
       {showAddEventModal && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-xl p-4" onClick={() => setShowAddEventModal(false)}>
-          <form onSubmit={handleAddCustomEvent} className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 font-inter border-2 border-[#D4AF37]/40" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold tracking-[0.2em] uppercase">Agregar al Calendario</h2>
+        <div className={`fixed inset-0 z-[400] flex items-center justify-center backdrop-blur-xl p-4 transition-colors duration-500 ${
+          isNightMode ? 'bg-[#1A1A2E]/90' : 'bg-[#4A233E]/80'
+        }`} onClick={() => setShowAddEventModal(false)}>
+          <form onSubmit={handleAddCustomEvent} className={`w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 font-inter border-2 backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.95)] border-[#A68A56]/40 shadow-[0_0_40px_rgba(199,125,255,0.3)]' 
+              : 'glass-card border-[#D4AF37]/40'
+          }`} onClick={(e) => e.stopPropagation()}>
+            <h2 className={`font-cinzel text-lg mb-6 text-center font-bold tracking-[0.2em] uppercase transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>Agregar al Calendario</h2>
             <div className="space-y-4">
               <input 
                 required 
                 name="title" 
                 type="text" 
                 placeholder="Nombre del Hito..." 
-                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none font-bold focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-sm outline-none font-bold transition-all ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] placeholder:text-[#7A748E]/50 focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                    : 'bg-white/30 border-[#D4AF37] text-[#4A233E] placeholder:text-[#8B5E75]/50 focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                }`}
               />
               <textarea
                 name="description"
                 placeholder="Descripción (opcional)..."
-                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all resize-none min-h-[60px]"
+                className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-sm outline-none transition-all resize-none min-h-[60px] ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] placeholder:text-[#7A748E]/50 focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                    : 'bg-white/30 border-[#D4AF37] text-[#4A233E] placeholder:text-[#8B5E75]/50 focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                }`}
               />
               <input 
                 required
                 name="date" 
                 type="date" 
                 defaultValue={anchorDate.toISOString().split('T')[0]}
-                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-sm outline-none transition-all ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                    : 'bg-white/30 border-[#D4AF37] text-[#4A233E] focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                }`}
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora Inicio (Opcional)</label>
+                  <label className={`text-[9px] uppercase font-bold mb-1 block transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Hora Inicio (Opcional)</label>
                   <input 
                     name="time" 
                     type="time" 
-                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                    className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-xs outline-none transition-all ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                        : 'bg-white/30 border-[#D4AF37] text-[#4A233E] focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora Fin (Opcional)</label>
+                  <label className={`text-[9px] uppercase font-bold mb-1 block transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Hora Fin (Opcional)</label>
                   <input 
                     name="endTime" 
                     type="time" 
-                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                    className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-xs outline-none transition-all ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                        : 'bg-white/30 border-[#D4AF37] text-[#4A233E] focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                    }`}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Prioridad</label>
+                <label className={`text-[9px] uppercase font-bold mb-1 block transition-colors duration-500 ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>Prioridad</label>
                 <select 
                   name="priority" 
-                  className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all appearance-none cursor-pointer"
+                  className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-xs outline-none transition-all appearance-none cursor-pointer ${
+                    isNightMode 
+                      ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                      : 'bg-white/30 border-[#D4AF37] text-[#4A233E] focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                  }`}
                 >
                   <option value="low">Normal</option>
                   <option value="high">Crítica</option>
@@ -934,10 +1117,14 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                     <label key={c} className="cursor-pointer">
                       <input type="radio" name="color" value={c} required className="peer sr-only" defaultChecked={c === COLORS.primary} />
                       <div 
-                        className="w-8 h-8 rounded-full border-2 border-white transition-all peer-checked:scale-125 peer-checked:ring-2 peer-checked:ring-[#D4AF37]" 
+                        className={`w-8 h-8 rounded-full border-2 transition-all peer-checked:scale-125 peer-checked:ring-2 ${
+                          isNightMode 
+                            ? 'border-[rgba(48,43,79,0.8)] peer-checked:ring-[#C77DFF]' 
+                            : 'border-white peer-checked:ring-[#D4AF37]'
+                        }`}
                         style={{ 
                           backgroundColor: c,
-                          boxShadow: `0 4px 12px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`
+                          boxShadow: `0 4px 12px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${isNightMode ? '0.6' : '0.4'})`
                         }} 
                       />
                     </label>
@@ -946,8 +1133,14 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
               </div>
             </div>
             <div className="flex gap-4 mt-8">
-              <button type="button" onClick={() => setShowAddEventModal(false)} className="flex-1 py-3 text-[10px] font-black text-[#8B5E75] uppercase tracking-widest">Cerrar</button>
-              <button type="submit" className="flex-[2] btn-primary py-3.5 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-[0_8px_20px_rgba(227,91,143,0.4)]">Sellar Registro</button>
+              <button type="button" onClick={() => setShowAddEventModal(false)} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E] hover:text-[#E0E1DD]' : 'text-[#8B5E75]'
+              }`}>Cerrar</button>
+              <button type="submit" className={`flex-[2] py-3.5 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest transition-all ${
+                isNightMode 
+                  ? 'bg-[#C77DFF] text-white shadow-[0_8px_20px_rgba(199,125,255,0.5)] hover:bg-[#B56DE6]' 
+                  : 'btn-primary shadow-[0_8px_20px_rgba(227,91,143,0.4)]'
+              }`}>Sellar Registro</button>
             </div>
           </form>
         </div>
@@ -955,9 +1148,17 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
 
       {/* Form Modal for Editing Event */}
       {editingEvent && onUpdateCustomEvent && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-xl p-4" onClick={() => setEditingEvent(null)}>
-          <form onSubmit={handleUpdateCustomEvent} className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 font-inter border-2 border-[#D4AF37]/40" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold tracking-[0.2em] uppercase">Editar Evento</h2>
+        <div className={`fixed inset-0 z-[400] flex items-center justify-center backdrop-blur-xl p-4 transition-colors duration-500 ${
+          isNightMode ? 'bg-[#1A1A2E]/90' : 'bg-[#4A233E]/80'
+        }`} onClick={() => setEditingEvent(null)}>
+          <form onSubmit={handleUpdateCustomEvent} className={`w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 font-inter border-2 backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.95)] border-[#A68A56]/40 shadow-[0_0_40px_rgba(199,125,255,0.3)]' 
+              : 'glass-card border-[#D4AF37]/40'
+          }`} onClick={(e) => e.stopPropagation()}>
+            <h2 className={`font-cinzel text-lg mb-6 text-center font-bold tracking-[0.2em] uppercase transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>Editar Evento</h2>
             <div className="space-y-4">
               <input 
                 required 
@@ -965,47 +1166,77 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 type="text" 
                 placeholder="Nombre del Hito..." 
                 defaultValue={editingEvent.title}
-                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none font-bold focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-sm outline-none font-bold transition-all ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] placeholder:text-[#7A748E]/50 focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                    : 'bg-white/30 border-[#D4AF37] text-[#4A233E] placeholder:text-[#8B5E75]/50 focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                }`}
               />
               <textarea
                 name="description"
                 placeholder="Descripción (opcional)..."
                 defaultValue={editingEvent.description || ''}
-                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all resize-none min-h-[60px]"
+                className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-sm outline-none transition-all resize-none min-h-[60px] ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] placeholder:text-[#7A748E]/50 focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                    : 'bg-white/30 border-[#D4AF37] text-[#4A233E] placeholder:text-[#8B5E75]/50 focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                }`}
               />
               <input 
                 required
                 name="date" 
                 type="date" 
                 defaultValue={editingEvent.date}
-                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-sm outline-none transition-all ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                    : 'bg-white/30 border-[#D4AF37] text-[#4A233E] focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                }`}
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora Inicio (Opcional)</label>
+                  <label className={`text-[9px] uppercase font-bold mb-1 block transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Hora Inicio (Opcional)</label>
                   <input 
                     name="time" 
                     type="time" 
                     defaultValue={editingEvent.time || ''}
-                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                    className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-xs outline-none transition-all ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                        : 'bg-white/30 border-[#D4AF37] text-[#4A233E] focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Hora Fin (Opcional)</label>
+                  <label className={`text-[9px] uppercase font-bold mb-1 block transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Hora Fin (Opcional)</label>
                   <input 
                     name="endTime" 
                     type="time" 
                     defaultValue={editingEvent.endTime || ''}
-                    className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all" 
+                    className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-xs outline-none transition-all ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                        : 'bg-white/30 border-[#D4AF37] text-[#4A233E] focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                    }`}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-[9px] text-[#8B5E75] uppercase font-bold mb-1 block">Prioridad</label>
+                <label className={`text-[9px] uppercase font-bold mb-1 block transition-colors duration-500 ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>Prioridad</label>
                 <select 
                   name="priority" 
                   defaultValue={editingEvent.priority}
-                  className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-xs outline-none focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all appearance-none cursor-pointer"
+                  className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-xs outline-none transition-all appearance-none cursor-pointer ${
+                    isNightMode 
+                      ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
+                      : 'bg-white/30 border-[#D4AF37] text-[#4A233E] focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)]'
+                  }`}
                 >
                   <option value="low">Normal</option>
                   <option value="high">Crítica</option>
@@ -1024,10 +1255,14 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                     <label key={c} className="cursor-pointer">
                       <input type="radio" name="color" value={c} required className="peer sr-only" defaultChecked={c === editingEvent.color} />
                       <div 
-                        className="w-8 h-8 rounded-full border-2 border-white transition-all peer-checked:scale-125 peer-checked:ring-2 peer-checked:ring-[#D4AF37]" 
+                        className={`w-8 h-8 rounded-full border-2 transition-all peer-checked:scale-125 peer-checked:ring-2 ${
+                          isNightMode 
+                            ? 'border-[rgba(48,43,79,0.8)] peer-checked:ring-[#C77DFF]' 
+                            : 'border-white peer-checked:ring-[#D4AF37]'
+                        }`}
                         style={{ 
                           backgroundColor: c,
-                          boxShadow: `0 4px 12px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`
+                          boxShadow: `0 4px 12px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${isNightMode ? '0.6' : '0.4'})`
                         }} 
                       />
                     </label>
@@ -1036,8 +1271,14 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
               </div>
             </div>
             <div className="flex gap-4 mt-8">
-              <button type="button" onClick={() => setEditingEvent(null)} className="flex-1 py-3 text-[10px] font-black text-[#8B5E75] uppercase tracking-widest">Cancelar</button>
-              <button type="submit" className="flex-[2] btn-primary py-3.5 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-[0_8px_20px_rgba(227,91,143,0.4)]">Guardar Cambios</button>
+              <button type="button" onClick={() => setEditingEvent(null)} className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E] hover:text-[#E0E1DD]' : 'text-[#8B5E75]'
+              }`}>Cancelar</button>
+              <button type="submit" className={`flex-[2] py-3.5 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest transition-all ${
+                isNightMode 
+                  ? 'bg-[#C77DFF] text-white shadow-[0_8px_20px_rgba(199,125,255,0.5)] hover:bg-[#B56DE6]' 
+                  : 'btn-primary shadow-[0_8px_20px_rgba(227,91,143,0.4)]'
+              }`}>Guardar Cambios</button>
             </div>
           </form>
         </div>

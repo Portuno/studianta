@@ -110,7 +110,6 @@ export enum NavView {
   PROFILE = 'Perfil',
   SECURITY = 'Seguridad',
   AI = 'IA',
-  BAZAR = 'Bazar',
   ORACLE = 'Oráculo',
   DOCS = 'Documentación',
   PRIVACY_POLICY = 'Política de Privacidad',
@@ -132,9 +131,6 @@ export interface StudentProfileContext {
     email: string;
     career?: string;
     institution?: string;
-    arcane_level: string;
-    essence: number;
-    total_essence_earned: number;
     account_created: string;
   };
   financial_state: {

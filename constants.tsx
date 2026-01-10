@@ -299,13 +299,5 @@ export const INITIAL_MODULES: Module[] = [
     active: false,
     icon: 'users',
   },
-  {
-    id: 'bazar',
-    name: 'Bazar',
-    description: 'Compra artefactos y mejoras',
-    cost: 200,
-    active: false,
-    icon: 'bazar',
-  },
 ];
 

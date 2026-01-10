@@ -253,7 +253,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, isMobile 
                 </h1>
                 <div className="space-y-6 max-w-2xl mx-auto">
                   <p className="font-inter text-lg md:text-xl text-[#4A233E]/80 leading-relaxed">
-                    Has entrado en un espacio diseñado para tu evolución. Aquí, tu curiosidad se transforma en maestría y tu esfuerzo en esencia.
+                    Has entrado en un espacio diseñado para tu evolución. Aquí, tu curiosidad se transforma en maestría.
                   </p>
                   <p className={`font-inter text-base md:text-lg leading-relaxed transition-colors duration-500 ${
                     isNightMode ? 'text-[#7A748E]' : 'text-[#4A233E]/70'
@@ -399,13 +399,13 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, isMobile 
             )}
 
             {currentStep === 8 && (
-              // Acto II - Hoja 2: La Esencia
+              // Acto II - Hoja 2: El Valor de tu Esfuerzo
               <div className="w-full text-center space-y-8 max-w-2xl mx-auto">
                 <h1 className="font-cinzel text-4xl md:text-5xl text-[#4A233E] font-bold">
                   El Valor de tu Esfuerzo
                 </h1>
                 <p className="font-inter text-lg md:text-xl text-[#4A233E]/80 leading-relaxed">
-                  Cada vez que estudies con el temporizador de Enfoque o registres tus pensamientos en la Bitácora, ganarás Esencia. Úsala en el Bazar para desbloquear herramientas avanzadas y potenciar tu crecimiento, haciendo de Studianta una plataforma enteramente personalizable a tus servicios.
+                  Cada vez que estudies con el temporizador de Enfoque o registres tus pensamientos en la Bitácora, estarás construyendo tu camino académico. Studianta es una plataforma enteramente personalizable a tus servicios.
                 </p>
               </div>
             )}

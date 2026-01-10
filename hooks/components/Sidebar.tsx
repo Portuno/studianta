@@ -6,10 +6,9 @@ import { getIcon, COLORS } from '../constants';
 interface SidebarProps {
   activeView: NavView;
   setActiveView: (view: NavView) => void;
-  essence: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, essence }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
   const menuItems = [
     { id: NavView.SUBJECTS, icon: 'book' },
     { id: NavView.CALENDAR, icon: 'compass' },
@@ -52,25 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, essence })
         </nav>
       </div>
 
-      <div className="mt-auto p-6 space-y-6">
-        <div className="bg-white/50 border border-[#D4AF37]/30 rounded-xl p-4 flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[10px] uppercase tracking-tighter text-[#8B5E75]">Esencia</span>
-            <span className="font-cinzel text-lg font-bold text-[#D4AF37]">{essence}</span>
-          </div>
-          <div className="text-[#D4AF37]">
-            {getIcon('sparkles', "w-6 h-6 animate-pulse")}
-          </div>
-        </div>
-
-        <div className="glass-card p-3 rounded-2xl flex items-center gap-3 border-[#F8C8DC]">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E35B8F] to-[#D4AF37] border-2 border-white shadow-sm flex-shrink-0" />
-          <div className="overflow-hidden">
-            <p className="text-sm font-bold text-[#4A233E] truncate">Académico Real</p>
-            <p className="text-[10px] text-[#8B5E75]">Nivel Arcano</p>
-          </div>
-        </div>
-
+      <div className="mt-auto p-6">
         <button className="w-full text-center text-[10px] text-[#8B5E75] hover:text-[#E35B8F] transition-colors">
           Enviar Feedback Celestial
         </button>

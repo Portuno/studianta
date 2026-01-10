@@ -39,9 +39,6 @@ export const useInteractionAggregator = ({
       email: userProfile?.email || '',
       career: userProfile?.career || undefined,
       institution: userProfile?.institution || undefined,
-      arcane_level: userProfile?.arcane_level || 'Buscadora de Luz',
-      essence: userProfile?.essence || 0,
-      total_essence_earned: userProfile?.total_essence_earned || 0,
       account_created: userProfile?.created_at || now.toISOString(),
     };
 

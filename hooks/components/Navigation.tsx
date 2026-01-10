@@ -7,14 +7,13 @@ import { UserProfile } from '../services/supabaseService';
 interface NavigationProps {
   activeView: NavView;
   setActiveView: (view: NavView) => void;
-  essence: number;
   isMobile: boolean;
   modules: Module[];
   user?: any;
   userProfile?: UserProfile | null;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, essence, isMobile, modules, user, userProfile }) => {
+const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMobile, modules, user, userProfile }) => {
   const isLocked = (moduleId: string) => {
     if (!moduleId || moduleId === 'atanor') return false;
     const mod = modules.find(m => m.id === moduleId);
@@ -72,14 +71,6 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
             active={activeView === NavView.FINANCE} 
             onClick={() => setActiveView(NavView.FINANCE)} 
           />
-          <NavButton 
-            id={NavView.BAZAR} 
-            icon="bazar" 
-            label="Bazar" 
-            locked={isLocked('bazar')} 
-            active={activeView === NavView.BAZAR} 
-            onClick={() => setActiveView(NavView.BAZAR)} 
-          />
         </div>
       </nav>
     );
@@ -92,7 +83,6 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
     { id: NavView.FOCUS, icon: 'hourglass', moduleId: 'focus', label: 'Enfoque' },
     { id: NavView.DIARY, icon: 'pen', moduleId: 'diary', label: 'Diario' },
     { id: NavView.FINANCE, icon: 'scale', moduleId: 'finance', label: 'Balanza' },
-    { id: NavView.BAZAR, icon: 'bazar', moduleId: 'bazar', label: 'Bazar' },
     { id: NavView.DASHBOARD, icon: 'sparkles', moduleId: '', label: 'Atanor' },
   ];
 
@@ -146,16 +136,6 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, esse
           {getIcon('brain', 'w-6 h-6 lg:w-5 lg:h-5 transition-transform')}
           <span className="hidden lg:inline font-cinzel text-[10px] font-black uppercase tracking-[0.2em]">Oráculo</span>
         </button>
-
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between px-2 text-center lg:text-left">
-          <div className="flex flex-col">
-             <p className="hidden lg:block text-[9px] font-cinzel font-bold text-[#4A233E] uppercase tracking-widest opacity-60">Esencia</p>
-             <p className="font-inter text-xl lg:text-2xl font-black text-[#D4AF37] leading-none">{essence}</p>
-          </div>
-          <div className="text-[#D4AF37] mt-1 lg:mt-0 self-center lg:self-auto">
-            {getIcon('sparkles', 'w-4 h-4')}
-          </div>
-        </div>
 
         <button 
           onClick={() => setActiveView(NavView.PROFILE)}

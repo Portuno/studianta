@@ -7,7 +7,6 @@ import { saveFocusSession } from '../utils/focusTracker';
 interface FocusModuleProps {
   subjects: Subject[];
   onUpdateSubject: (subject: Subject) => void;
-  onAddEssence: (amount: number) => void;
   onAddCalendarEvent?: (event: Omit<CustomCalendarEvent, 'id'>) => void;
   isMobile: boolean;
   // Estado global del focus
@@ -33,7 +32,6 @@ interface FocusModuleProps {
 const FocusModule: React.FC<FocusModuleProps> = ({ 
   subjects, 
   onUpdateSubject, 
-  onAddEssence, 
   onAddCalendarEvent, 
   isMobile,
   focusState,
@@ -171,13 +169,6 @@ const FocusModule: React.FC<FocusModuleProps> = ({
 
   const submitReflection = () => {
     const minutesStudied = Math.floor((totalTime - timeLeft) / 60);
-    let essenceEarned = minutesStudied;
-    
-    if (!reflectionData.wasInterrupted && timeLeft === 0) {
-      essenceEarned += 5;
-    }
-
-    onAddEssence(essenceEarned);
 
     const subject = subjects.find(s => s.id === selectedSubjectId);
     const currentDate = new Date().toISOString().split('T')[0];
@@ -503,7 +494,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                 onClick={submitReflection}
                 className="btn-primary w-full py-5 rounded-[2rem] font-cinzel text-xs lg:text-sm tracking-[0.3em] font-black uppercase shadow-2xl hover:brightness-105"
               >
-                Transmutar en Esencia
+                Finalizar Sesión
               </button>
             </div>
           </div>

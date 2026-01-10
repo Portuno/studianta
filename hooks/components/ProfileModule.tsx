@@ -20,26 +20,6 @@ interface ProfileModuleProps {
   setActiveView?: (view: any) => void;
 }
 
-// Función para calcular el progreso del nivel arcano
-const calculateArcaneProgress = (totalEssence: number) => {
-  const levels = [
-    { min: 0, max: 100, name: 'Buscadora de Luz' },
-    { min: 100, max: 300, name: 'Aprendiz de la Logia' },
-    { min: 300, max: 600, name: 'Alquimista Clínica' },
-    { min: 600, max: 1000, name: 'Maestra de la Transmutación' },
-    { min: 1000, max: 2000, name: 'Archimaga del Conocimiento' },
-    { min: 2000, max: 5000, name: 'Gran Alquimista' },
-    { min: 5000, max: Infinity, name: 'Arquitecta del Saber Eterno' },
-  ];
-
-  for (const level of levels) {
-    if (totalEssence >= level.min && totalEssence < level.max) {
-      const progress = ((totalEssence - level.min) / (level.max - level.min)) * 100;
-      return { progress: Math.min(progress, 100), currentLevel: level.name, nextLevel: levels[levels.indexOf(level) + 1]?.name || null };
-    }
-  }
-  return { progress: 100, currentLevel: 'Arquitecta del Saber Eterno', nextLevel: null };
-};
 
 const ProfileModule: React.FC<ProfileModuleProps> = ({ 
   user, 
@@ -201,14 +181,8 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
   const displayEmail = profile?.email || user.email || '';
   const displayCareer = profile?.career || 'No especificada';
   const displayInstitution = profile?.institution || 'No especificada';
-  const arcaneLevel = profile?.arcane_level || 'Buscadora de Luz';
-  const currentEssence = profile?.essence || 0;
-  const totalEssenceEarned = profile?.total_essence_earned || 0;
   const createdAt = profile?.created_at ? new Date(profile.created_at) : new Date();
   const joinDate = createdAt.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-
-  // Calcular progreso del nivel arcano
-  const arcaneProgress = calculateArcaneProgress(totalEssenceEarned);
 
   // Si es móvil, mantener diseño vertical simplificado
   if (isMobile) {
@@ -277,13 +251,6 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
             <div>
               <p className="text-[8px] uppercase font-bold text-[#8B5E75] mb-1 font-inter tracking-[0.2em]">Institución</p>
               <p className="font-garamond text-[#4A233E]">{displayInstitution}</p>
-            </div>
-            <div className="pt-4 border-t border-[#F8C8DC]">
-              <p className="text-[8px] uppercase font-bold text-[#8B5E75] mb-2 font-inter tracking-[0.2em]">Esencia</p>
-              <div className="flex items-center gap-2">
-                <p className="font-cinzel text-2xl font-black text-[#D4AF37]">{currentEssence}</p>
-                {getIcon('sparkles', 'w-5 h-5 text-[#D4AF37] animate-pulse')}
-              </div>
             </div>
           </div>
           <div className="mt-6 flex flex-col gap-2">
@@ -432,8 +399,8 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
             </div>
           </div>
 
-          {/* B. Columna Central: El Registro Académico (Doble - 6 columnas) */}
-          <div className="col-span-12 md:col-span-6 flex flex-col justify-center space-y-6">
+          {/* B. Columna Central: El Registro Académico */}
+          <div className="col-span-12 md:col-span-9 flex flex-col justify-center space-y-6">
             {/* Díptico Informativo - Dos bloques horizontales paralelos */}
             
             {/* Bloque 1: Carrera + Institución */}
@@ -503,52 +470,6 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
                   </label>
                 </div>
                 <p className="font-garamond text-base md:text-lg text-[#4A233E]">Activa</p>
-              </div>
-            </div>
-          </div>
-
-          {/* C. Columna Derecha: El Tesoro de Esencia (3 columnas) */}
-          <div className="col-span-12 md:col-span-3 flex flex-col justify-center space-y-6">
-            {/* Esencia Actual */}
-            <div className="text-center">
-              <label className="block text-[8px] uppercase font-bold text-[#8B5E75] mb-2 font-inter tracking-[0.3em]">
-                ESENCIA ACTUAL
-              </label>
-              <div className="flex items-center justify-center gap-2">
-                <p className="font-cinzel text-3xl md:text-4xl font-black text-[#D4AF37]">{currentEssence}</p>
-                <div className="text-[#D4AF37] animate-pulse">
-                  {getIcon('sparkles', 'w-6 h-6 md:w-8 md:h-8')}
-                </div>
-              </div>
-            </div>
-
-            {/* Esencia Total Ganada */}
-            <div className="text-center">
-              <label className="block text-[8px] uppercase font-bold text-[#8B5E75] mb-2 font-inter tracking-[0.3em]">
-                ESENCIA TOTAL
-              </label>
-              <p className="font-cinzel text-xl md:text-2xl font-bold text-[#4A233E]">{totalEssenceEarned}</p>
-            </div>
-
-            {/* Barra de Nivel Arcano */}
-            <div>
-              <label className="block text-[8px] uppercase font-bold text-[#8B5E75] mb-2 font-inter tracking-[0.3em]">
-                NIVEL ARCANO
-              </label>
-              <div className="space-y-2">
-                <p className="font-cinzel text-sm font-bold text-[#4A233E] text-center">{arcaneLevel}</p>
-                {/* Barra de progreso horizontal fina */}
-                <div className="h-2 bg-[#FFE4E9] rounded-full overflow-hidden border border-[#F8C8DC]/50">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[#E35B8F] to-[#D4AF37] rounded-full transition-all duration-500"
-                    style={{ width: `${arcaneProgress.progress}%` }}
-                  ></div>
-                </div>
-                {arcaneProgress.nextLevel && (
-                  <p className="text-[8px] text-[#8B5E75] text-center italic">
-                    Próximo: {arcaneProgress.nextLevel}
-                  </p>
-                )}
               </div>
             </div>
           </div>

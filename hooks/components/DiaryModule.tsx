@@ -100,7 +100,7 @@ const MOODS: { type: MoodType; icon: string; color: string; label: string }[] = 
 const PROMPTS = [
   "¿Qué susurro del universo resonó en tu alma hoy?",
   "¿Qué fragmento de eternidad capturaste en este instante?",
-  "Describe el eco de tu esencia en este momento sagrado.",
+  "Describe el eco de tu experiencia en este momento sagrado.",
   "¿Qué verdad velada se reveló ante tus ojos?",
   "¿Cómo danzó la luz en tu corazón esta jornada?",
   "¿Qué misterio del cosmos se desplegó en tu camino?",

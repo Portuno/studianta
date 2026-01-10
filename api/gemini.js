@@ -38,7 +38,6 @@ export default async function handler(req, res) {
         const spc = studentProfileContext;
         spcText = `\n\n--- CONTEXTO COMPLETO DEL ESTUDIANTE ---\n`;
         spcText += `Perfil: ${spc.user_profile?.full_name || spc.user_profile?.email || 'Estudiante'} - ${spc.user_profile?.career || 'Sin carrera especificada'} - ${spc.user_profile?.institution || 'Sin institución'}\n`;
-        spcText += `Nivel Arcano: ${spc.user_profile?.arcane_level || 'Buscadora de Luz'} (Esencia: ${spc.user_profile?.essence || 0})\n\n`;
         
         if (spc.financial_state && spc.financial_state.transactions && spc.financial_state.transactions.length > 0) {
           spcText += `Estado Financiero: ${spc.financial_state.status || 'N/A'} - Balance: $${spc.financial_state.balance || 0}\n`;

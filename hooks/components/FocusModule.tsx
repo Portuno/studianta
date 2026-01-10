@@ -1,13 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Subject, NavView, CustomCalendarEvent } from '../types';
-import { getIcon, COLORS } from '../constants';
-import { saveFocusSession } from '../utils/focusTracker';
+import { Subject, NavView, CustomCalendarEvent } from '../../types';
+import { getIcon, COLORS } from '../../constants';
+import { saveFocusSession } from '../../utils/focusTracker';
 
 interface FocusModuleProps {
   subjects: Subject[];
   onUpdateSubject: (subject: Subject) => void;
-  onAddEssence: (amount: number) => void;
   onAddCalendarEvent?: (event: Omit<CustomCalendarEvent, 'id'>) => void;
   isMobile: boolean;
   // Estado global del focus
@@ -32,7 +31,6 @@ interface FocusModuleProps {
 const FocusModule: React.FC<FocusModuleProps> = ({ 
   subjects, 
   onUpdateSubject, 
-  onAddEssence, 
   onAddCalendarEvent, 
   isMobile,
   focusState,
@@ -169,13 +167,6 @@ const FocusModule: React.FC<FocusModuleProps> = ({
 
   const submitReflection = () => {
     const minutesStudied = Math.floor((totalTime - timeLeft) / 60);
-    let essenceEarned = minutesStudied;
-    
-    if (!reflectionData.wasInterrupted && timeLeft === 0) {
-      essenceEarned += 5;
-    }
-
-    onAddEssence(essenceEarned);
 
     const subject = subjects.find(s => s.id === selectedSubjectId);
     const currentDate = new Date().toISOString().split('T')[0];
@@ -372,10 +363,6 @@ const FocusModule: React.FC<FocusModuleProps> = ({
             </div>
           </div>
         </div>
-
-        <div className="text-center opacity-30 max-w-md">
-          <p className="font-garamond italic text-lg lg:text-xl">"Cada grano de arena que cae es un peldaño más hacia la cúspide de la Logia."</p>
-        </div>
       </div>
 
       {/* Modo Santuario - Solo efectos visuales de fondo, sin bloquear interacción */}
@@ -467,7 +454,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                 onClick={submitReflection}
                 className="btn-primary w-full py-5 rounded-[2rem] font-cinzel text-xs lg:text-sm tracking-[0.3em] font-black uppercase shadow-2xl hover:brightness-105"
               >
-                Transmutar en Esencia
+                Finalizar Sesión
               </button>
             </div>
           </div>

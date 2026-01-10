@@ -15,7 +15,6 @@ import FocusModule from './components/FocusModule';
 import DiaryModule from './components/DiaryModule';
 import AuthModule from './components/AuthModule';
 import ProfileModule from './components/ProfileModule';
-import BazarArtefactos from './components/BazarArtefactos';
 import FocusFloatingWidget from './components/FocusFloatingWidget';
 import OraculoPage from './components/OraculoPage';
 import PrivacyPolicy from './components/PrivacyPolicy';
@@ -23,7 +22,6 @@ import TermsOfService from './components/TermsOfService';
 import DocsPage from './components/DocsPage';
 import Footer from './components/Footer';
 import OnboardingModal from './components/OnboardingModal';
-import EssenceNotification from './components/EssenceNotification';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -91,7 +89,6 @@ const App: React.FC = () => {
   
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [modules, setModules] = useState<Module[]>(INITIAL_MODULES);
-  const [essence, setEssence] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [monthlyBudget, setMonthlyBudget] = useState<number>(0);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
@@ -99,7 +96,6 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [securityPin, setSecurityPin] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showEssenceNotification, setShowEssenceNotification] = useState(false);
   const [isNightMode, setIsNightMode] = useState<boolean>(false);
 
   const toggleTheme = () => {
@@ -285,7 +281,6 @@ const App: React.FC = () => {
           // Limpiar datos locales
           setSubjects([]);
           setModules(INITIAL_MODULES);
-          setEssence(0);
           setTransactions([]);
           setMonthlyBudget(0);
           setJournalEntries([]);
@@ -311,7 +306,7 @@ const App: React.FC = () => {
 
   const loadAllData = async (userId: string) => {
     try {
-      // Cargar perfil primero (necesario para esencia)
+      // Cargar perfil primero
       let profile = await supabaseService.getProfile(userId);
       
       // Si no existe perfil, crearlo automáticamente (útil para usuarios de Google Auth)
@@ -331,7 +326,6 @@ const App: React.FC = () => {
       }
       
       if (profile) {
-        setEssence(profile.essence);
         setUserProfile(profile);
         // Verificar si necesita mostrar el onboarding
         if (!profile.onboarding_completed) {
@@ -426,8 +420,6 @@ const App: React.FC = () => {
 
     const saveData = async () => {
       try {
-        // Actualizar esencia en perfil
-        await supabaseService.updateEssence(user.id, essence);
 
         // Actualizar módulos (solo si hay cambios)
         // No actualizar todos los módulos cada vez, solo los que han cambiado
@@ -456,7 +448,7 @@ const App: React.FC = () => {
 
     const timeoutId = setTimeout(saveData, 1000); // Debounce
     return () => clearTimeout(timeoutId);
-  }, [essence, modules, user]);
+  }, [modules, user]);
 
   const handleAuthSuccess = () => {
     // El onAuthStateChange manejará todo automáticamente
@@ -479,20 +471,17 @@ const App: React.FC = () => {
     if (!mod) return;
     
     // Si es el módulo de seguridad y no está activo, pedir PIN primero
-    if (moduleId === 'security' && !mod.active && essence >= mod.cost) {
+    if (moduleId === 'security' && !mod.active) {
       setPendingModuleId(moduleId);
       setShowPinSetupModal(true);
       return;
     }
     
-    if (!mod.active && essence >= mod.cost) {
-      const newEssence = essence - mod.cost;
-      setEssence(newEssence);
+    if (!mod.active) {
       const updatedModules = modules.map(m => m.id === moduleId ? { ...m, active: true } : m);
       setModules(updatedModules);
       
       try {
-        await supabaseService.updateEssence(user.id, newEssence);
         await supabaseService.updateModule(user.id, moduleId, { active: true });
       } catch (error) {
         console.error('Error updating module:', error);
@@ -510,7 +499,7 @@ const App: React.FC = () => {
     }
 
     const mod = modules.find(m => m.id === pendingModuleId);
-    if (!mod || mod.active || essence < mod.cost) return;
+    if (!mod || mod.active) return;
 
     try {
       // Guardar PIN en la configuración de seguridad
@@ -518,12 +507,8 @@ const App: React.FC = () => {
       setSecurityPin(trimmedPin);
       
       // Activar el módulo
-      const newEssence = essence - mod.cost;
-      setEssence(newEssence);
       const updatedModules = modules.map(m => m.id === pendingModuleId ? { ...m, active: true } : m);
       setModules(updatedModules);
-      
-      await supabaseService.updateEssence(user.id, newEssence);
       await supabaseService.updateModule(user.id, pendingModuleId, { active: true });
       
       setShowPinSetupModal(false);
@@ -745,29 +730,11 @@ const App: React.FC = () => {
   };
 
   const handleMaterialUpload = async () => {
-    if (!user) return;
-    
-    const newEssence = essence + 5;
-    setEssence(newEssence);
-    
-    try {
-      await supabaseService.updateEssence(user.id, newEssence);
-    } catch (error) {
-      console.error('Error updating essence:', error);
-    }
+    // Función mantenida para compatibilidad, sin lógica de esencia
   };
 
   const handleAddEssence = async (amount: number) => {
-    if (!user) return;
-    
-    const newEssence = essence + amount;
-    setEssence(newEssence);
-    
-    try {
-      await supabaseService.updateEssence(user.id, newEssence);
-    } catch (error) {
-      console.error('Error updating essence:', error);
-    }
+    // Función mantenida para compatibilidad, sin lógica de esencia
   };
 
   const handleCompleteOnboarding = async (
@@ -798,13 +765,11 @@ const App: React.FC = () => {
         // Actualizar el estado local
         if (finalProfile) {
           setUserProfile(finalProfile);
-          setEssence(finalProfile.essence);
         }
         
         // Cerrar el modal y navegar al Dashboard
         setShowOnboarding(false);
         setActiveView(NavView.DASHBOARD);
-        setShowEssenceNotification(true);
         return;
       }
       
@@ -828,8 +793,6 @@ const App: React.FC = () => {
         // Actualizar el perfil con los datos del Acto I
         await supabaseService.updateProfile(user.id, profileUpdates);
         
-        // Otorgar 300 puntos de esencia
-        await supabaseService.addEssence(user.id, 300);
         
         // Recargar el perfil actualizado
         const updatedProfile = await supabaseService.getProfile(user.id);
@@ -837,7 +800,6 @@ const App: React.FC = () => {
         // Actualizar el estado local
         if (updatedProfile) {
           setUserProfile(updatedProfile);
-          setEssence(updatedProfile.essence);
         }
       }
       
@@ -891,7 +853,6 @@ const App: React.FC = () => {
             isMobile={isMobile} 
             setActiveView={setActiveView}
             user={user}
-            essence={user ? essence : 0}
             showLoginModal={showLoginModal}
             setShowLoginModal={setShowLoginModal}
             onAuthSuccess={handleAuthSuccess}
@@ -906,7 +867,6 @@ const App: React.FC = () => {
           onUpdate={updateSubject} 
           isMobile={isMobile} 
           onMaterialUpload={handleMaterialUpload}
-          onAddEssence={handleAddEssence}
           studentProfileContext={studentProfileContext}
           isNightMode={isNightMode}
         />;
@@ -938,7 +898,6 @@ const App: React.FC = () => {
         return <FocusModule 
           subjects={subjects} 
           onUpdateSubject={updateSubject} 
-          onAddEssence={handleAddEssence}
           onAddCalendarEvent={handleAddCalendarEvent}
           isMobile={isMobile}
           focusState={focusState}
@@ -971,13 +930,6 @@ const App: React.FC = () => {
           modules={modules}
           monthlyBudget={monthlyBudget}
           setActiveView={handleViewChange}
-          isNightMode={isNightMode}
-        />;
-      case NavView.BAZAR:
-        return <BazarArtefactos 
-          isMobile={isMobile}
-          essence={user ? essence : 0}
-          onEssenceChange={setEssence}
           isNightMode={isNightMode}
         />;
       case NavView.ORACLE:
@@ -1053,7 +1005,6 @@ const App: React.FC = () => {
         <Navigation 
           activeView={activeView} 
           setActiveView={handleNavigationClick} 
-          essence={user ? essence : 0} 
           isMobile={false}
           modules={modules}
           user={user}
@@ -1079,7 +1030,6 @@ const App: React.FC = () => {
         <Navigation 
           activeView={activeView}
           setActiveView={handleNavigationClick} 
-          essence={user ? essence : 0} 
           isMobile={true}
           modules={modules}
           user={user}
@@ -1125,14 +1075,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* Notificación de Esencia Ganada */}
-      {showEssenceNotification && (
-        <EssenceNotification
-          amount={300}
-          onClose={() => setShowEssenceNotification(false)}
-          isMobile={isMobile}
-        />
-      )}
 
       <Analytics />
     </div>

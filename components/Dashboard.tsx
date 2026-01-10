@@ -11,7 +11,6 @@ interface DashboardProps {
   isMobile: boolean;
   setActiveView: (view: NavView) => void;
   user?: any;
-  essence: number;
   showLoginModal: boolean;
   setShowLoginModal: (show: boolean) => void;
   onAuthSuccess: () => void;
@@ -23,7 +22,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   onActivate, isMobile, 
   setActiveView, 
   user, 
-  essence,
   showLoginModal,
   setShowLoginModal,
   onAuthSuccess,
@@ -49,8 +47,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   }, [user, showLoginModal, setShowLoginModal]);
 
-  // Inicializar orden de módulos basado en posiciones guardadas
-  useEffect(() => {
+  // Función para inicializar el orden de módulos basado en posiciones guardadas
+  const initializeModuleOrder = useCallback(() => {
     if (modules.length > 0) {
       // Separar activos e inactivos
       const activeModules = modules.filter(m => m.active);
@@ -75,6 +73,23 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   }, [modules]);
 
+  // Inicializar orden de módulos basado en posiciones guardadas cuando cambian los módulos
+  useEffect(() => {
+    initializeModuleOrder();
+  }, [initializeModuleOrder]);
+
+  // Reinicializar el orden cuando se monta el componente o cuando cambia el usuario
+  // Esto asegura que las posiciones se carguen correctamente al volver al Dashboard
+  useEffect(() => {
+    if (user && modules.length > 0) {
+      // Pequeño delay para asegurar que los módulos están completamente cargados
+      const timer = setTimeout(() => {
+        initializeModuleOrder();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [user, initializeModuleOrder]);
+
   // Guardar posición del módulo en la BD
   const handleSaveModulePosition = useCallback(async (moduleId: string, row: number, col: number) => {
     if (!user) return;
@@ -87,6 +102,32 @@ const Dashboard: React.FC<DashboardProps> = ({
       console.error('Error guardando posición del módulo:', error);
     }
   }, [user]);
+
+  // Función para guardar todas las posiciones de una vez (más robusta)
+  const saveAllModulePositions = useCallback(async (newOrder: string[]) => {
+    if (!user) return;
+
+    const GRID_COLS = 3;
+    const activeModuleIds = newOrder.filter(moduleId => {
+      const module = modules.find(m => m.id === moduleId);
+      return module?.active;
+    });
+
+    // Guardar todas las posiciones en paralelo para mejor rendimiento
+    const savePromises = activeModuleIds.map((moduleId, index) => {
+      const row = Math.floor(index / GRID_COLS);
+      const col = index % GRID_COLS;
+      return supabaseService.updateModule(user.id, moduleId, { 
+        gridPosition: { row, col } 
+      });
+    });
+
+    try {
+      await Promise.all(savePromises);
+    } catch (error) {
+      console.error('Error guardando posiciones de módulos:', error);
+    }
+  }, [user, modules]);
 
   // Handlers de drag and drop
   const handleDragStart = (e: React.DragEvent, moduleId: string) => {
@@ -138,22 +179,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     newOrder.splice(targetIndex, 0, removed);
     setModuleOrder(newOrder);
 
-    // Calcular nuevas posiciones solo para módulos activos (grid de 3 columnas)
-    const GRID_COLS = 3;
-    // Filtrar solo módulos activos del nuevo orden
-    const activeModuleIds = newOrder.filter(moduleId => {
-      const module = modules.find(m => m.id === moduleId);
-      return module?.active;
-    });
-    
-    // Guardar posiciones solo para módulos activos
-    activeModuleIds.forEach((moduleId, index) => {
-      const row = Math.floor(index / GRID_COLS);
-      const col = index % GRID_COLS;
-      if (user) {
-        handleSaveModulePosition(moduleId, row, col);
-      }
-    });
+    // Guardar todas las posiciones de una vez
+    saveAllModulePositions(newOrder);
 
     setDragOverIndex(null);
     
@@ -173,7 +200,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     'profile': NavView.PROFILE,
     'security': NavView.SECURITY,
     'social': NavView.SOCIAL,
-    'bazar': NavView.BAZAR
   };
 
   // Ordenar módulos: pendientes primero, adquiridos al final
@@ -315,44 +341,123 @@ const Dashboard: React.FC<DashboardProps> = ({
           }
         });
 
+        // Ocultar temporalmente el elemento arrastrado para detectar correctamente el elemento debajo
+        if (currentElement) {
+          currentElement.style.pointerEvents = 'none';
+          currentElement.style.opacity = '0.3';
+        }
+
+        // Encontrar el módulo objetivo basándose en la posición del touch
         const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+        let targetModuleId: string | null = null;
         
         if (elementBelow) {
           const cardElement = elementBelow.closest('[data-module-id]') as HTMLElement;
-          if (cardElement && cardElement.dataset.moduleId) {
-            const targetModuleId = cardElement.dataset.moduleId;
-            const targetIndex = orderedModules.findIndex(m => m.id === targetModuleId);
-            
-            if (targetIndex !== -1 && targetModuleId !== currentModuleId) {
-              setModuleOrder((prevOrder) => {
-                const draggedIndex = prevOrder.indexOf(currentModuleId);
-                if (draggedIndex !== -1 && draggedIndex !== targetIndex) {
-                  const newOrder = [...prevOrder];
-                  const [removed] = newOrder.splice(draggedIndex, 1);
-                  newOrder.splice(targetIndex, 0, removed);
-
-                  // Calcular nuevas posiciones solo para módulos activos
-                  const GRID_COLS = 3;
-                  const activeModuleIds = newOrder.filter(moduleId => {
-                    const module = modules.find(m => m.id === moduleId);
-                    return module?.active;
-                  });
-                  
-                  activeModuleIds.forEach((moduleId, index) => {
-                    const row = Math.floor(index / GRID_COLS);
-                    const col = index % GRID_COLS;
-                    if (user) {
-                      handleSaveModulePosition(moduleId, row, col);
-                    }
-                  });
-
-                  return newOrder;
-                }
-                return prevOrder;
-              });
-            }
+          if (cardElement && cardElement.dataset.moduleId && cardElement.dataset.moduleId !== currentModuleId) {
+            targetModuleId = cardElement.dataset.moduleId;
           }
         }
+
+        // Restaurar el elemento arrastrado
+        if (currentElement) {
+          currentElement.style.pointerEvents = '';
+          currentElement.style.opacity = '';
+        }
+
+        // Si no encontramos un módulo objetivo directamente, buscar el más cercano basándose en la posición
+        if (!targetModuleId) {
+          // Obtener todos los elementos de módulos activos
+          const allModuleElements = Array.from(document.querySelectorAll('[data-module-id]')) as HTMLElement[];
+          const activeModuleElements = allModuleElements.filter(el => {
+            const moduleId = el.dataset.moduleId;
+            if (!moduleId || el === currentElement) return false;
+            const module = modules.find(m => m.id === moduleId);
+            return module?.active && moduleId !== currentModuleId;
+          });
+
+          // Encontrar el elemento más cercano al punto de release
+          let closestElement: HTMLElement | null = null;
+          let minDistance = Infinity;
+
+          activeModuleElements.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const distance = Math.sqrt(
+              Math.pow(touch.clientX - centerX, 2) + 
+              Math.pow(touch.clientY - centerY, 2)
+            );
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestElement = el;
+            }
+          });
+
+          // Si encontramos un elemento cercano (dentro de 200px), usarlo como objetivo
+          if (closestElement && minDistance < 200 && closestElement.dataset.moduleId) {
+            targetModuleId = closestElement.dataset.moduleId;
+          }
+        }
+
+        // Reordenar y guardar posiciones
+        setModuleOrder((prevOrder) => {
+          const draggedIndex = prevOrder.indexOf(currentModuleId);
+          let finalOrder = prevOrder;
+          
+          // Si encontramos un módulo objetivo válido, reordenar
+          if (targetModuleId) {
+            const targetIndex = prevOrder.indexOf(targetModuleId);
+            
+            if (draggedIndex !== -1 && targetIndex !== -1 && draggedIndex !== targetIndex) {
+              const newOrder = [...prevOrder];
+              const [removed] = newOrder.splice(draggedIndex, 1);
+              newOrder.splice(targetIndex, 0, removed);
+              finalOrder = newOrder;
+            }
+          }
+          // Si no encontramos un objetivo específico, intentar calcular la posición basándose en el grid
+          else if (!targetModuleId && draggedIndex !== -1) {
+            const gridContainer = currentElement?.closest('.grid') as HTMLElement;
+            if (gridContainer) {
+              const gridRect = gridContainer.getBoundingClientRect();
+              const relativeX = touch.clientX - gridRect.left;
+              const relativeY = touch.clientY - gridRect.top;
+              
+              // Calcular posición en el grid (3 columnas)
+              const GRID_COLS = 3;
+              const cardWidth = gridRect.width / GRID_COLS;
+              const col = Math.max(0, Math.min(GRID_COLS - 1, Math.floor(relativeX / cardWidth)));
+              const row = Math.floor(relativeY / cardWidth);
+              
+              // Calcular el índice objetivo basándose en la posición del grid
+              const pendingCount = prevOrder.filter(moduleId => {
+                const module = modules.find(m => m.id === moduleId);
+                return module && !module.active;
+              }).length;
+              
+              const activeCount = prevOrder.filter(moduleId => {
+                const module = modules.find(m => m.id === moduleId);
+                return module?.active;
+              }).length;
+              
+              const calculatedIndex = Math.min(pendingCount + row * GRID_COLS + col, pendingCount + activeCount - 1);
+              
+              if (calculatedIndex >= 0 && calculatedIndex !== draggedIndex) {
+                const newOrder = [...prevOrder];
+                const [removed] = newOrder.splice(draggedIndex, 1);
+                newOrder.splice(calculatedIndex, 0, removed);
+                finalOrder = newOrder;
+              }
+            }
+          }
+          
+          // Guardar todas las posiciones de una vez con el orden final
+          if (user && finalOrder !== prevOrder) {
+            saveAllModulePositions(finalOrder);
+          }
+          
+          return finalOrder;
+        });
       } else {
         // Si no hubo arrastre significativo, limpiar estilos
         document.querySelectorAll('[data-module-id]').forEach((el) => {

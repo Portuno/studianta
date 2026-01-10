@@ -96,9 +96,6 @@ export interface UserProfile {
   career?: string;
   institution?: string; // Renombrado de university a institution
   avatar_url?: string;
-  arcane_level?: string; // Nivel arcano (ej: "Buscadora de Luz", "Alquimista Clínica")
-  essence: number;
-  total_essence_earned?: number; // Esencia histórica total ganada
   onboarding_completed?: boolean; // Si el usuario completó el onboarding
   academic_stage?: string; // Etapa académica del usuario
   interests?: string[]; // Array de áreas de interés
@@ -230,7 +227,6 @@ export class SupabaseService {
         full_name: fullName || '',
         essence: 0,
         total_essence_earned: 0,
-        arcane_level: 'Buscadora de Luz',
         onboarding_completed: false,
       })
       .select()
@@ -274,9 +270,6 @@ export class SupabaseService {
         career: data.career,
         institution: data.institution, // Mapear institution (antes university)
         avatar_url: data.avatar_url,
-        arcane_level: data.arcane_level || 'Buscadora de Luz',
-        essence: data.essence || 0,
-        total_essence_earned: data.total_essence_earned || 0,
         onboarding_completed: data.onboarding_completed ?? false,
         academic_stage: data.academic_stage,
         interests: data.interests || [],
@@ -299,9 +292,6 @@ export class SupabaseService {
     if (updates.career !== undefined) dbUpdates.career = updates.career;
     if (updates.institution !== undefined) dbUpdates.institution = updates.institution;
     if (updates.avatar_url !== undefined) dbUpdates.avatar_url = updates.avatar_url;
-    if (updates.arcane_level !== undefined) dbUpdates.arcane_level = updates.arcane_level;
-    if (updates.essence !== undefined) dbUpdates.essence = updates.essence;
-    if (updates.total_essence_earned !== undefined) dbUpdates.total_essence_earned = updates.total_essence_earned;
     if (updates.onboarding_completed !== undefined) dbUpdates.onboarding_completed = updates.onboarding_completed;
     if (updates.academic_stage !== undefined) dbUpdates.academic_stage = updates.academic_stage;
     if (updates.interests !== undefined) dbUpdates.interests = updates.interests;
@@ -338,9 +328,6 @@ export class SupabaseService {
         career: data.career,
         institution: data.institution,
         avatar_url: data.avatar_url,
-        arcane_level: data.arcane_level || 'Buscadora de Luz',
-        essence: data.essence || 0,
-        total_essence_earned: data.total_essence_earned || 0,
         onboarding_completed: data.onboarding_completed ?? false,
         academic_stage: data.academic_stage,
         interests: data.interests || [],
@@ -357,34 +344,6 @@ export class SupabaseService {
     }
   }
 
-  async updateEssence(userId: string, essence: number) {
-    return this.updateProfile(userId, { essence });
-  }
-
-  async addEssence(userId: string, amount: number) {
-    // Obtener perfil actual
-    const profile = await this.getProfile(userId);
-    if (!profile) throw new Error('Profile not found');
-
-    const newEssence = (profile.essence || 0) + amount;
-    const newTotalEssence = (profile.total_essence_earned || 0) + amount;
-
-    // Actualizar esencia y total ganado (el trigger actualizará el arcane_level automáticamente)
-    return this.updateProfile(userId, {
-      essence: newEssence,
-      total_essence_earned: newTotalEssence,
-    });
-  }
-
-  async calculateArcaneLevel(totalEssence: number): Promise<string> {
-    if (totalEssence < 100) return 'Buscadora de Luz';
-    if (totalEssence < 300) return 'Aprendiz de la Logia';
-    if (totalEssence < 600) return 'Alquimista Clínica';
-    if (totalEssence < 1000) return 'Maestra de la Transmutación';
-    if (totalEssence < 2000) return 'Archimaga del Conocimiento';
-    if (totalEssence < 5000) return 'Gran Alquimista';
-    return 'Arquitecta del Saber Eterno';
-  }
 
   // ============ SUBJECTS ============
 

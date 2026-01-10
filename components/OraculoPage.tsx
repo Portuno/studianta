@@ -92,31 +92,6 @@ const StudiantaSeal: React.FC<{ className?: string; size?: number }> = ({ classN
   );
 };
 
-// Animación de partículas de luz (Esencia)
-const EssenceParticles: React.FC = () => {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(12)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-1 h-1 bg-[#D4AF37] rounded-full opacity-60"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animation: `float ${3 + Math.random() * 2}s ease-in-out infinite`,
-            animationDelay: `${Math.random() * 2}s`,
-          }}
-        />
-      ))}
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0) translateX(0); opacity: 0.6; }
-          50% { transform: translateY(-20px) translateX(10px); opacity: 1; }
-        }
-      `}</style>
-    </div>
-  );
-};
 
 // Animación de pluma escribiendo
 const WritingQuill: React.FC = () => {
@@ -618,7 +593,6 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
                       ) : (
                         <>
                           <WritingQuill />
-                          <EssenceParticles />
                         </>
                       )}
                     </div>

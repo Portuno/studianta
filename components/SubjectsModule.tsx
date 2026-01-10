@@ -26,12 +26,11 @@ interface SubjectsModuleProps {
   onUpdate: (subject: Subject) => void;
   isMobile: boolean;
   onMaterialUpload: () => void;
-  onAddEssence?: (amount: number) => void;
   studentProfileContext?: StudentProfileContext;
   isNightMode?: boolean;
 }
 
-const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDelete, onUpdate, isMobile, onMaterialUpload, onAddEssence, studentProfileContext, isNightMode = false }) => {
+const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDelete, onUpdate, isMobile, onMaterialUpload, studentProfileContext, isNightMode = false }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -154,7 +153,6 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
             onStatusChange={handleStatusChange}
             isMobile={isMobile}
             onMaterialUpload={onMaterialUpload}
-            onAddEssence={onAddEssence}
             studentProfileContext={studentProfileContext}
             isNightMode={isNightMode}
           />
@@ -289,12 +287,11 @@ interface DetailProps {
   onStatusChange: (status: SubjectStatus) => void;
   isMobile: boolean;
   onMaterialUpload: () => void;
-  onAddEssence?: (amount: number) => void;
   studentProfileContext?: StudentProfileContext;
   isNightMode?: boolean;
 }
 
-const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onStatusChange, isMobile, onMaterialUpload, onAddEssence, studentProfileContext, isNightMode = false }) => {
+const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onStatusChange, isMobile, onMaterialUpload, studentProfileContext, isNightMode = false }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'plan' | 'lab' | 'notas'>('info');
   const [loadingIa, setLoadingIa] = useState(false);
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ia', text: string}[]>([]);
@@ -1087,26 +1084,42 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                 </h4>
                 <div className="space-y-4">
                   {programaMaterial ? (
-                    <div className="bg-white/60 p-4 rounded-xl flex items-center justify-between border-l-4 border-l-[#D4AF37] shadow-sm">
+                    <div className={`p-4 rounded-xl flex items-center justify-between border-l-4 shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.4)] border-l-[#A68A56] shadow-[0_0_10px_rgba(199,125,255,0.1)]' 
+                        : 'bg-white/60 border-l-[#D4AF37]'
+                    }`}>
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="text-[#D4AF37]">{getIcon('book', 'w-6 h-6')}</div>
+                        <div className={`transition-colors duration-500 ${
+                          isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+                        }`}>{getIcon('book', 'w-6 h-6')}</div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-bold text-[#4A233E] truncate">{programaMaterial.name}</h4>
-                          <p className="text-[9px] text-[#8B5E75] uppercase font-black tracking-widest mt-1">
+                          <h4 className={`text-sm font-bold truncate transition-colors duration-500 ${
+                            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                          }`}>{programaMaterial.name}</h4>
+                          <p className={`text-[9px] uppercase font-black tracking-widest mt-1 transition-colors duration-500 ${
+                            isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                          }`}>
                             {new Date(programaMaterial.date).toLocaleDateString()} • {programaMaterial.type}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {(programaMaterial.type === 'PDF' || programaMaterial.content) && (
-                          <button onClick={() => handleViewPdf(programaMaterial)} className="text-[#D4AF37] hover:text-[#4A233E] p-2" title="Leer">
+                          <button onClick={() => handleViewPdf(programaMaterial)} className={`p-2 transition-colors duration-500 ${
+                            isNightMode ? 'text-[#A68A56] hover:text-[#C77DFF]' : 'text-[#D4AF37] hover:text-[#4A233E]'
+                          }`} title="Leer">
                             {getIcon('eye', 'w-5 h-5')}
                           </button>
                         )}
-                        <button onClick={() => handleDownloadMaterial(programaMaterial)} className="text-[#4A233E] hover:text-[#E35B8F] p-2" title="Descargar">
+                        <button onClick={() => handleDownloadMaterial(programaMaterial)} className={`p-2 transition-colors duration-500 ${
+                          isNightMode ? 'text-[#E0E1DD] hover:text-[#C77DFF]' : 'text-[#4A233E] hover:text-[#E35B8F]'
+                        }`} title="Descargar">
                           {getIcon('download', 'w-5 h-5')}
                         </button>
-                        <button onClick={() => programaInputRef.current?.click()} className="text-[#8B5E75] hover:text-[#D4AF37] p-2" title="Reemplazar">
+                        <button onClick={() => programaInputRef.current?.click()} className={`p-2 transition-colors duration-500 ${
+                          isNightMode ? 'text-[#7A748E] hover:text-[#A68A56]' : 'text-[#8B5E75] hover:text-[#D4AF37]'
+                        }`} title="Reemplazar">
                           {getIcon('edit', 'w-5 h-5')}
                         </button>
                         <button onClick={() => handleDeleteMaterial(programaMaterial.id)} className="text-red-300 hover:text-red-500 p-2" title="Eliminar">
@@ -1115,10 +1128,20 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-8 border-2 border-dashed border-[#F8C8DC] rounded-xl">
-                      <p className="text-sm text-[#8B5E75] mb-4 italic opacity-50">No hay programa cargado</p>
+                    <div className={`text-center py-8 border-2 border-dashed rounded-xl backdrop-blur-[15px] transition-colors duration-500 ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40' 
+                        : 'border-[#F8C8DC]'
+                    }`}>
+                      <p className={`text-sm mb-4 italic opacity-50 transition-colors duration-500 ${
+                        isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                      }`}>No hay programa cargado</p>
                       <input type="file" ref={programaInputRef} className="hidden" onChange={handleProgramaUpload} accept=".pdf,.doc,.docx,.ppt,.pptx" />
-                      <button onClick={() => programaInputRef.current?.click()} className="px-6 py-3 rounded-xl border-2 border-dashed border-[#E35B8F] text-[#E35B8F] text-[10px] font-bold uppercase tracking-widest hover:bg-[#E35B8F]/5">
+                      <button onClick={() => programaInputRef.current?.click()} className={`px-6 py-3 rounded-xl border-2 border-dashed text-[10px] font-bold uppercase tracking-widest transition-colors duration-500 ${
+                        isNightMode 
+                          ? 'border-[#C77DFF] text-[#C77DFF] hover:bg-[#C77DFF]/10' 
+                          : 'border-[#E35B8F] text-[#E35B8F] hover:bg-[#E35B8F]/5'
+                      }`}>
                         Agregar Programa
                       </button>
                     </div>
@@ -1127,32 +1150,56 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
               </div>
             </section>
 
-            <section className="glass-card p-6 rounded-[2rem] shadow-sm">
-              <h3 className="font-cinzel text-lg text-[#4A233E] mb-6 flex items-center gap-3 font-bold uppercase tracking-widest border-b pb-4">
+            <section className={`p-6 rounded-[2rem] shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.6)] border border-[#A68A56]/40 shadow-[0_0_20px_rgba(199,125,255,0.2)]' 
+                : 'glass-card'
+            }`}>
+              <h3 className={`font-cinzel text-lg mb-6 flex items-center gap-3 font-bold uppercase tracking-widest border-b pb-4 transition-colors duration-500 ${
+                isNightMode 
+                  ? 'text-[#E0E1DD] border-[#A68A56]/40' 
+                  : 'text-[#4A233E] border-[#F8C8DC]'
+              }`}>
                 {getIcon('sparkles', "w-5 h-5")} Contenido de la Asignatura
               </h3>
               <div className="space-y-3 mb-4">
                 {contenidoMaterials.length === 0 ? (
-                  <p className="text-center italic text-[#8B5E75] py-4 text-sm opacity-50">No hay contenido agregado.</p>
+                  <p className={`text-center italic py-4 text-sm opacity-50 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>No hay contenido agregado.</p>
                 ) : (
                   contenidoMaterials.map(m => (
-                    <div key={m.id} className="bg-white/60 p-4 rounded-xl flex items-center justify-between border-l-4 border-l-[#E35B8F] shadow-sm">
+                    <div key={m.id} className={`p-4 rounded-xl flex items-center justify-between border-l-4 shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.4)] border-l-[#C77DFF] shadow-[0_0_10px_rgba(199,125,255,0.1)]' 
+                        : 'bg-white/60 border-l-[#E35B8F]'
+                    }`}>
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="text-[#E35B8F]">{getIcon('file', 'w-6 h-6')}</div>
+                        <div className={`transition-colors duration-500 ${
+                          isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
+                        }`}>{getIcon('file', 'w-6 h-6')}</div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-bold text-[#4A233E] truncate">{m.name}</h4>
-                          <p className="text-[9px] text-[#8B5E75] uppercase font-black tracking-widest mt-1">
+                          <h4 className={`text-sm font-bold truncate transition-colors duration-500 ${
+                            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                          }`}>{m.name}</h4>
+                          <p className={`text-[9px] uppercase font-black tracking-widest mt-1 transition-colors duration-500 ${
+                            isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                          }`}>
                             {new Date(m.date).toLocaleDateString()} • {m.type}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         {(m.type === 'PDF' || m.content) && (
-                          <button onClick={() => handleViewPdf(m)} className="text-[#D4AF37] hover:text-[#4A233E] p-2" title="Leer">
+                          <button onClick={() => handleViewPdf(m)} className={`p-2 transition-colors duration-500 ${
+                            isNightMode ? 'text-[#A68A56] hover:text-[#C77DFF]' : 'text-[#D4AF37] hover:text-[#4A233E]'
+                          }`} title="Leer">
                             {getIcon('eye', 'w-5 h-5')}
                           </button>
                         )}
-                        <button onClick={() => handleDownloadMaterial(m)} className="text-[#4A233E] hover:text-[#E35B8F] p-2" title="Descargar">
+                        <button onClick={() => handleDownloadMaterial(m)} className={`p-2 transition-colors duration-500 ${
+                          isNightMode ? 'text-[#E0E1DD] hover:text-[#C77DFF]' : 'text-[#4A233E] hover:text-[#E35B8F]'
+                        }`} title="Descargar">
                           {getIcon('download', 'w-5 h-5')}
                         </button>
                         <button onClick={() => handleDeleteMaterial(m.id)} className="text-red-300 hover:text-red-500 p-2" title="Eliminar">
@@ -1164,7 +1211,11 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                 )}
               </div>
               <input type="file" ref={contenidoInputRef} className="hidden" onChange={handleContenidoUpload} accept=".pdf,.doc,.docx,.ppt,.pptx" />
-              <button onClick={() => contenidoInputRef.current?.click()} className="w-full py-3 rounded-xl border-2 border-dashed border-[#E35B8F] text-[#E35B8F] text-[10px] font-bold uppercase tracking-widest hover:bg-[#E35B8F]/5">
+              <button onClick={() => contenidoInputRef.current?.click()} className={`w-full py-3 rounded-xl border-2 border-dashed text-[10px] font-bold uppercase tracking-widest transition-colors duration-500 ${
+                isNightMode 
+                  ? 'border-[#C77DFF] text-[#C77DFF] hover:bg-[#C77DFF]/10' 
+                  : 'border-[#E35B8F] text-[#E35B8F] hover:bg-[#E35B8F]/5'
+              }`}>
                 {getIcon('plus', 'w-4 h-4 inline mr-2')} Agregar Contenido (PDF/Word/PPT)
               </button>
             </section>
@@ -1176,18 +1227,32 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
           <div className={`space-y-6 animate-fade-in transition-all duration-500 ${isNoteFocused ? 'scale-105 opacity-95' : ''}`}>
             {/* Header con búsqueda */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-2">
-              <h3 className="font-cinzel text-xl text-[#4A233E] font-bold uppercase tracking-widest">Cuaderno de Foco Profundo</h3>
+              <h3 className={`font-cinzel text-xl font-bold uppercase tracking-widest transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              }`}>Cuaderno de Foco Profundo</h3>
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <input 
                   type="text" 
                   value={noteSearchQuery}
                   onChange={(e) => setNoteSearchQuery(e.target.value)}
                   placeholder="Buscar en apuntes..."
-                  className="flex-1 sm:flex-none sm:w-64 bg-white/60 border border-[#F8C8DC] rounded-xl px-4 py-2 text-sm outline-none"
+                  className={`flex-1 sm:flex-none sm:w-64 border rounded-xl px-4 py-2 text-sm outline-none transition-colors duration-500 ${
+                    isNightMode 
+                      ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD] placeholder:text-[#7A748E]/50' 
+                      : 'bg-white/60 border-[#F8C8DC] text-[#4A233E] placeholder:text-[#8B5E75]/50'
+                  }`}
                 />
                 <button 
                   onClick={() => setShowImportantOnly(!showImportantOnly)}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition-all ${showImportantOnly ? 'bg-[#D4AF37] text-white' : 'bg-white/60 text-[#8B5E75]'}`}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition-all ${
+                    showImportantOnly 
+                      ? isNightMode
+                        ? 'bg-[#A68A56] text-white'
+                        : 'bg-[#D4AF37] text-white'
+                      : isNightMode
+                        ? 'bg-[rgba(48,43,79,0.6)] text-[#7A748E] border border-[#A68A56]/40'
+                        : 'bg-white/60 text-[#8B5E75]'
+                  }`}
                 >
                   {getIcon('sparkles', 'w-4 h-4 inline mr-1')} Importantes
                 </button>
@@ -1223,34 +1288,60 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                     <div key={n.id} className="relative flex gap-6 mb-8">
                       {/* Línea de tiempo vertical */}
                       <div className="flex flex-col items-center shrink-0">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 ${isToday ? 'bg-[#D4AF37] border-[#D4AF37]' : 'bg-white/60 border-[#F8C8DC]'}`}>
-                          {getIcon('calendar', 'w-6 h-6 text-[#4A233E]')}
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-colors duration-500 ${
+                          isToday 
+                            ? isNightMode
+                              ? 'bg-[#A68A56] border-[#A68A56]'
+                              : 'bg-[#D4AF37] border-[#D4AF37]'
+                            : isNightMode
+                              ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40'
+                              : 'bg-white/60 border-[#F8C8DC]'
+                        }`}>
+                          {getIcon('calendar', `w-6 h-6 ${isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'}`)}
                         </div>
                         {idx < subject.notes.length - 1 && (
-                          <div className="w-0.5 h-full bg-gradient-to-b from-[#F8C8DC] to-transparent mt-2 min-h-[80px]" />
+                          <div className={`w-0.5 h-full bg-gradient-to-b to-transparent mt-2 min-h-[80px] transition-colors duration-500 ${
+                            isNightMode ? 'from-[#A68A56]/40' : 'from-[#F8C8DC]'
+                          }`} />
                         )}
                       </div>
                       
                       {/* Contenido de la nota */}
                       <div 
                         onClick={() => { setEditingNote(n); setShowNoteModal(true); setIsNoteFocused(true); }} 
-                        className="flex-1 glass-card p-6 rounded-[2rem] border-l-4 border-l-[#D4AF37] active:scale-[0.98] transition-all bg-white/60 cursor-pointer hover:shadow-lg"
+                        className={`flex-1 p-6 rounded-[2rem] border-l-4 active:scale-[0.98] transition-all cursor-pointer hover:shadow-lg backdrop-blur-[15px] ${
+                          isNightMode 
+                            ? 'bg-[rgba(48,43,79,0.6)] border-l-[#A68A56] shadow-[0_0_15px_rgba(199,125,255,0.2)] hover:shadow-[0_0_25px_rgba(199,125,255,0.3)]' 
+                            : 'glass-card border-l-[#D4AF37] bg-white/60'
+                        }`}
                       >
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1">
-                            <h4 className="font-cinzel text-lg text-[#4A233E] font-bold uppercase mb-1">{n.title}</h4>
-                            <span className="text-[9px] text-[#8B5E75] font-black uppercase font-inter">
+                            <h4 className={`font-cinzel text-lg font-bold uppercase mb-1 transition-colors duration-500 ${
+                              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                            }`}>{n.title}</h4>
+                            <span className={`text-[9px] font-black uppercase font-inter transition-colors duration-500 ${
+                              isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                            }`}>
                               {isToday ? 'Hoy' : noteDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
                             {n.isSealed && (
-                              <span className="text-[8px] bg-[#D4AF37]/20 text-[#D4AF37] px-2 py-1 rounded-full font-bold uppercase">
+                              <span className={`text-[8px] px-2 py-1 rounded-full font-bold uppercase transition-colors duration-500 ${
+                                isNightMode 
+                                  ? 'bg-[#A68A56]/20 text-[#A68A56]' 
+                                  : 'bg-[#D4AF37]/20 text-[#D4AF37]'
+                              }`}>
                                 {getIcon('sparkles', 'w-3 h-3 inline mr-1')} Sellada
                               </span>
                             )}
                             {n.importantFragments && n.importantFragments.length > 0 && (
-                              <span className="text-[8px] bg-[#E35B8F]/20 text-[#E35B8F] px-2 py-1 rounded-full font-bold uppercase">
+                              <span className={`text-[8px] px-2 py-1 rounded-full font-bold uppercase transition-colors duration-500 ${
+                                isNightMode 
+                                  ? 'bg-[#C77DFF]/20 text-[#C77DFF]' 
+                                  : 'bg-[#E35B8F]/20 text-[#E35B8F]'
+                              }`}>
                                 {n.importantFragments.length} Importante{n.importantFragments.length > 1 ? 's' : ''}
                               </span>
                             )}
@@ -1267,7 +1358,9 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                           </div>
                         </div>
                         <div 
-                          className="font-garamond text-[#4A233E] leading-relaxed text-base line-clamp-3 opacity-80 prose prose-sm max-w-none"
+                          className={`font-garamond leading-relaxed text-base line-clamp-3 opacity-80 prose prose-sm max-w-none transition-colors duration-500 ${
+                            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                          }`}
                           dangerouslySetInnerHTML={{ __html: n.content.replace(/\n/g, '<br>') }}
                         />
                       </div>
@@ -1276,8 +1369,14 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                 })}
               
               {subject.notes.length === 0 && (
-                <div className="text-center py-16 bg-white/40 rounded-[2rem] border-2 border-dashed border-[#F8C8DC]">
-                  <p className="font-garamond italic text-xl opacity-40">Tu cuaderno académico aguarda su primera página...</p>
+                <div className={`text-center py-16 rounded-[2rem] border-2 border-dashed backdrop-blur-[15px] transition-colors duration-500 ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40' 
+                    : 'bg-white/40 border-[#F8C8DC]'
+                }`}>
+                  <p className={`font-garamond italic text-xl opacity-40 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Tu cuaderno académico aguarda su primera página...</p>
                 </div>
               )}
             </div>
@@ -1287,17 +1386,33 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
         {activeTab === 'lab' && (
           <div className="flex flex-col h-full overflow-hidden">
             {/* RAG Sincronización - Arriba, bordeando con las tabs */}
-            <div className="bg-[#E35B8F] px-4 py-2.5 flex items-center justify-between text-white shadow-sm shrink-0 border-b border-[#D4AF37]/30">
+            <div className={`px-4 py-2.5 flex items-center justify-between shadow-sm shrink-0 border-b transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[#C77DFF] text-white border-[#A68A56]/30 shadow-[0_0_20px_rgba(199,125,255,0.3)]' 
+                : 'bg-[#E35B8F] text-white border-[#D4AF37]/30'
+            }`}>
               <div className="flex items-center gap-4 overflow-hidden w-full">
                 <span className="font-marcellus text-[9px] font-black uppercase tracking-widest shrink-0">Contexto:</span>
                 <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 flex-1">
                   {subject.materials.filter(m => m.category === 'contenido').map(m => (
-                    <button key={m.id} onClick={() => toggleContext(m.id)} className={`px-3 py-1.5 rounded-full text-[8px] font-bold whitespace-nowrap border transition-all ${selectedContextIds.includes(m.id) ? 'bg-[#D4AF37] border-[#D4AF37]' : 'bg-white/20 border-white/40'}`}>
+                    <button key={m.id} onClick={() => toggleContext(m.id)} className={`px-3 py-1.5 rounded-full text-[8px] font-bold whitespace-nowrap border transition-all ${
+                      selectedContextIds.includes(m.id) 
+                        ? isNightMode
+                          ? 'bg-[#A68A56] border-[#A68A56] text-white'
+                          : 'bg-[#D4AF37] border-[#D4AF37] text-white'
+                        : 'bg-white/20 border-white/40 text-white'
+                    }`}>
                       📄 {m.name}
                     </button>
                   ))}
                   {subject.notes.map(n => (
-                    <button key={n.id} onClick={() => toggleContext(n.id)} className={`px-3 py-1.5 rounded-full text-[8px] font-bold whitespace-nowrap border transition-all ${selectedContextIds.includes(n.id) ? 'bg-[#4A233E] border-[#4A233E]' : 'bg-white/20 border-white/40'}`}>
+                    <button key={n.id} onClick={() => toggleContext(n.id)} className={`px-3 py-1.5 rounded-full text-[8px] font-bold whitespace-nowrap border transition-all ${
+                      selectedContextIds.includes(n.id) 
+                        ? isNightMode
+                          ? 'bg-[rgba(26,26,46,0.8)] border-[rgba(26,26,46,0.8)] text-white'
+                          : 'bg-[#4A233E] border-[#4A233E] text-white'
+                        : 'bg-white/20 border-white/40 text-white'
+                    }`}>
                       📝 {n.title}
                     </button>
                   ))}
@@ -1305,7 +1420,11 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
                 {chatHistory.length > 0 && (
                   <button
                     onClick={handleDownloadChat}
-                    className="shrink-0 px-3 py-1.5 bg-[#D4AF37] hover:bg-[#C19D2E] rounded-xl text-white text-[8px] font-bold uppercase tracking-widest flex items-center gap-1.5 transition-all"
+                    className={`shrink-0 px-3 py-1.5 rounded-xl text-white text-[8px] font-bold uppercase tracking-widest flex items-center gap-1.5 transition-all ${
+                      isNightMode 
+                        ? 'bg-[#A68A56] hover:bg-[#8B6F45]' 
+                        : 'bg-[#D4AF37] hover:bg-[#C19D2E]'
+                    }`}
                     title="Descargar chat"
                   >
                     {getIcon('download', 'w-3 h-3')}
@@ -1316,20 +1435,40 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
             </div>
 
             {/* Chat - Ocupa todo el espacio libre con márgenes pequeños */}
-            <div className="flex-1 mx-2 my-3 p-4 md:p-6 overflow-y-auto space-y-6 bg-[#FFF9FB]/60 font-garamond glass-card rounded-[2rem] border-[#F8C8DC]">
+            <div className={`flex-1 mx-2 my-3 p-4 md:p-6 overflow-y-auto space-y-6 font-garamond rounded-[2rem] backdrop-blur-[15px] transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.6)] border border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+                : 'bg-[#FFF9FB]/60 glass-card border-[#F8C8DC]'
+            }`}>
               {chatHistory.length === 0 && (
                 <div className="h-full flex flex-col items-center justify-center text-center px-4 opacity-50">
-                  <div className="w-16 h-16 rounded-full border border-dashed border-[#D4AF37] flex items-center justify-center text-[#D4AF37] mb-4">
+                  <div className={`w-16 h-16 rounded-full border border-dashed flex items-center justify-center mb-4 transition-colors duration-500 ${
+                    isNightMode 
+                      ? 'border-[#A68A56] text-[#A68A56]' 
+                      : 'border-[#D4AF37] text-[#D4AF37]'
+                  }`}>
                     {getIcon('chat', 'w-8 h-8')}
                   </div>
-                  <h4 className="font-marcellus text-xl font-bold text-[#4A233E] mb-2 uppercase tracking-widest">Oráculo de Estudio</h4>
-                  <p className="text-[#8B5E75] text-sm italic">Sincroniza fuentes arriba y pregunta cualquier duda.</p>
+                  <h4 className={`font-marcellus text-xl font-bold mb-2 uppercase tracking-widest transition-colors duration-500 ${
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  }`}>Oráculo de Estudio</h4>
+                  <p className={`text-sm italic transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Sincroniza fuentes arriba y pregunta cualquier duda.</p>
                 </div>
               )}
                 
               {chatHistory.map((chat, idx) => (
                 <div key={idx} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[90%] p-6 rounded-[2rem] shadow-md ${chat.role === 'user' ? 'bg-[#E35B8F] text-white rounded-tr-none' : 'bg-white/95 border border-[#F8C8DC] text-[#4A233E] rounded-tl-none'}`}>
+                  <div className={`max-w-[90%] p-6 rounded-[2rem] shadow-md transition-colors duration-500 ${
+                    chat.role === 'user' 
+                      ? isNightMode
+                        ? 'bg-[#C77DFF] text-white rounded-tr-none'
+                        : 'bg-[#E35B8F] text-white rounded-tr-none'
+                      : isNightMode
+                        ? 'bg-[rgba(48,43,79,0.8)] border border-[#A68A56]/40 text-[#E0E1DD] rounded-tl-none'
+                        : 'bg-white/95 border border-[#F8C8DC] text-[#4A233E] rounded-tl-none'
+                  }`}>
                     {chat.role === 'user' ? (
                       <p className="font-garamond text-lg md:text-xl leading-relaxed">{chat.text}</p>
                     ) : (
@@ -1342,15 +1481,23 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
               ))}
               {loadingIa && (
                 <div className="flex justify-start">
-                  <div className="bg-white p-4 rounded-[1.5rem] rounded-tl-none border border-[#F8C8DC]">
+                  <div className={`p-4 rounded-[1.5rem] rounded-tl-none border backdrop-blur-[15px] transition-colors duration-500 ${
+                    isNightMode 
+                      ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40' 
+                      : 'bg-white border-[#F8C8DC]'
+                  }`}>
                     {showPetFirstTime ? (
                       <div className="flex items-center justify-center py-2">
                         <PetAnimation show={true} />
                       </div>
                     ) : (
                       <div className="animate-pulse flex items-center gap-3">
-                        <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-bounce [animation-delay:0.2s]" />
+                        <div className={`w-2 h-2 rounded-full animate-bounce transition-colors duration-500 ${
+                          isNightMode ? 'bg-[#A68A56]' : 'bg-[#D4AF37]'
+                        }`} />
+                        <div className={`w-2 h-2 rounded-full animate-bounce [animation-delay:0.2s] transition-colors duration-500 ${
+                          isNightMode ? 'bg-[#A68A56]' : 'bg-[#D4AF37]'
+                        }`} />
                       </div>
                     )}
                   </div>
@@ -1360,10 +1507,22 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
             </div>
 
             {/* Input - Fijo en la parte baja */}
-            <div className="p-4 bg-white/95 border-t border-[#F8C8DC] shrink-0 mx-2 mb-2 rounded-[1.5rem] shadow-lg">
+            <div className={`p-4 border-t shrink-0 mx-2 mb-2 rounded-[1.5rem] shadow-lg backdrop-blur-[15px] transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.95)] border-[#A68A56]/40 shadow-[0_0_20px_rgba(199,125,255,0.2)]' 
+                : 'bg-white/95 border-[#F8C8DC]'
+            }`}>
               <form onSubmit={handleIaQuery} className="flex gap-2 items-center">
-                <input ref={queryInputRef} placeholder="Pregunta al Oráculo..." className="flex-1 bg-white border border-[#F8C8DC] rounded-[1.5rem] px-6 py-3 text-lg font-garamond focus:border-[#E35B8F] outline-none shadow-inner" />
-                <button type="submit" disabled={loadingIa} className="w-12 h-12 bg-[#E35B8F] rounded-2xl flex items-center justify-center shadow-lg active:scale-90">
+                <input ref={queryInputRef} placeholder="Pregunta al Oráculo..." className={`flex-1 border rounded-[1.5rem] px-6 py-3 text-lg font-garamond outline-none shadow-inner transition-colors duration-500 ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD] placeholder:text-[#7A748E]/50 focus:border-[#C77DFF]' 
+                    : 'bg-white border-[#F8C8DC] text-[#4A233E] placeholder:text-[#8B5E75]/50 focus:border-[#E35B8F]'
+                }`} />
+                <button type="submit" disabled={loadingIa} className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-colors duration-500 ${
+                  isNightMode 
+                    ? 'bg-[#C77DFF] hover:bg-[#B56DE6] shadow-[0_0_15px_rgba(199,125,255,0.3)]' 
+                    : 'bg-[#E35B8F] hover:bg-[#D1477A]'
+                }`}>
                   {loadingIa ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : getIcon('chat', 'w-6 h-6 text-white')}
                 </button>
               </form>
@@ -1373,22 +1532,42 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
 
         {activeTab === 'plan' && (
           <div className="space-y-6 animate-fade-in">
-            <section className="glass-card p-6 rounded-[2rem] shadow-sm">
+            <section className={`p-6 rounded-[2rem] shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.6)] border border-[#A68A56]/40 shadow-[0_0_20px_rgba(199,125,255,0.2)]' 
+                : 'glass-card'
+            }`}>
               <div className="flex justify-between items-center mb-6">
-                <h3 className="font-cinzel text-lg text-[#4A233E] font-bold uppercase tracking-widest">Cronograma de exámenes y otras fechas</h3>
-                <button onClick={() => setShowMilestoneModal(true)} className="bg-[#E35B8F] text-white p-2 rounded-xl">
+                <h3 className={`font-cinzel text-lg font-bold uppercase tracking-widest transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                }`}>Cronograma de exámenes y otras fechas</h3>
+                <button onClick={() => setShowMilestoneModal(true)} className={`p-2 rounded-xl transition-colors duration-500 ${
+                  isNightMode 
+                    ? 'bg-[#C77DFF] text-white hover:bg-[#B56DE6]' 
+                    : 'bg-[#E35B8F] text-white hover:bg-[#D1477A]'
+                }`}>
                   {getIcon('plus', "w-5 h-5")}
                 </button>
               </div>
               <div className="space-y-3">
                 {subject.milestones.length === 0 ? (
-                  <p className="text-center italic text-[#8B5E75] py-4 text-sm opacity-50">No hay hitos registrados.</p>
+                  <p className={`text-center italic py-4 text-sm opacity-50 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>No hay hitos registrados.</p>
                 ) : (
                   subject.milestones.map(m => (
-                    <div key={m.id} className="bg-white/60 p-4 rounded-xl flex items-center justify-between border-l-4 border-l-[#D4AF37] shadow-sm">
+                    <div key={m.id} className={`p-4 rounded-xl flex items-center justify-between border-l-4 shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.4)] border-l-[#A68A56] shadow-[0_0_10px_rgba(199,125,255,0.1)]' 
+                        : 'bg-white/60 border-l-[#D4AF37]'
+                    }`}>
                        <div>
-                          <h4 className="text-sm font-bold text-[#4A233E] uppercase">{m.title}</h4>
-                          <p className="text-[9px] text-[#8B5E75] uppercase font-black tracking-widest mt-1">
+                          <h4 className={`text-sm font-bold uppercase transition-colors duration-500 ${
+                            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                          }`}>{m.title}</h4>
+                          <p className={`text-[9px] uppercase font-black tracking-widest mt-1 transition-colors duration-500 ${
+                            isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                          }`}>
                             {m.date} • {m.type}
                           </p>
                        </div>
@@ -1401,22 +1580,42 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
               </div>
             </section>
 
-            <section className="glass-card p-6 rounded-[2rem] shadow-sm">
+            <section className={`p-6 rounded-[2rem] shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.6)] border border-[#A68A56]/40 shadow-[0_0_20px_rgba(199,125,255,0.2)]' 
+                : 'glass-card'
+            }`}>
               <div className="flex justify-between items-center mb-6">
-                <h3 className="font-cinzel text-lg text-[#4A233E] font-bold uppercase tracking-widest">Horarios de cursada</h3>
-                <button onClick={() => setShowScheduleModal(true)} className="bg-[#D4AF37] text-white p-2 rounded-xl">
+                <h3 className={`font-cinzel text-lg font-bold uppercase tracking-widest transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                }`}>Horarios de cursada</h3>
+                <button onClick={() => setShowScheduleModal(true)} className={`p-2 rounded-xl transition-colors duration-500 ${
+                  isNightMode 
+                    ? 'bg-[#A68A56] text-white hover:bg-[#8B6F45]' 
+                    : 'bg-[#D4AF37] text-white hover:bg-[#C19D2E]'
+                }`}>
                   {getIcon('plus', "w-5 h-5")}
                 </button>
               </div>
               <div className="space-y-3">
                 {subject.schedules.length === 0 ? (
-                  <p className="text-center italic text-[#8B5E75] py-4 text-sm opacity-50">Sin horarios definidos.</p>
+                  <p className={`text-center italic py-4 text-sm opacity-50 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Sin horarios definidos.</p>
                 ) : (
                   subject.schedules.map(s => (
-                    <div key={s.id} className="bg-white/60 p-4 rounded-xl flex items-center justify-between border-l-4 border-l-[#E35B8F] shadow-sm">
+                    <div key={s.id} className={`p-4 rounded-xl flex items-center justify-between border-l-4 shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.4)] border-l-[#C77DFF] shadow-[0_0_10px_rgba(199,125,255,0.1)]' 
+                        : 'bg-white/60 border-l-[#E35B8F]'
+                    }`}>
                        <div>
-                          <h4 className="text-sm font-bold text-[#4A233E] uppercase">{s.day}</h4>
-                          <p className="text-[9px] text-[#8B5E75] uppercase font-black tracking-widest mt-1">
+                          <h4 className={`text-sm font-bold uppercase transition-colors duration-500 ${
+                            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                          }`}>{s.day}</h4>
+                          <p className={`text-[9px] uppercase font-black tracking-widest mt-1 transition-colors duration-500 ${
+                            isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                          }`}>
                             {s.startTime} — {s.endTime}
                           </p>
                        </div>
@@ -1434,23 +1633,45 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
 
       {/* Internal Full-Screen Modals for Mobile */}
       {showMilestoneModal && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4" onClick={() => setShowMilestoneModal(false)}>
+        <div className={`fixed inset-0 z-[400] flex items-center justify-center backdrop-blur-sm p-4 transition-colors duration-500 ${
+          isNightMode ? 'bg-[#1A1A2E]/90' : 'bg-[#4A233E]/60'
+        }`} onClick={() => setShowMilestoneModal(false)}>
           <form onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             onUpdate({...subject, milestones: [...subject.milestones, {id: Math.random().toString(36), title: fd.get('title') as string, date: fd.get('date') as string, type: fd.get('type') as any}]});
             setShowMilestoneModal(false);
-          }} className="glass-card w-full max-w-sm p-8 rounded-[2rem] shadow-2xl font-inter" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">Nuevo Hito</h2>
+          }} className={`w-full max-w-sm p-8 rounded-[2rem] shadow-2xl font-inter backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.3)]' 
+              : 'glass-card'
+          }`} onClick={(e) => e.stopPropagation()}>
+            <h2 className={`font-cinzel text-lg mb-6 text-center font-bold tracking-widest uppercase transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>Nuevo Hito</h2>
             <div className="space-y-4">
-              <input required name="title" placeholder="Título..." className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-4 outline-none text-sm" />
-              <input required name="date" type="date" className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-4 outline-none text-sm" />
-              <select name="type" className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-4 outline-none text-sm">
+              <input required name="title" placeholder="Título..." className={`w-full border rounded-xl px-4 py-4 outline-none text-sm transition-colors duration-500 ${
+                isNightMode 
+                  ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD] placeholder:text-[#7A748E]/50' 
+                  : 'bg-white border-[#F8C8DC] text-[#4A233E] placeholder:text-[#8B5E75]/50'
+              }`} />
+              <input required name="date" type="date" className={`w-full border rounded-xl px-4 py-4 outline-none text-sm transition-colors duration-500 ${
+                isNightMode 
+                  ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD]' 
+                  : 'bg-white border-[#F8C8DC] text-[#4A233E]'
+              }`} />
+              <select name="type" className={`w-full border rounded-xl px-4 py-4 outline-none text-sm transition-colors duration-500 ${
+                isNightMode 
+                  ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD]' 
+                  : 'bg-white border-[#F8C8DC] text-[#4A233E]'
+              }`}>
                 <option value="Examen">Examen</option><option value="Parcial">Parcial</option><option value="Entrega">Entrega</option><option value="Trabajo Práctico">TP</option>
               </select>
             </div>
             <div className="flex gap-4 mt-8">
-              <button type="button" onClick={() => setShowMilestoneModal(false)} className="flex-1 py-4 text-xs font-bold text-[#8B5E75] uppercase">Cerrar</button>
+              <button type="button" onClick={() => setShowMilestoneModal(false)} className={`flex-1 py-4 text-xs font-bold uppercase transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E] hover:text-[#E0E1DD]' : 'text-[#8B5E75]'
+              }`}>Cerrar</button>
               <button type="submit" className="flex-[2] btn-primary py-4 rounded-2xl font-cinzel text-xs font-black uppercase">Guardar</button>
             </div>
           </form>
@@ -1458,16 +1679,28 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
       )}
 
       {showScheduleModal && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4" onClick={() => setShowScheduleModal(false)}>
+        <div className={`fixed inset-0 z-[400] flex items-center justify-center backdrop-blur-sm p-4 transition-colors duration-500 ${
+          isNightMode ? 'bg-[#1A1A2E]/90' : 'bg-[#4A233E]/60'
+        }`} onClick={() => setShowScheduleModal(false)}>
           <form onSubmit={(e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             onUpdate({...subject, schedules: [...subject.schedules, {id: Math.random().toString(36), day: fd.get('day') as string, startTime: fd.get('start') as string, endTime: fd.get('end') as string}]});
             setShowScheduleModal(false);
-          }} className="glass-card w-full max-w-sm p-8 rounded-[2rem] shadow-2xl font-inter" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">Horario</h2>
+          }} className={`w-full max-w-sm p-8 rounded-[2rem] shadow-2xl font-inter backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.3)]' 
+              : 'glass-card'
+          }`} onClick={(e) => e.stopPropagation()}>
+            <h2 className={`font-cinzel text-lg mb-6 text-center font-bold tracking-widest uppercase transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>Horario</h2>
             <div className="space-y-4">
-              <select name="day" className="w-full bg-white border border-[#F8C8DC] rounded-xl px-4 py-4 outline-none text-sm">
+              <select name="day" className={`w-full border rounded-xl px-4 py-4 outline-none text-sm transition-colors duration-500 ${
+                isNightMode 
+                  ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD]' 
+                  : 'bg-white border-[#F8C8DC] text-[#4A233E]'
+              }`}>
                 {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'].map(d => <option key={d} value={d}>{d}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-4">
@@ -1508,9 +1741,6 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
               onUpdate({...subject, notes: subject.notes.map(n => n.id === editingNote.id ? sealedNote : n)});
             } else {
               onUpdate({...subject, notes: [sealedNote, ...subject.notes]});
-            }
-            if (onAddEssence) {
-              onAddEssence(3);
             }
             setShowNoteModal(false);
             setEditingNote(null);
@@ -1988,7 +2218,7 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
                 onClick={handleSeal}
                 className="px-6 py-3 bg-[#D4AF37] text-white rounded-xl font-cinzel text-xs font-black uppercase shadow-lg hover:bg-[#C19D2E] transition-all flex items-center gap-2"
               >
-                {getIcon('sparkles', 'w-4 h-4')} Sellar Nota (+3 Esencia)
+                {getIcon('sparkles', 'w-4 h-4')} Sellar Nota
               </button>
             )}
           </div>

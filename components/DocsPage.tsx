@@ -16,17 +16,10 @@ interface Section {
 }
 
 const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
-  const [selectedSection, setSelectedSection] = useState<string>('essence');
+  const [selectedSection, setSelectedSection] = useState<string>('dashboard');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const sections: Section[] = [
-    { 
-      id: 'essence', 
-      title: 'Esencia', 
-      icon: 'sparkles',
-      keywords: ['esencia', 'gamificación', 'puntos', 'niveles', 'arcano', 'ganar', 'usar', 'social', 'bazar', 'costos'],
-      content: EssenceSection 
-    },
     { 
       id: 'dashboard', 
       title: 'Atanor (Dashboard)', 
@@ -77,13 +70,6 @@ const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
       content: OracleSection 
     },
     { 
-      id: 'bazar', 
-      title: 'Bazar de Artefactos', 
-      icon: 'bazar',
-      keywords: ['bazar', 'artefactos', 'mejoras', 'comprar', 'tienda'],
-      content: BazarSection 
-    },
-    { 
       id: 'profile', 
       title: 'Perfil', 
       icon: 'profile',
@@ -121,7 +107,7 @@ const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
   }, [searchQuery]);
 
   const currentSection = sections.find(s => s.id === selectedSection);
-  const CurrentContent = currentSection?.content || EssenceSection;
+  const CurrentContent = currentSection?.content || DashboardSection;
 
   return (
     <div className={`h-full flex flex-col bg-white ${isMobile ? '' : ''}`}>
@@ -299,111 +285,6 @@ const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
   );
 };
 
-// Sección de Esencia
-const EssenceSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
-  return (
-    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
-      <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
-          Sistema de Esencia
-        </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
-          La <strong className="text-[#D4AF37] font-semibold">Esencia</strong> es el sistema de gamificación de Studianta. 
-          Representa tu energía y dedicación en el camino académico. Comenzarás con <strong className="text-[#D4AF37] font-semibold">0 esencia</strong> 
-          y podrás ganarla a través de diversas actividades en la plataforma.
-        </p>
-      </div>
-
-      <section className={`bg-[#D4AF37]/5 border-l-4 border-[#D4AF37] ${isMobile ? 'p-4' : 'p-6'} rounded-r-lg`}>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} flex items-center ${isMobile ? 'gap-2' : 'gap-2 md:gap-3'}`}>
-          {getIcon('sparkles', `${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-[#D4AF37]`)}
-          Cómo Ganar Esencia
-        </h3>
-        <ul className={`${isMobile ? 'space-y-3' : 'space-y-3 md:space-y-4'} text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
-          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
-            <div className="w-2 h-2 rounded-full bg-[#D4AF37] mt-2.5 flex-shrink-0" />
-            <div>
-              <strong className="text-[#1a1a1a] font-semibold">Sesiones de Enfoque:</strong> Gana esencia por cada minuto 
-              de estudio completado. Las sesiones completadas otorgan bonificaciones adicionales de <strong className="text-[#D4AF37]">+5 esencia</strong>.
-            </div>
-          </li>
-          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
-            <div className="w-2 h-2 rounded-full bg-[#D4AF37] mt-2.5 flex-shrink-0" />
-            <div>
-              <strong className="text-[#1a1a1a] font-semibold">Sellar Notas:</strong> Al sellar una nota en Asignaturas, 
-              ganas <strong className="text-[#D4AF37] font-semibold">+3 esencia</strong>. Esto consagra tu conocimiento al Oráculo.
-            </div>
-          </li>
-          <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
-            <div className="w-2 h-2 rounded-full bg-[#D4AF37] mt-2.5 flex-shrink-0" />
-            <div>
-              <strong className="text-[#1a1a1a] font-semibold">Completar Tareas:</strong> Varias acciones en la plataforma 
-              te otorgan esencia como recompensa por tu productividad.
-            </div>
-          </li>
-        </ul>
-      </section>
-
-      <section>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 flex items-center gap-2 md:gap-3`}>
-          {getIcon('scale', `${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-[#D4AF37]`)}
-          Cómo Usar la Esencia
-        </h3>
-        <div className={`bg-white border-2 border-[#D4AF37]/20 rounded-lg ${isMobile ? 'p-4' : 'p-6'} space-y-3 md:space-y-4`}>
-          <div className={`flex items-center justify-between ${isMobile ? 'p-3' : 'p-4'} bg-[#E35B8F]/5 rounded-lg border border-[#E35B8F]/20`}>
-            <div className="min-w-0 flex-1 pr-2">
-              <strong className={`text-[#1a1a1a] font-semibold ${isMobile ? 'text-base' : 'text-lg'} block`}>Módulo Social</strong>
-              <p className={`text-[#666] ${isMobile ? 'text-xs' : 'text-sm'} mt-1`}>Conecta con otros estudiantes</p>
-            </div>
-            <span className={`font-cinzel font-bold text-[#D4AF37] flex-shrink-0 ${isMobile ? 'text-xl' : 'text-2xl'}`}>100</span>
-          </div>
-          <div className={`flex items-center justify-between ${isMobile ? 'p-3' : 'p-4'} bg-[#E35B8F]/5 rounded-lg border border-[#E35B8F]/20`}>
-            <div className="min-w-0 flex-1 pr-2">
-              <strong className={`text-[#1a1a1a] font-semibold ${isMobile ? 'text-base' : 'text-lg'} block`}>Bazar de Artefactos</strong>
-              <p className={`text-[#666] ${isMobile ? 'text-xs' : 'text-sm'} mt-1`}>Compra mejoras y artefactos</p>
-            </div>
-            <span className={`font-cinzel font-bold text-[#D4AF37] flex-shrink-0 ${isMobile ? 'text-xl' : 'text-2xl'}`}>200</span>
-          </div>
-          <div className={`${isMobile ? 'pt-3' : 'pt-4'} border-t border-[#D4AF37]/20`}>
-            <p className={`text-[#666] ${isMobile ? 'text-xs' : 'text-sm'} font-inter`}>
-              Todos los demás módulos son <strong className="text-[#D4AF37] font-semibold">gratuitos</strong> y están disponibles desde el inicio.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] mb-3 md:mb-4 flex items-center gap-2 md:gap-3`}>
-          {getIcon('target', `${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-[#D4AF37]`)}
-          Niveles Arcanos
-        </h3>
-        <p className={`${isMobile ? 'text-sm' : ''} text-[#333] leading-relaxed font-inter mb-4 md:mb-6`}>
-          Tu <strong className="text-[#D4AF37] font-semibold">Esencia Total Ganada</strong> determina tu nivel arcano, 
-          que refleja tu progreso en el camino académico:
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-          {[
-            { level: 'Buscadora de Luz', min: 0, max: 100 },
-            { level: 'Aprendiz de la Logia', min: 100, max: 300 },
-            { level: 'Alquimista Clínica', min: 300, max: 600 },
-            { level: 'Maestra de la Transmutación', min: 600, max: 1000 },
-            { level: 'Archimaga del Conocimiento', min: 1000, max: 2000 },
-            { level: 'Gran Alquimista', min: 2000, max: 5000 },
-            { level: 'Arquitecta del Saber Eterno', min: 5000, max: Infinity },
-          ].map((lvl) => (
-            <div key={lvl.level} className={`bg-white border-2 border-[#D4AF37]/20 rounded-lg ${isMobile ? 'p-3' : 'p-4'} hover:border-[#D4AF37] transition-colors`}>
-              <div className={`font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'text-sm' : 'text-base'} mb-1 md:mb-2`}>{lvl.level}</div>
-              <div className={`font-inter ${isMobile ? 'text-xs' : 'text-sm'} text-[#666]`}>
-                {lvl.min === 0 ? 'Inicio' : `${lvl.min}`} - {lvl.max === Infinity ? '∞' : `${lvl.max}`} esencia
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-};
 
 // Sección de Dashboard
 const DashboardSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
@@ -465,7 +346,7 @@ const SubjectsSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false })
           </li>
           <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
-            <span><strong className="text-[#D4AF37] font-semibold">Sellar notas</strong> para ganar +3 esencia</span>
+            <span><strong className="text-[#D4AF37] font-semibold">Sellar notas</strong> para marcar tu conocimiento</span>
           </li>
           <li className={`flex items-start ${isMobile ? 'gap-3' : 'gap-2 md:gap-3'}`}>
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
@@ -544,7 +425,7 @@ const FocusSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =>
         <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
         <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
           <strong className="text-[#D4AF37] font-semibold">Enfoque</strong> es tu herramienta de productividad basada en 
-          la técnica Pomodoro. Gestiona sesiones de estudio enfocadas y gana esencia por tu dedicación.
+          la técnica Pomodoro. Gestiona sesiones de estudio enfocadas para mejorar tu productividad.
         </p>
       </div>
       <section>
@@ -556,11 +437,11 @@ const FocusSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =>
           </li>
           <li className="flex items-start gap-2 md:gap-3">
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
-            <span>Gana <strong className="text-[#D4AF37] font-semibold">1 esencia por minuto</strong> de estudio</span>
+            <span>Registra tu tiempo de estudio para mantener un seguimiento de tu dedicación</span>
           </li>
           <li className="flex items-start gap-2 md:gap-3">
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
-            <span>Completar una sesión otorga <strong className="text-[#D4AF37] font-semibold">+5 esencia</strong> de bonificación</span>
+            <span>Completa sesiones para mejorar tu disciplina y productividad</span>
           </li>
           <li className="flex items-start gap-2 md:gap-3">
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
@@ -712,34 +593,6 @@ const OracleSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =
   );
 };
 
-// Sección de Bazar
-const BazarSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
-  return (
-    <div className={`${isMobile ? 'space-y-4' : 'space-y-6 md:space-y-8'}`}>
-      <div>
-        <h2 className={`${isMobile ? 'text-2xl' : 'text-3xl md:text-4xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'} tracking-tight`}>
-          Bazar de Artefactos
-        </h2>
-        <div className={`h-1 bg-[#D4AF37] ${isMobile ? 'mb-3 w-16' : 'mb-4 md:mb-6 w-24'}`}></div>
-        <p className={`${isMobile ? 'text-base leading-relaxed' : 'text-lg leading-relaxed'} text-[#333] font-inter ${isMobile ? 'mb-3' : 'mb-4 md:mb-6'}`}>
-          El <strong className="text-[#D4AF37] font-semibold">Bazar de Artefactos</strong> es donde puedes gastar tu esencia 
-          en mejoras y artefactos que potencian tu experiencia en Studianta.
-        </p>
-      </div>
-      <div className={`bg-[#E35B8F]/5 border-l-4 border-[#E35B8F] ${isMobile ? 'p-4' : 'p-6'} rounded-r-lg`}>
-        <p className={`text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
-          <strong className="text-[#1a1a1a] font-semibold">Costo de activación:</strong> <span className={`text-[#D4AF37] font-bold ${isMobile ? 'text-base' : 'text-lg'}`}>200 esencia</span>
-        </p>
-      </div>
-      <div>
-        <h3 className={`${isMobile ? 'text-xl' : 'text-2xl'} font-cinzel font-bold text-[#1a1a1a] ${isMobile ? 'mb-3' : 'mb-3 md:mb-4'}`}>Disponible próximamente</h3>
-        <p className={`text-[#666] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
-          El Bazar estará disponible en futuras actualizaciones con artefactos y mejoras exclusivas.
-        </p>
-      </div>
-    </div>
-  );
-};
 
 // Sección de Perfil
 const ProfileSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) => {
@@ -768,11 +621,11 @@ const ProfileSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) 
           </li>
           <li className="flex items-start gap-2 md:gap-3">
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
-            <span>Esencia actual y total ganada</span>
+            <span>Estadísticas de uso de la plataforma</span>
           </li>
           <li className="flex items-start gap-2 md:gap-3">
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
-            <span>Nivel arcano y progreso hacia el siguiente nivel</span>
+            <span>Descargar tu perfil completo (SPC) para análisis externo</span>
           </li>
           <li className="flex items-start gap-2 md:gap-3">
             <span className={`text-[#D4AF37] font-bold leading-none mt-1 flex-shrink-0 ${isMobile ? 'text-lg' : 'text-xl'}`}>•</span>
@@ -800,7 +653,7 @@ const SecuritySection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false })
       </div>
       <div className={`bg-[#E35B8F]/5 border-l-4 border-[#E35B8F] ${isMobile ? 'p-4' : 'p-6'} rounded-r-lg`}>
         <p className={`text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
-          <strong className="text-[#1a1a1a] font-semibold">Costo de activación:</strong> <span className={`text-[#D4AF37] font-bold ${isMobile ? 'text-base' : 'text-lg'}`}>0 esencia</span> (gratis)
+          <strong className="text-[#1a1a1a] font-semibold">Disponibilidad:</strong> <span className={`text-[#D4AF37] font-bold ${isMobile ? 'text-base' : 'text-lg'}`}>Gratuito</span>
         </p>
       </div>
       <section>
@@ -840,7 +693,7 @@ const SocialSection: React.FC<{ isMobile?: boolean }> = ({ isMobile = false }) =
       </div>
       <div className={`bg-[#E35B8F]/5 border-l-4 border-[#E35B8F] ${isMobile ? 'p-4' : 'p-6'} rounded-r-lg`}>
         <p className={`text-[#333] font-inter ${isMobile ? 'text-base leading-relaxed' : ''}`}>
-          <strong className="text-[#1a1a1a] font-semibold">Costo de activación:</strong> <span className={`text-[#D4AF37] font-bold ${isMobile ? 'text-base' : 'text-lg'}`}>100 esencia</span>
+          <strong className="text-[#1a1a1a] font-semibold">Disponibilidad:</strong> <span className={`text-[#D4AF37] font-bold ${isMobile ? 'text-base' : 'text-lg'}`}>Próximamente</span>
         </p>
       </div>
       <div>

@@ -361,10 +361,16 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
         <div className="max-w-7xl mx-auto w-full">
           {/* Desktop: Título y botón en fila superior */}
           <div className="hidden md:flex justify-between items-center mb-3">
-            <h1 className="font-marcellus text-lg md:text-2xl font-black text-[#4A233E] tracking-widest uppercase">Balanza de Latón</h1>
+            <h1 className={`font-marcellus text-lg md:text-2xl font-black tracking-widest uppercase transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>Balanza de Latón</h1>
             <button 
               onClick={handleConsultOracle}
-              className="px-4 py-2 bg-[#4A233E] text-[#D4AF37] rounded-xl font-marcellus text-xs font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all hover:bg-[#321829] flex items-center gap-2"
+              className={`px-4 py-2 rounded-xl font-marcellus text-xs font-black uppercase tracking-[0.2em] shadow-lg active:scale-95 transition-all flex items-center gap-2 ${
+                isNightMode 
+                  ? 'bg-[rgba(48,43,79,0.8)] text-[#A68A56] border border-[#A68A56]/40 hover:bg-[rgba(48,43,79,1)]' 
+                  : 'bg-[#4A233E] text-[#D4AF37] hover:bg-[#321829]'
+              }`}
             >
               {getIcon('sparkles', 'w-4 h-4')}
               Consultar Oráculo
@@ -380,20 +386,30 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
                 ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40' 
                 : 'glass-card border-[#F8C8DC]'
             }`}>
-              <p className="text-[7px] md:text-[9px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-0.5 opacity-60">Presupuesto</p>
+              <p className={`text-[7px] md:text-[9px] uppercase font-black tracking-[0.2em] mb-0.5 opacity-60 transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>Presupuesto</p>
               {showBudgetInput ? (
                 <div className="flex items-center gap-2">
                   <input 
                     type="number" value={tempBudget} onChange={(e) => setTempBudget(e.target.value)}
-                    className="w-full bg-transparent border-b-2 border-[#E35B8F] text-base font-marcellus text-[#4A233E] outline-none"
+                    className={`w-full bg-transparent border-b-2 outline-none text-base font-marcellus transition-colors duration-500 ${
+                      isNightMode 
+                        ? 'border-[#C77DFF] text-[#E0E1DD]' 
+                        : 'border-[#E35B8F] text-[#4A233E]'
+                    }`}
                     autoFocus
                   />
-                  <button onClick={handleSaveBudget} className="p-1.5 bg-[#E35B8F] text-white rounded-lg shadow-sm">{getIcon('check', 'w-3 h-3')}</button>
+                  <button onClick={handleSaveBudget} className={`p-1.5 rounded-lg shadow-sm transition-colors duration-500 ${
+                    isNightMode ? 'bg-[#C77DFF] text-white' : 'bg-[#E35B8F] text-white'
+                  }`}>{getIcon('check', 'w-3 h-3')}</button>
                 </div>
               ) : (
                 <div className="flex items-center justify-between cursor-pointer group" onClick={() => setShowBudgetInput(true)}>
-                  <h2 className="font-marcellus text-lg md:text-2xl font-black text-[#4A233E] tracking-tighter">${budget}</h2>
-                  {getIcon('pen', 'w-3 h-3 text-[#8B5E75] opacity-0 group-hover:opacity-40 transition-opacity')}
+                  <h2 className={`font-marcellus text-lg md:text-2xl font-black tracking-tighter transition-colors duration-500 ${
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  }`}>${budget}</h2>
+                  {getIcon('pen', `w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity ${isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'}`)}
                 </div>
               )}
             </div>
@@ -406,8 +422,14 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
                   ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40'
                   : 'glass-card border-[#D4AF37]/30'
             }`}>
-              <p className="text-[7px] md:text-[9px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-0.5 opacity-60">Capital Residual</p>
-              <h2 className={`font-marcellus text-lg md:text-2xl font-black tracking-tighter ${isCritical ? 'text-red-500' : 'text-[#4A233E]'}`}>${balance}</h2>
+              <p className={`text-[7px] md:text-[9px] uppercase font-black tracking-[0.2em] mb-0.5 opacity-60 transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>Capital Residual</p>
+              <h2 className={`font-marcellus text-lg md:text-2xl font-black tracking-tighter transition-colors duration-500 ${
+                isCritical 
+                  ? 'text-red-500' 
+                  : isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              }`}>${balance}</h2>
             </div>
             {/* Botón Consultar Oráculo solo visible en mobile */}
             {isMobile && (
@@ -437,45 +459,97 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
               ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
               : 'glass-card border-[#F8C8DC] bg-white/70'
           }`}>
-            <h3 className="font-marcellus text-sm md:text-base font-black text-[#4A233E] mb-4 text-center tracking-[0.3em] uppercase border-b border-[#F8C8DC] pb-2">Registrar Operación</h3>
+            <h3 className={`font-marcellus text-sm md:text-base font-black mb-4 text-center tracking-[0.3em] uppercase border-b pb-2 transition-colors duration-500 ${
+              isNightMode 
+                ? 'text-[#E0E1DD] border-[#A68A56]/40' 
+                : 'text-[#4A233E] border-[#F8C8DC]'
+            }`}>Registrar Operación</h3>
             
-            <div className="flex bg-[#FDEEF4] p-1 rounded-xl border border-[#F8C8DC] mb-4 shadow-inner">
-               <button onClick={() => setTransType('Gasto')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] transition-all ${transType === 'Gasto' ? 'bg-[#E35B8F] text-white shadow-md scale-[1.02]' : 'text-[#8B5E75] hover:bg-white/40'}`}>Gasto</button>
-               <button onClick={() => setTransType('Ingreso')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] transition-all ${transType === 'Ingreso' ? 'bg-[#D4AF37] text-white shadow-md scale-[1.02]' : 'text-[#8B5E75] hover:bg-white/40'}`}>Ingreso</button>
+            <div className={`flex p-1 rounded-xl border mb-4 shadow-inner transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40' 
+                : 'bg-[#FDEEF4] border-[#F8C8DC]'
+            }`}>
+               <button onClick={() => setTransType('Gasto')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
+                 transType === 'Gasto' 
+                   ? isNightMode 
+                     ? 'bg-[#C77DFF] text-white shadow-md scale-[1.02]' 
+                     : 'bg-[#E35B8F] text-white shadow-md scale-[1.02]'
+                   : isNightMode 
+                     ? 'text-[#7A748E] hover:bg-[rgba(48,43,79,1)]' 
+                     : 'text-[#8B5E75] hover:bg-white/40'
+               }`}>Gasto</button>
+               <button onClick={() => setTransType('Ingreso')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
+                 transType === 'Ingreso' 
+                   ? isNightMode 
+                     ? 'bg-[#A68A56] text-white shadow-md scale-[1.02]' 
+                     : 'bg-[#D4AF37] text-white shadow-md scale-[1.02]'
+                   : isNightMode 
+                     ? 'text-[#7A748E] hover:bg-[rgba(48,43,79,1)]' 
+                     : 'text-[#8B5E75] hover:bg-white/40'
+               }`}>Ingreso</button>
             </div>
 
             <form onSubmit={handleAddTransaction} className="space-y-3">
               <div className="space-y-1.5">
-                <label className="text-[8px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Concepto de la Transacción</label>
-                <input required name="description" type="text" placeholder="Ej: Inscripción Congreso, Apuntes Bioética..." className="w-full bg-white/80 border border-[#F8C8DC] rounded-xl px-4 py-2.5 text-xs text-[#4A233E] font-bold outline-none focus:border-[#E35B8F] transition-all" />
+                <label className={`text-[8px] font-black uppercase tracking-widest px-1 transition-colors duration-500 ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>Concepto de la Transacción</label>
+                <input required name="description" type="text" placeholder="Ej: Inscripción Congreso, Apuntes Bioética..." className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold outline-none transition-all ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 text-[#E0E1DD] placeholder:text-[#7A748E]/50 focus:border-[#C77DFF]' 
+                    : 'bg-white/80 border-[#F8C8DC] text-[#4A233E] focus:border-[#E35B8F]'
+                }`} />
               </div>
               
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[8px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Monto de Operación</label>
-                  <input required name="amount" type="number" step="0.01" placeholder="0.00" className="w-full bg-white/80 border border-[#F8C8DC] rounded-xl px-4 py-2.5 text-xs text-[#4A233E] font-black outline-none focus:border-[#E35B8F] transition-all" />
+                  <label className={`text-[8px] font-black uppercase tracking-widest px-1 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Monto de Operación</label>
+                  <input required name="amount" type="number" step="0.01" placeholder="0.00" className={`w-full border rounded-xl px-4 py-2.5 text-xs font-black outline-none transition-all ${
+                    isNightMode 
+                      ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 text-[#E0E1DD] placeholder:text-[#7A748E]/50 focus:border-[#C77DFF]' 
+                      : 'bg-white/80 border-[#F8C8DC] text-[#4A233E] focus:border-[#E35B8F]'
+                  }`} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[8px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Esfera de Gasto</label>
-                  <select name="category" className="w-full bg-white/80 border border-[#F8C8DC] rounded-xl px-3 py-2.5 text-xs font-bold text-[#4A233E] outline-none focus:border-[#E35B8F] transition-all">
+                  <label className={`text-[8px] font-black uppercase tracking-widest px-1 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Esfera de Gasto</label>
+                  <select name="category" className={`w-full border rounded-xl px-3 py-2.5 text-xs font-bold outline-none transition-all ${
+                    isNightMode 
+                      ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 text-[#E0E1DD] focus:border-[#C77DFF]' 
+                      : 'bg-white/80 border-[#F8C8DC] text-[#4A233E] focus:border-[#E35B8F]'
+                  }`}>
                     {(transType === 'Gasto' ? GASTO_CATEGORIES : INGRESO_CATEGORIES).map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[8px] font-black text-[#8B5E75] uppercase tracking-widest px-1">Fecha del Sello</label>
-                <input name="date" type="date" className="w-full bg-white/80 border border-[#F8C8DC] rounded-xl px-4 py-2.5 text-xs text-[#4A233E] font-bold outline-none focus:border-[#E35B8F]" defaultValue={new Date().toISOString().split('T')[0]} />
+                <label className={`text-[8px] font-black uppercase tracking-widest px-1 transition-colors duration-500 ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>Fecha del Sello</label>
+                <input name="date" type="date" className={`w-full border rounded-xl px-4 py-2.5 text-xs font-bold outline-none transition-all ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 text-[#E0E1DD] focus:border-[#C77DFF]' 
+                    : 'bg-white/80 border-[#F8C8DC] text-[#4A233E] focus:border-[#E35B8F]'
+                }`} defaultValue={new Date().toISOString().split('T')[0]} />
               </div>
 
-              <button type="submit" className={`w-full py-3 rounded-[1.5rem] font-marcellus text-[10px] font-black uppercase tracking-[0.3em] text-white shadow-xl transition-all active:scale-95 hover:brightness-105 mt-3 ${transType === 'Gasto' ? 'bg-[#E35B8F]' : 'bg-[#D4AF37]'}`}>
+              <button type="submit" className={`w-full py-3 rounded-[1.5rem] font-marcellus text-[10px] font-black uppercase tracking-[0.3em] text-white shadow-xl transition-all active:scale-95 hover:brightness-105 mt-3 ${
+                transType === 'Gasto' 
+                  ? isNightMode ? 'bg-[#C77DFF]' : 'bg-[#E35B8F]'
+                  : isNightMode ? 'bg-[#A68A56]' : 'bg-[#D4AF37]'
+              }`}>
                 Sellar Operación Financiera
               </button>
             </form>
           </section>
 
           {/* LADO DERECHO: Crónicas de la Tesorería */}
-          <TreasuryChronicles transactions={transactions} onDelete={onDelete} />
+          <TreasuryChronicles transactions={transactions} onDelete={onDelete} isNightMode={isNightMode} />
 
         </div>
       </main>
@@ -493,7 +567,9 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
           {!showPetFirstTime && (
             <div className="w-24 h-24 border-[6px] border-[#D4AF37]/20 border-t-[#D4AF37] rounded-full animate-spin mb-10 shadow-2xl" />
           )}
-           <p className="font-marcellus text-lg font-black text-[#4A233E] tracking-[0.4em] uppercase animate-pulse">Consultando los Pesos Celestiales...</p>
+           <p className={`font-marcellus text-lg font-black tracking-[0.4em] uppercase animate-pulse transition-colors duration-500 ${
+             isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+           }`}>Consultando los Pesos Celestiales...</p>
         </div>
       )}
 
@@ -507,9 +583,15 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
               : 'glass-card border-[#F8C8DC] bg-white/80'
           }`} onClick={(e) => e.stopPropagation()}>
             {/* Header del Modal */}
-            <div className="flex-shrink-0 text-center pt-8 pb-6 px-8 border-b border-[#F8C8DC]/50">
-              <h2 className="font-marcellus text-2xl md:text-4xl font-black text-[#4A233E] mb-3 uppercase tracking-[0.3em]">El Veredicto de la Balanza</h2>
-              <div className="h-1 w-20 bg-[#D4AF37] mx-auto rounded-full" />
+            <div className={`flex-shrink-0 text-center pt-8 pb-6 px-8 border-b transition-colors duration-500 ${
+              isNightMode ? 'border-[#A68A56]/40' : 'border-[#F8C8DC]/50'
+            }`}>
+              <h2 className={`font-marcellus text-2xl md:text-4xl font-black mb-3 uppercase tracking-[0.3em] transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              }`}>El Veredicto de la Balanza</h2>
+              <div className={`h-1 w-20 mx-auto rounded-full transition-colors duration-500 ${
+                isNightMode ? 'bg-[#A68A56]' : 'bg-[#D4AF37]'
+              }`} />
             </div>
 
             {/* Contenido con scroll interno - Pergamino Digital */}
@@ -520,18 +602,30 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
               </div>
               
               {/* Contenedor del Pergamino */}
-              <div className="relative z-10 bg-[#FFF9FB] rounded-lg border-2 border-[#D4AF37]/30 p-6 md:p-8 shadow-inner">
+              <div className={`relative z-10 rounded-lg border-2 p-6 md:p-8 shadow-inner transition-colors duration-500 ${
+                isNightMode 
+                  ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40' 
+                  : 'bg-[#FFF9FB] border-[#D4AF37]/30'
+              }`}>
                 <div className="space-y-4">
-                  {parseOracleText(oracleDiagnosis)}
+                  {parseOracleText(oracleDiagnosis, isNightMode)}
                 </div>
               </div>
             </div>
 
             {/* Footer Fijo */}
-            <div className="flex-shrink-0 flex gap-4 p-6 border-t border-[#F8C8DC]/50 bg-white/60 backdrop-blur-sm">
+            <div className={`flex-shrink-0 flex gap-4 p-6 border-t backdrop-blur-sm transition-colors duration-500 ${
+              isNightMode 
+                ? 'border-[#A68A56]/40 bg-[rgba(48,43,79,0.8)]' 
+                : 'border-[#F8C8DC]/50 bg-white/60'
+            }`}>
               <button 
                 onClick={handleDownloadPDF}
-                className="flex-1 py-4 glass-card rounded-[2rem] border-[#F8C8DC] text-[#4A233E] font-marcellus text-sm font-black uppercase tracking-[0.3em] shadow-lg hover:bg-white/80 transition-all active:scale-95 flex items-center justify-center gap-2"
+                className={`flex-1 py-4 rounded-[2rem] font-marcellus text-sm font-black uppercase tracking-[0.3em] shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.8)] border border-[#A68A56]/40 text-[#E0E1DD] hover:bg-[rgba(48,43,79,1)]' 
+                    : 'glass-card border-[#F8C8DC] text-[#4A233E] hover:bg-white/80'
+                }`}
               >
                 {getIcon('download', 'w-5 h-5')}
                 Descargar Pergamino
@@ -541,7 +635,11 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
                   setRightPanelTab('history');
                   setOracleDiagnosis('');
                 }}
-                className="flex-1 py-4 bg-[#4A233E] text-[#D4AF37] rounded-[2rem] font-marcellus text-sm font-black uppercase tracking-[0.3em] shadow-2xl transition-all hover:bg-[#321829] active:scale-95"
+                className={`flex-1 py-4 rounded-[2rem] font-marcellus text-sm font-black uppercase tracking-[0.3em] shadow-2xl transition-all active:scale-95 ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.8)] text-[#A68A56] border border-[#A68A56]/40 hover:bg-[rgba(48,43,79,1)]' 
+                    : 'bg-[#4A233E] text-[#D4AF37] hover:bg-[#321829]'
+                }`}
               >
                 Sellar Veredicto y Volver
               </button>

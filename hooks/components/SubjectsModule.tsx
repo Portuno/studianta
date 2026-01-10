@@ -25,11 +25,10 @@ interface SubjectsModuleProps {
   onUpdate: (subject: Subject) => void;
   isMobile: boolean;
   onMaterialUpload: () => void;
-  onAddEssence?: (amount: number) => void;
   studentProfileContext?: StudentProfileContext;
 }
 
-const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDelete, onUpdate, isMobile, onMaterialUpload, onAddEssence, studentProfileContext }) => {
+const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDelete, onUpdate, isMobile, onMaterialUpload, studentProfileContext }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -129,7 +128,6 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
             onStatusChange={handleStatusChange}
             isMobile={isMobile}
             onMaterialUpload={onMaterialUpload}
-            onAddEssence={onAddEssence}
             studentProfileContext={studentProfileContext}
           />
         </div>
@@ -187,11 +185,10 @@ interface DetailProps {
   onStatusChange: (status: SubjectStatus) => void;
   isMobile: boolean;
   onMaterialUpload: () => void;
-  onAddEssence?: (amount: number) => void;
   studentProfileContext?: StudentProfileContext;
 }
 
-const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onStatusChange, isMobile, onMaterialUpload, onAddEssence, studentProfileContext }) => {
+const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onStatusChange, isMobile, onMaterialUpload, studentProfileContext }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'plan' | 'lab' | 'notas'>('info');
   const [loadingIa, setLoadingIa] = useState(false);
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ia', text: string}[]>([]);
@@ -1315,9 +1312,6 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
             } else {
               onUpdate({...subject, notes: [sealedNote, ...subject.notes]});
             }
-            if (onAddEssence) {
-              onAddEssence(3);
-            }
             setShowNoteModal(false);
             setEditingNote(null);
             setIsNoteFocused(false);
@@ -1674,7 +1668,7 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
                 onClick={handleSeal}
                 className="px-6 py-3 bg-[#D4AF37] text-white rounded-xl font-cinzel text-xs font-black uppercase shadow-lg hover:bg-[#C19D2E] transition-all flex items-center gap-2"
               >
-                {getIcon('sparkles', 'w-4 h-4')} Sellar Nota (+3 Esencia)
+                {getIcon('sparkles', 'w-4 h-4')} Sellar Nota
               </button>
             )}
           </div>
