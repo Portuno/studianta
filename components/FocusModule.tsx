@@ -27,6 +27,7 @@ interface FocusModuleProps {
     selectedSubjectId: string | null;
     sanctuaryMode: boolean;
   }) => void;
+  isNightMode?: boolean;
 }
 
 const FocusModule: React.FC<FocusModuleProps> = ({ 
@@ -36,7 +37,8 @@ const FocusModule: React.FC<FocusModuleProps> = ({
   onAddCalendarEvent, 
   isMobile,
   focusState,
-  onFocusStateChange
+  onFocusStateChange,
+  isNightMode = false
 }) => {
   // Usar estado global si está disponible, sino usar estado local
   const [localIsActive, setLocalIsActive] = useState(false);
@@ -256,7 +258,9 @@ const FocusModule: React.FC<FocusModuleProps> = ({
 
       <div className="max-w-4xl w-full flex flex-col items-center gap-8 lg:gap-12 animate-fade-in transition-all duration-500 overflow-visible">
         <header className="text-center">
-          <h1 className="font-cinzel text-xl md:text-2xl lg:text-3xl text-[#8B5E75] tracking-[0.4em] uppercase opacity-60 mb-2">
+          <h1 className={`font-cinzel text-xl md:text-2xl lg:text-3xl tracking-[0.4em] uppercase opacity-60 mb-2 transition-colors duration-500 ${
+            isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+          }`}>
             El Reloj de Arena
           </h1>
           <div className="h-0.5 w-16 lg:w-24 bg-[#D4AF37] mx-auto opacity-30" />
@@ -264,7 +268,11 @@ const FocusModule: React.FC<FocusModuleProps> = ({
 
         <div className="relative group">
           <div className="absolute inset-0 bg-gradient-to-br from-[#E35B8F]/10 to-[#D4AF37]/10 rounded-full blur-[80px] opacity-50 group-hover:opacity-100 transition-opacity duration-1000" />
-          <div className="glass-card w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-full flex flex-col items-center justify-center border-2 border-[#F8C8DC]/40 shadow-2xl relative z-10 overflow-hidden">
+          <div className={`w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-full flex flex-col items-center justify-center border-2 shadow-2xl relative z-10 overflow-hidden backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 shadow-[0_0_40px_rgba(199,125,255,0.3)]' 
+              : 'glass-card border-[#F8C8DC]/40'
+          }`}>
             {/* Efecto de llenado con líquido rosado traslúcido */}
             <div 
               className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#E35B8F]/40 via-[#E35B8F]/30 to-[#E35B8F]/20 transition-all duration-1000 ease-out"
@@ -288,7 +296,9 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                 }}
               />
             ))}
-            <span className="font-mono text-5xl md:text-7xl lg:text-8xl font-black text-[#4A233E] tabular-nums tracking-tighter relative z-10">
+            <span className={`font-mono text-5xl md:text-7xl lg:text-8xl font-black tabular-nums tracking-tighter relative z-10 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               {formatTime(timeLeft)}
             </span>
             <div className="mt-4 lg:mt-6 flex flex-col items-center gap-3 relative z-10">
@@ -333,8 +343,16 @@ const FocusModule: React.FC<FocusModuleProps> = ({
         </div>
 
         <div className="w-full max-w-2xl lg:max-w-3xl">
-          <div className="glass-card p-6 lg:p-8 rounded-[2.5rem] border-[#F8C8DC]/30 shadow-sm">
-            <p className="text-[10px] lg:text-[11px] uppercase font-black text-[#8B5E75] tracking-widest mb-5 border-b border-[#F8C8DC]/30 pb-2">Vínculo Académico</p>
+          <div className={`p-6 lg:p-8 rounded-[2.5rem] shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/30' 
+              : 'glass-card border-[#F8C8DC]/30'
+          }`}>
+            <p className={`text-[10px] lg:text-[11px] uppercase font-black tracking-widest mb-5 border-b pb-2 transition-colors duration-500 ${
+              isNightMode 
+                ? 'text-[#7A748E] border-[#A68A56]/30' 
+                : 'text-[#8B5E75] border-[#F8C8DC]/30'
+            }`}>Vínculo Académico</p>
             <div className="space-y-5">
               <select 
                 disabled={isActive}
@@ -356,7 +374,15 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                       const newTime = m * 60;
                       updateState({ timeLeft: newTime, totalTime: newTime });
                     }}
-                    className={`flex-1 min-w-[80px] py-3 rounded-xl font-cinzel text-[10px] lg:text-[11px] border-2 transition-all ${totalTime === m * 60 ? 'bg-[#E35B8F] text-white border-[#E35B8F] shadow-md scale-[1.03]' : 'text-[#8B5E75] border-[#F8C8DC] hover:bg-white/60'}`}
+                    className={`flex-1 min-w-[80px] py-3 rounded-xl font-cinzel text-[10px] lg:text-[11px] border-2 transition-all ${
+                      totalTime === m * 60 
+                        ? isNightMode
+                          ? 'bg-[#C77DFF] text-white border-[#C77DFF] shadow-md shadow-[#C77DFF]/30 scale-[1.03]'
+                          : 'bg-[#E35B8F] text-white border-[#E35B8F] shadow-md scale-[1.03]'
+                        : isNightMode
+                          ? 'text-[#7A748E] border-[#A68A56]/40 hover:bg-[rgba(48,43,79,0.6)]'
+                          : 'text-[#8B5E75] border-[#F8C8DC] hover:bg-white/60'
+                    }`}
                   >
                     {m} MIN
                   </button>
@@ -364,17 +390,17 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                 <button
                   disabled={isActive}
                   onClick={() => setShowCustomTimeModal(true)}
-                  className={`flex-1 min-w-[80px] py-3 rounded-xl font-cinzel text-[10px] lg:text-[11px] border-2 transition-all text-[#8B5E75] border-[#D4AF37] hover:bg-[#D4AF37]/10 disabled:opacity-50`}
+                  className={`flex-1 min-w-[80px] py-3 rounded-xl font-cinzel text-[10px] lg:text-[11px] border-2 transition-all disabled:opacity-50 ${
+                    isNightMode 
+                      ? 'text-[#7A748E] border-[#A68A56] hover:bg-[rgba(199,125,255,0.2)]' 
+                      : 'text-[#8B5E75] border-[#D4AF37] hover:bg-[#D4AF37]/10'
+                  }`}
                 >
                   Personalizado
                 </button>
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="text-center opacity-30 max-w-md">
-          <p className="font-garamond italic text-lg lg:text-xl">"Cada grano de arena que cae es un peldaño más hacia la cúspide de la Logia."</p>
         </div>
       </div>
 
@@ -383,8 +409,14 @@ const FocusModule: React.FC<FocusModuleProps> = ({
       {/* Modal para tiempo personalizado */}
       {showCustomTimeModal && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/80 backdrop-blur-xl p-4" onClick={() => { setShowCustomTimeModal(false); setCustomMinutes(''); }}>
-          <div className="glass-card w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl border-2 border-[#D4AF37]/40" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-cinzel text-lg text-[#4A233E] mb-6 text-center font-bold uppercase tracking-widest">Tiempo Personalizado</h2>
+          <div className={`w-full max-w-sm p-8 rounded-[2.5rem] shadow-2xl border-2 backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.95)] border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+              : 'glass-card border-[#D4AF37]/40'
+          }`} onClick={(e) => e.stopPropagation()}>
+            <h2 className={`font-cinzel text-lg mb-6 text-center font-bold uppercase tracking-widest transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>Tiempo Personalizado</h2>
             <div className="space-y-4">
               <input
                 type="number"
@@ -416,7 +448,11 @@ const FocusModule: React.FC<FocusModuleProps> = ({
 
       {showReflection && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-6" onClick={() => setShowReflection(false)}>
-          <div className="glass-card w-full max-w-lg lg:max-w-xl p-8 lg:p-12 rounded-[3.5rem] shadow-[0_30px_60px_rgba(0,0,0,0.3)] animate-in zoom-in duration-500 overflow-y-auto max-h-[90vh] no-scrollbar" onClick={(e) => e.stopPropagation()}>
+          <div className={`w-full max-w-lg lg:max-w-xl p-8 lg:p-12 rounded-[3.5rem] shadow-[0_30px_60px_rgba(0,0,0,0.3)] animate-in zoom-in duration-500 overflow-y-auto max-h-[90vh] no-scrollbar backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_30px_60px_rgba(199,125,255,0.3)]' 
+              : 'glass-card'
+          }`} onClick={(e) => e.stopPropagation()}>
             <h2 className="font-cinzel text-2xl lg:text-3xl text-[#4A233E] mb-3 font-black text-center uppercase tracking-widest">
               {reflectionData.wasInterrupted ? "Sesión Interrumpida" : "Sesión Completada"}
             </h2>

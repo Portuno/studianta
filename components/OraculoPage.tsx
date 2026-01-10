@@ -36,6 +36,7 @@ interface OraculoPageProps {
   monthlyBudget: number;
   isMobile: boolean;
   onAddJournalEntry?: (entry: Omit<JournalEntry, 'id'>) => void;
+  isNightMode?: boolean;
 }
 
 // Componente del Sello de Lacre Rosado
@@ -140,6 +141,7 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
   monthlyBudget,
   isMobile,
   onAddJournalEntry,
+  isNightMode = false
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -515,7 +517,9 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#FFF9FB] relative overflow-hidden">
+    <div className={`h-full flex flex-col relative overflow-hidden transition-colors duration-500 ${
+      isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF9FB]'
+    }`}>
       {/* Fondo con textura de papel antiguo */}
       <div 
         className="absolute inset-0 opacity-30 pointer-events-none"
@@ -525,9 +529,15 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
       />
 
       {/* Header */}
-      <header className="flex-none p-4 md:p-6 border-b border-[#D4AF37]/40 bg-white/60 backdrop-blur-sm z-10">
+      <header className={`flex-none p-4 md:p-6 border-b backdrop-blur-sm z-10 transition-colors duration-500 ${
+        isNightMode 
+          ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40' 
+          : 'border-[#D4AF37]/40 bg-white/60'
+      }`}>
         <div className="max-w-4xl mx-auto">
-          <h1 className="font-cinzel text-2xl md:text-3xl font-black text-[#4A233E] tracking-[0.2em] uppercase mb-2">
+          <h1 className={`font-cinzel text-2xl md:text-3xl font-black tracking-[0.2em] uppercase mb-2 transition-colors duration-500 ${
+            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+          }`}>
             Oráculo Personal
           </h1>
         </div>
@@ -538,7 +548,11 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
         <div className="max-w-4xl mx-auto">
           {/* Contenedor de mensajes con bordes dorados */}
           <div 
-            className="min-h-full p-6 md:p-8 rounded-[2rem] border-2 border-[#D4AF37]/40 bg-white/80 backdrop-blur-sm shadow-xl"
+            className={`min-h-full p-6 md:p-8 rounded-[2rem] border-2 backdrop-blur-sm shadow-xl transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+                : 'border-[#D4AF37]/40 bg-white/80'
+            }`}
             style={{
               backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
               backgroundColor: '#FFFEF7',
@@ -549,13 +563,19 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
                 <div className="mb-6">
                   <StudiantaSeal className="w-20 h-20" />
                 </div>
-                <h2 className="font-marcellus text-2xl md:text-3xl text-[#4A233E] mb-6">
+                <h2 className={`font-marcellus text-2xl md:text-3xl mb-6 transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                }`}>
                   Salve, Buscadora de la luz
                 </h2>
-                <p className="font-garamond text-xl md:text-2xl text-[#8B5E75] italic max-w-2xl mb-6 leading-relaxed">
+                <p className={`font-garamond text-xl md:text-2xl italic max-w-2xl mb-6 leading-relaxed transition-colors duration-500 ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>
                   El Oráculo de Studianta está listo para escuchar tus consultas. Formula tu pregunta y recibirás sabiduría basada en tu perfil.
                 </p>
-                <p className="font-garamond text-base md:text-lg text-[#8B5E75] italic max-w-2xl">
+                <p className={`font-garamond text-base md:text-lg italic max-w-2xl transition-colors duration-500 ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>
                   *Chat experimental y en constante desarrollo, esta conversación no quedará guardada (podrás descargarla para tenerla tu)
                 </p>
               </div>
@@ -585,7 +605,11 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-[#FFF9FB] border border-[#D4AF37]/30 rounded-2xl p-4 md:p-6 relative">
+                    <div className={`border rounded-2xl p-4 md:p-6 relative backdrop-blur-[15px] transition-colors duration-500 ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40' 
+                        : 'bg-[#FFF9FB] border-[#D4AF37]/30'
+                    }`}>
                       {showPetFirstTime ? (
                         <div className="flex flex-col items-center justify-center py-4 gap-4">
                           <PetAnimation show={true} />
@@ -618,7 +642,11 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Escribe tu consulta al Oráculo..."
-                className="w-full min-h-[60px] md:min-h-[80px] max-h-[200px] p-4 rounded-xl border-2 border-[#D4AF37]/40 bg-white/90 font-garamond text-[#4A233E] text-base md:text-lg placeholder:text-[#8B5E75]/50 focus:outline-none focus:border-[#D4AF37] resize-none"
+                className={`w-full min-h-[60px] md:min-h-[80px] max-h-[200px] p-4 rounded-xl border-2 font-garamond text-base md:text-lg placeholder:text-[#7A748E]/50 focus:outline-none resize-none transition-colors duration-500 ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD] focus:border-[#C77DFF]' 
+                    : 'border-[#D4AF37]/40 bg-white/90 text-[#4A233E] placeholder:text-[#8B5E75]/50 focus:border-[#D4AF37]'
+                }`}
                 style={{
                   backgroundImage: 'url("https://www.transparenttextures.com/patterns/wood-pattern.png")',
                   backgroundColor: '#F5E6D3',
@@ -643,7 +671,11 @@ const OraculoPage: React.FC<OraculoPageProps> = ({
             <div className="flex gap-3 mt-4 justify-end">
               <button
                 onClick={handleDownloadParchment}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#4A233E] font-cinzel text-xs font-black uppercase tracking-widest hover:bg-[#D4AF37]/20 transition-all"
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-cinzel text-xs font-black uppercase tracking-widest transition-all ${
+                  isNightMode 
+                    ? 'bg-[#A68A56]/10 border-[#A68A56]/40 text-[#E0E1DD] hover:bg-[#A68A56]/20' 
+                    : 'bg-[#D4AF37]/10 border-[#D4AF37]/40 text-[#4A233E] hover:bg-[#D4AF37]/20'
+                }`}
               >
                 {getIcon('download', 'w-4 h-4')}
                 <span>Descargar Pergamino</span>

@@ -28,6 +28,7 @@ interface FinanceModuleProps {
   onDelete: (id: string) => void;
   onUpdate: (t: Transaction) => void;
   isMobile: boolean;
+  isNightMode?: boolean;
 }
 
 const GASTO_CATEGORIES = [
@@ -45,7 +46,7 @@ const INGRESO_CATEGORIES = [
   "Otros"
 ];
 
-const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onUpdateBudget, onAdd, onDelete, onUpdate, isMobile }) => {
+const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onUpdateBudget, onAdd, onDelete, onUpdate, isMobile, isNightMode = false }) => {
   const [loadingOracle, setLoadingOracle] = useState(false);
   const [oracleDiagnosis, setOracleDiagnosis] = useState<string>('');
   const [showBudgetInput, setShowBudgetInput] = useState(false);
@@ -348,9 +349,15 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden font-inter bg-[#FFF0F5]">
+    <div className={`h-screen flex flex-col overflow-hidden font-inter transition-colors duration-500 ${
+      isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF0F5]'
+    }`}>
       {/* Header Compacto */}
-      <header className="pt-4 pb-2 px-4 flex-shrink-0 bg-[#FFF0F5]/80 backdrop-blur-md border-b border-[#F8C8DC]/30">
+      <header className={`pt-4 pb-2 px-4 flex-shrink-0 backdrop-blur-md border-b transition-colors duration-500 ${
+        isNightMode 
+          ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/30' 
+          : 'bg-[#FFF0F5]/80 border-[#F8C8DC]/30'
+      }`}>
         <div className="max-w-7xl mx-auto w-full">
           {/* Desktop: Título y botón en fila superior */}
           <div className="hidden md:flex justify-between items-center mb-3">
@@ -368,7 +375,11 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
           {/* Mobile: 3 columnas (Presupuesto, Capital, Consultar Oráculo) */}
           {/* Desktop: 2 columnas (Presupuesto, Capital) + botón arriba */}
           <div className={`grid gap-2 ${isMobile ? 'grid-cols-3' : 'md:grid-cols-2 max-w-xl'}`}>
-            <div className="glass-card p-3 rounded-[1.25rem] border-[#F8C8DC] shadow-sm">
+            <div className={`p-3 rounded-[1.25rem] shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40' 
+                : 'glass-card border-[#F8C8DC]'
+            }`}>
               <p className="text-[7px] md:text-[9px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-0.5 opacity-60">Presupuesto</p>
               {showBudgetInput ? (
                 <div className="flex items-center gap-2">
@@ -386,7 +397,15 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
                 </div>
               )}
             </div>
-            <div className={`glass-card p-3 rounded-[1.25rem] border-2 shadow-sm ${isCritical ? 'border-red-400 bg-red-50' : 'border-[#D4AF37]/30'}`}>
+            <div className={`p-3 rounded-[1.25rem] border-2 shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
+              isCritical 
+                ? isNightMode
+                  ? 'border-red-400 bg-red-900/20'
+                  : 'border-red-400 bg-red-50'
+                : isNightMode
+                  ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40'
+                  : 'glass-card border-[#D4AF37]/30'
+            }`}>
               <p className="text-[7px] md:text-[9px] uppercase font-black tracking-[0.2em] text-[#8B5E75] mb-0.5 opacity-60">Capital Residual</p>
               <h2 className={`font-marcellus text-lg md:text-2xl font-black tracking-tighter ${isCritical ? 'text-red-500' : 'text-[#4A233E]'}`}>${balance}</h2>
             </div>
@@ -394,7 +413,11 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
             {isMobile && (
               <button 
                 onClick={handleConsultOracle}
-                className="glass-card p-3 rounded-[1.25rem] border-[#F8C8DC] shadow-sm bg-[#4A233E] text-[#D4AF37] flex flex-col items-center justify-center font-marcellus text-[7px] font-black uppercase tracking-[0.2em] active:scale-95 transition-all hover:bg-[#321829]"
+                className={`p-3 rounded-[1.25rem] shadow-sm flex flex-col items-center justify-center font-marcellus text-[7px] font-black uppercase tracking-[0.2em] active:scale-95 transition-all backdrop-blur-[15px] ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 text-[#A68A56] hover:bg-[rgba(48,43,79,1)]' 
+                    : 'glass-card border-[#F8C8DC] bg-[#4A233E] text-[#D4AF37] hover:bg-[#321829]'
+                }`}
               >
                 {getIcon('sparkles', 'w-4 h-4 mb-1')}
                 <span className="text-center leading-tight">Consultar<br />Oráculo</span>
@@ -409,7 +432,11 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
           
           {/* LADO IZQUIERDO: Registrar Operación */}
-          <section className="glass-card p-4 md:p-6 rounded-[2.5rem] border-[#F8C8DC] shadow-2xl bg-white/70 overflow-y-auto no-scrollbar">
+          <section className={`p-4 md:p-6 rounded-[2.5rem] shadow-2xl overflow-y-auto no-scrollbar backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+              : 'glass-card border-[#F8C8DC] bg-white/70'
+          }`}>
             <h3 className="font-marcellus text-sm md:text-base font-black text-[#4A233E] mb-4 text-center tracking-[0.3em] uppercase border-b border-[#F8C8DC] pb-2">Registrar Operación</h3>
             
             <div className="flex bg-[#FDEEF4] p-1 rounded-xl border border-[#F8C8DC] mb-4 shadow-inner">
@@ -455,7 +482,9 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
 
       {/* Oracle Modal Overlay */}
       {loadingOracle && (
-        <div className="fixed inset-0 z-[400] bg-[#FFF0F5]/90 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center">
+        <div className={`fixed inset-0 z-[400] backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center transition-colors duration-500 ${
+          isNightMode ? 'bg-[#1A1A2E]/90' : 'bg-[#FFF0F5]/90'
+        }`}>
           {showPetFirstTime && (
             <div className="mb-8">
               <PetAnimation show={true} size="xlarge" />
@@ -469,8 +498,14 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ transactions, budget, onU
       )}
 
       {oracleDiagnosis && rightPanelTab === 'oracle' && !loadingOracle && (
-        <div className="fixed inset-0 z-[400] bg-[#FFF0F5]/95 backdrop-blur-2xl flex items-center justify-center p-6" onClick={() => { setRightPanelTab('history'); setOracleDiagnosis(''); }}>
-          <div className="max-w-4xl w-full max-h-[85vh] flex flex-col glass-card rounded-[3rem] border-[#F8C8DC] shadow-2xl bg-white/80 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className={`fixed inset-0 z-[400] backdrop-blur-2xl flex items-center justify-center p-6 transition-colors duration-500 ${
+          isNightMode ? 'bg-[#1A1A2E]/95' : 'bg-[#FFF0F5]/95'
+        }`} onClick={() => { setRightPanelTab('history'); setOracleDiagnosis(''); }}>
+          <div className={`max-w-4xl w-full max-h-[85vh] flex flex-col rounded-[3rem] shadow-2xl overflow-hidden backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_0_40px_rgba(199,125,255,0.3)]' 
+              : 'glass-card border-[#F8C8DC] bg-white/80'
+          }`} onClick={(e) => e.stopPropagation()}>
             {/* Header del Modal */}
             <div className="flex-shrink-0 text-center pt-8 pb-6 px-8 border-b border-[#F8C8DC]/50">
               <h2 className="font-marcellus text-2xl md:text-4xl font-black text-[#4A233E] mb-3 uppercase tracking-[0.3em]">El Veredicto de la Balanza</h2>

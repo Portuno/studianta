@@ -15,6 +15,7 @@ interface CalendarModuleProps {
   onUpdateCustomEvent?: (e: CustomCalendarEvent) => void;
   isMobile: boolean;
   userId?: string;
+  isNightMode?: boolean;
 }
 
 interface ConvergenceEvent {
@@ -48,7 +49,8 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
   onDeleteCustomEvent,
   onUpdateCustomEvent,
   isMobile,
-  userId
+  userId,
+  isNightMode = false
 }) => {
   const [view, setView] = useState<'month' | 'week' | 'day'>(isMobile ? 'day' : 'week');
   const [anchorDate, setAnchorDate] = useState(new Date());
@@ -366,7 +368,11 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
         key={date.toDateString()} 
         className={`flex-1 flex flex-col min-w-[150px] md:min-w-0 border-r border-[#D4AF37]/10 last:border-r-0 ${isToday ? 'bg-[#D4AF37]/5' : ''}`}
       >
-        <div className={`p-6 text-center border-b border-[#D4AF37]/20 ${isToday ? 'text-[#4A233E]' : 'text-[#8B5E75]'}`}>
+        <div className={`p-6 text-center border-b transition-colors duration-500 ${
+          isNightMode 
+            ? `border-[#A68A56]/20 ${isToday ? 'text-[#E0E1DD]' : 'text-[#7A748E]'}` 
+            : `border-[#D4AF37]/20 ${isToday ? 'text-[#4A233E]' : 'text-[#8B5E75]'}`
+        }`}>
           <p className="text-[10px] uppercase font-cinzel font-black tracking-[0.2em] opacity-60">
             {date.toLocaleDateString('es-ES', { weekday: 'short' })}
           </p>
@@ -404,11 +410,15 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 style={event.type === 'custom' ? { borderLeftColor: event.color } : {}}
               >
                 <div className="flex justify-between items-start mb-1.5">
-                   <span className="font-bold text-[#4A233E] truncate pr-1">{event.title}</span>
+                   <span className={`font-bold truncate pr-1 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  }`}>{event.title}</span>
                    {event.priority === 'high' && <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-ping shrink-0" />}
                 </div>
                 <div className="flex flex-col gap-0.5">
-                  <p className="text-[9px] text-[#8B5E75] font-medium uppercase tracking-wider opacity-80">
+                  <p className={`text-[9px] font-medium uppercase tracking-wider opacity-80 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>
                     {event.time ? `${event.time}${event.endTime ? ` - ${event.endTime}` : ''} • ` : ''}{event.subtitle}
                   </p>
                 </div>
@@ -468,11 +478,21 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
             <div 
               key={i} 
               onClick={() => { if(!isOutside) { setAnchorDate(date); setView('day'); } }}
-              className={`p-2 border-r border-b border-[#D4AF37]/10 transition-all cursor-pointer group relative ${isOutside ? 'opacity-10 grayscale bg-black/5' : 'hover:bg-[#FFF0F5]/50'}`}
+              className={`p-2 border-r border-b transition-all cursor-pointer group relative ${
+                isNightMode 
+                  ? `border-[#A68A56]/10 ${isOutside ? 'opacity-10 grayscale bg-black/5' : 'hover:bg-[rgba(48,43,79,0.3)]'}` 
+                  : `border-[#D4AF37]/10 ${isOutside ? 'opacity-10 grayscale bg-black/5' : 'hover:bg-[#FFF0F5]/50'}`
+              }`}
               title={events.length > 0 ? allEventsText : ''}
             >
               <div className="flex justify-between items-start">
-                <span className={`text-[10px] md:text-base font-cinzel transition-all ${isToday ? 'border-2 border-[#D4AF37] ring-2 ring-[#D4AF37]/20 text-[#4A233E] w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,175,55,0.3)] font-black' : 'text-[#8B5E75]'}`}>
+                <span className={`text-[10px] md:text-base font-cinzel transition-all ${
+                  isToday 
+                    ? isNightMode
+                      ? 'border-2 border-[#A68A56] ring-2 ring-[#C77DFF]/20 text-[#E0E1DD] w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(199,125,255,0.3)] font-black'
+                      : 'border-2 border-[#D4AF37] ring-2 ring-[#D4AF37]/20 text-[#4A233E] w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,175,55,0.3)] font-black'
+                    : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>
                   {date.getDate()}
                 </span>
                 <div className="flex gap-1">
@@ -502,7 +522,9 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                   />
                 ))}
                 {events.length > 3 && (
-                  <div className="text-[8px] text-[#8B5E75] font-bold opacity-60 mt-1">
+                  <div className={`text-[8px] font-bold opacity-60 mt-1 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>
                     +{events.length - 3} más
                   </div>
                 )}
@@ -513,8 +535,16 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 <div className={`absolute z-[100] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 hidden md:block ${
                   i % 7 >= 4 ? 'right-full top-0 mr-2' : 'left-full top-0 ml-2'
                 }`}>
-                  <div className="glass-card p-3 rounded-xl shadow-2xl border-2 border-[#D4AF37]/40 min-w-[200px] max-w-[300px] bg-white/95 backdrop-blur-md">
-                    <div className="text-[9px] font-cinzel font-bold text-[#4A233E] mb-2 uppercase border-b border-[#F8C8DC] pb-1">
+                  <div className={`p-3 rounded-xl shadow-2xl border-2 min-w-[200px] max-w-[300px] backdrop-blur-md transition-colors duration-500 ${
+                    isNightMode 
+                      ? 'bg-[rgba(48,43,79,0.95)] border-[#A68A56]/40 shadow-[0_0_20px_rgba(199,125,255,0.2)]' 
+                      : 'glass-card border-[#D4AF37]/40 bg-white/95'
+                  }`}>
+                    <div className={`text-[9px] font-cinzel font-bold mb-2 uppercase border-b pb-1 transition-colors duration-500 ${
+                      isNightMode 
+                        ? 'text-[#E0E1DD] border-[#A68A56]/40' 
+                        : 'text-[#4A233E] border-[#F8C8DC]'
+                    }`}>
                       {date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </div>
                     <div className="space-y-2 max-h-[200px] overflow-y-auto">
@@ -570,7 +600,11 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
             {events.map(event => (
               <div 
                 key={event.id}
-                className={`glass-card p-4 sm:p-6 md:p-8 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] border-l-4 flex flex-col sm:flex-row items-start sm:items-center justify-between group transition-all duration-300 font-inter shadow-md gap-3 sm:gap-4`}
+                className={`p-4 sm:p-6 md:p-8 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] border-l-4 flex flex-col sm:flex-row items-start sm:items-center justify-between group transition-all duration-300 font-inter shadow-md gap-3 sm:gap-4 backdrop-blur-[15px] ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.6)] border-l-[#C77DFF] shadow-[0_0_20px_rgba(199,125,255,0.2)]' 
+                    : 'glass-card border-l-[#E35B8F]'
+                }`}
                 style={{ borderLeftColor: event.color }}
               >
                 <div className="flex items-center gap-3 sm:gap-4 md:gap-8 flex-1 w-full sm:w-auto">
@@ -634,14 +668,22 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
           <div className="flex gap-2">
             <button 
               onClick={() => navigate(-1)} 
-              className="min-w-[48px] min-h-[48px] w-12 h-12 rounded-full glass-card border-2 border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm touch-manipulation"
+              className={`min-w-[48px] min-h-[48px] w-12 h-12 rounded-full border-2 flex items-center justify-center active:scale-90 transition-all shadow-sm touch-manipulation backdrop-blur-[15px] ${
+                isNightMode 
+                  ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 text-[#C77DFF]' 
+                  : 'glass-card border-[#F8C8DC] text-[#E35B8F]'
+              }`}
               aria-label="Día anterior"
             >
               <div className="rotate-180">{getIcon('chevron', 'w-6 h-6')}</div>
             </button>
             <button 
               onClick={() => navigate(1)} 
-              className="min-w-[48px] min-h-[48px] w-12 h-12 rounded-full glass-card border-2 border-[#F8C8DC] flex items-center justify-center text-[#E35B8F] active:scale-90 transition-all shadow-sm touch-manipulation"
+              className={`min-w-[48px] min-h-[48px] w-12 h-12 rounded-full border-2 flex items-center justify-center active:scale-90 transition-all shadow-sm touch-manipulation backdrop-blur-[15px] ${
+                isNightMode 
+                  ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 text-[#C77DFF]' 
+                  : 'glass-card border-[#F8C8DC] text-[#E35B8F]'
+              }`}
               aria-label="Día siguiente"
             >
               {getIcon('chevron', 'w-6 h-6')}
@@ -690,7 +732,11 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
 
       {/* Sección de Conectividad */}
       {showConnectivitySection && (
-        <div className="mb-4 glass-card rounded-[1.5rem] p-4 md:p-6 border-2 border-[#D4AF37]/30 shadow-lg">
+        <div className={`mb-4 rounded-[1.5rem] p-4 md:p-6 border-2 shadow-lg backdrop-blur-[15px] transition-colors duration-500 ${
+          isNightMode 
+            ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 shadow-[0_0_20px_rgba(199,125,255,0.2)]' 
+            : 'glass-card border-[#D4AF37]/30'
+        }`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-cinzel text-lg font-bold text-[#4A233E] uppercase tracking-wider">
               Conectividad

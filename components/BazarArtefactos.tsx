@@ -14,12 +14,14 @@ interface BazarArtefactosProps {
   isMobile?: boolean;
   essence?: number;
   onEssenceChange?: (newEssence: number) => void;
+  isNightMode?: boolean;
 }
 
 const BazarArtefactos: React.FC<BazarArtefactosProps> = ({ 
   isMobile = false,
   essence: externalEssence,
-  onEssenceChange
+  onEssenceChange,
+  isNightMode = false
 }) => {
   // Estado interno para esencia si no se proporciona externamente
   const [internalEssence, setInternalEssence] = useState(0);
@@ -87,20 +89,32 @@ const BazarArtefactos: React.FC<BazarArtefactosProps> = ({
       <div className="h-full flex flex-col gap-6 pb-20 animate-fade-in px-4 overflow-y-auto no-scrollbar">
         {/* Encabezado */}
         <section className="text-center pt-8 mb-4">
-          <h1 className="font-cinzel text-3xl font-black text-[#4A233E] tracking-[0.25em] uppercase">
+          <h1 className={`font-cinzel text-3xl font-black tracking-[0.25em] uppercase transition-colors duration-500 ${
+            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+          }`}>
             Bazar de Artefactos Académicos
           </h1>
           <div className="h-0.5 w-12 bg-[#D4AF37] mx-auto mt-2 opacity-50 rounded-full" />
         </section>
 
         {/* Saldo de Esencia */}
-        <section className="glass-card p-4 rounded-2xl border-2 border-[#D4AF37]/30 mx-2 mb-4">
+        <section className={`p-4 rounded-2xl border-2 mx-2 mb-4 backdrop-blur-[15px] transition-colors duration-500 ${
+          isNightMode 
+            ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 shadow-[0_0_20px_rgba(199,125,255,0.2)]' 
+            : 'glass-card border-[#D4AF37]/30'
+        }`}>
           <div className="flex items-center justify-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#D4AF37]/20 flex items-center justify-center border border-[#D4AF37]/30">
-              {getIcon('sparkles', 'w-5 h-5 text-[#D4AF37]')}
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[#A68A56]/20 border-[#A68A56]/30' 
+                : 'bg-[#D4AF37]/20 border-[#D4AF37]/30'
+            }`}>
+              {getIcon('sparkles', `w-5 h-5 ${isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'}`)}
             </div>
             <div className="text-center">
-              <p className="font-garamond italic text-xs text-[#8B5E75]">Esencia Disponible</p>
+              <p className={`font-garamond italic text-xs transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>Esencia Disponible</p>
               <p className="font-cinzel text-2xl font-black text-[#D4AF37]">{currentEssence}</p>
             </div>
           </div>
@@ -108,7 +122,9 @@ const BazarArtefactos: React.FC<BazarArtefactosProps> = ({
 
         {/* Grid de Artefactos */}
         <section className="flex-1">
-          <h3 className="text-[11px] font-inter font-black uppercase tracking-[0.3em] text-[#8B5E75] border-b border-[#F8C8DC] pb-3 mb-6 px-2">
+          <h3 className={`text-[11px] font-inter font-black uppercase tracking-[0.3em] pb-3 mb-6 px-2 border-b transition-colors duration-500 ${
+            isNightMode ? 'text-[#E0E1DD] border-[#A68A56]/40' : 'text-[#8B5E75] border-[#F8C8DC]'
+          }`}>
             Artefactos Disponibles
           </h3>
           <div className="grid grid-cols-1 gap-4 pb-12">
@@ -149,12 +165,16 @@ const BazarArtefactos: React.FC<BazarArtefactosProps> = ({
                   </div>
 
                   {/* Descripción */}
-                  <p className="font-garamond italic text-sm text-[#8B5E75] mb-4 leading-relaxed">
+                  <p className={`font-garamond italic text-sm mb-4 leading-relaxed transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>
                     {artefacto.descripcion}
                   </p>
 
                   {/* Precio y Botón */}
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#F8C8DC]">
+                  <div className={`flex items-center justify-between mt-4 pt-4 border-t transition-colors duration-500 ${
+                    isNightMode ? 'border-[#A68A56]/40' : 'border-[#F8C8DC]'
+                  }`}>
                     <div className="flex items-center gap-2">
                       <span className="font-cinzel text-xl font-black text-[#D4AF37]">
                         {artefacto.precio}

@@ -13,6 +13,7 @@ interface DiaryModuleProps {
   securityModuleActive?: boolean;
   securityPin?: string;
   onVerifyPin?: (pin: string) => Promise<boolean>;
+  isNightMode?: boolean;
 }
 
 // Componente para iconos de ánimos con degradados
@@ -198,7 +199,8 @@ const SealButton: React.FC<SealButtonProps> = ({ onClick, label = "Sellar Cróni
   );
 };
 
-const DiaryModule: React.FC<DiaryModuleProps> = ({ 
+const DiaryModule: React.FC<DiaryModuleProps> = ({
+  isNightMode = false, 
   entries, 
   onAddEntry, 
   onDeleteEntry, 
@@ -592,7 +594,9 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
               </div>
               <button 
                 onClick={onClose}
-                className="text-[#8B5E75] hover:text-[#4A233E] transition-colors p-2"
+                className={`transition-colors p-2 ${
+                  isNightMode ? 'text-[#7A748E] hover:text-[#E0E1DD]' : 'text-[#8B5E75] hover:text-[#4A233E]'
+                }`}
               >
                 {getIcon('x', 'w-6 h-6')}
               </button>
@@ -606,15 +610,21 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                 <div className="w-24 h-24 rounded-full bg-[#4A233E]/10 flex items-center justify-center mb-6">
                   {getIcon('lock', 'w-12 h-12 text-[#D4AF37]')}
                 </div>
-                <p className="text-xl font-cinzel text-[#4A233E] mb-2">Contenido Protegido</p>
-                <p className="text-sm font-garamond text-[#8B5E75] italic">
+                <p className={`text-xl font-cinzel mb-2 transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                }`}>Contenido Protegido</p>
+                <p className={`text-sm font-garamond italic transition-colors duration-500 ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>
                   Esta entrada está protegida. Debes ingresar el PIN para ver su contenido.
                 </p>
               </div>
             ) : (
               <>
                 <div className="prose max-w-none">
-                  <p className="text-xl text-[#4A233E] font-garamond leading-relaxed italic first-letter:text-4xl first-letter:font-marcellus first-letter:mr-2">
+                  <p className={`text-xl font-garamond leading-relaxed italic first-letter:text-4xl first-letter:font-marcellus first-letter:mr-2 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  }`}>
                     {entry.content}
                   </p>
                 </div>
@@ -668,10 +678,18 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
 
   if (isMobile) {
     return (
-      <div className="h-full flex flex-col overflow-hidden bg-[#FFF0F5] -mt-4 -mx-4 font-inter">
-        <header className="flex-none p-4 pt-6 bg-white/40 border-b border-[#F8C8DC] shadow-sm z-20">
+      <div className={`h-full flex flex-col overflow-hidden -mt-4 -mx-4 font-inter transition-colors duration-500 ${
+        isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF0F5]'
+      }`}>
+        <header className={`flex-none p-4 pt-6 border-b shadow-sm z-20 backdrop-blur-md transition-colors duration-500 ${
+          isNightMode 
+            ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40' 
+            : 'bg-white/40 border-[#F8C8DC]'
+        }`}>
           <div className="text-center mb-4">
-            <h1 className="font-cinzel text-xl font-black text-[#4A233E] tracking-[0.25em] uppercase">Diario</h1>
+            <h1 className={`font-cinzel text-xl font-black tracking-[0.25em] uppercase transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>Diario</h1>
           </div>
 
           <div className="flex items-center justify-between gap-4">

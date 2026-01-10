@@ -986,6 +986,10 @@ export class SupabaseService {
         return {
           ...module,
           active: userModule?.is_active ?? module.active,
+          gridPosition: userModule?.grid_position ? {
+            row: userModule.grid_position.row,
+            col: userModule.grid_position.col
+          } : undefined,
         };
       });
     } catch (error: any) {
@@ -1010,6 +1014,9 @@ export class SupabaseService {
         if (updates.active && !dbUpdates.unlocked_at) {
           dbUpdates.unlocked_at = new Date().toISOString();
         }
+      }
+      if (updates.gridPosition !== undefined) {
+        dbUpdates.grid_position = updates.gridPosition;
       }
 
       // Verificar si el módulo existe
@@ -1042,6 +1049,10 @@ export class SupabaseService {
         return {
           ...moduleDef,
           active: data.is_active,
+          gridPosition: data.grid_position ? {
+            row: data.grid_position.row,
+            col: data.grid_position.col
+          } : undefined,
         };
       } else {
         // Crear nuevo registro
@@ -1052,6 +1063,7 @@ export class SupabaseService {
             user_id: userId,
             is_active: updates.active || false,
             unlocked_at: updates.active ? new Date().toISOString() : null,
+            grid_position: updates.gridPosition || null,
           })
           .select()
           .single();
@@ -1068,6 +1080,10 @@ export class SupabaseService {
         return {
           ...moduleDef,
           active: data.is_active,
+          gridPosition: data.grid_position ? {
+            row: data.grid_position.row,
+            col: data.grid_position.col
+          } : undefined,
         };
       }
     } catch (error: any) {
@@ -1090,6 +1106,7 @@ export class SupabaseService {
             user_id: userId,
             is_active: m.active,
             unlocked_at: m.active ? new Date().toISOString() : null,
+            grid_position: m.gridPosition || null,
           }))
         )
         .select();

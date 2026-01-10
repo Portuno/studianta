@@ -63,6 +63,7 @@ export interface Module {
   cost: number;
   active: boolean;
   icon: string;
+  gridPosition?: { row: number; col: number };
 }
 
 export interface Transaction {

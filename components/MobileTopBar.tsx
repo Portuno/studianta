@@ -7,25 +7,39 @@ interface MobileTopBarProps {
   user?: any;
   userProfile?: UserProfile | null;
   onProfileClick: () => void;
+  isNightMode?: boolean;
+  toggleTheme?: () => void;
 }
 
-const MobileTopBar: React.FC<MobileTopBarProps> = ({ user, userProfile, onProfileClick }) => {
-  // Obtener el nivel arcano del perfil o usar el por defecto
-  const arcaneLevel = userProfile?.arcane_level || 'Buscadora de Luz';
-  const greeting = user ? `Bienvenida, ${arcaneLevel}` : 'Bienvenida, Buscadora de Luz';
-  
+const MobileTopBar: React.FC<MobileTopBarProps> = ({ user, userProfile, onProfileClick, isNightMode = false, toggleTheme }) => {
   // Obtener el avatar o usar el icono por defecto
   const avatarUrl = userProfile?.avatar_url;
   const displayName = userProfile?.full_name || user?.email?.split('@')[0] || 'Usuario';
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-[#FFF9FB] border-b border-[#F8C8DC]/50 shadow-sm z-50 flex items-center justify-between px-4 safe-area-inset-top">
-      {/* Saludo personalizado a la izquierda */}
-      <div className="flex-1 min-w-0">
-        <p className="font-garamond text-sm text-[#4A233E] truncate">
-          {greeting}
-        </p>
-      </div>
+    <header className={`fixed top-0 left-0 right-0 h-16 border-b shadow-sm z-50 flex items-center justify-between px-4 safe-area-inset-top transition-colors duration-500 ${
+      isNightMode 
+        ? 'bg-[#151525] border-[#A68A56]/40' 
+        : 'bg-[#FFF9FB] border-[#F8C8DC]/50'
+    }`}>
+      {/* Toggle Diario/Nocturno a la izquierda */}
+      {toggleTheme && (
+        <button
+          onClick={toggleTheme}
+          className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl transition-all duration-300 active:scale-95 touch-manipulation ${
+            isNightMode
+              ? 'bg-[rgba(48,43,79,0.6)] text-[#A68A56] border border-[#A68A56]/40'
+              : 'bg-white/80 text-[#4A233E] border border-[#F8C8DC]'
+          }`}
+          aria-label={isNightMode ? 'Cambiar a modo diario' : 'Cambiar a modo nocturno'}
+        >
+          {isNightMode ? (
+            getIcon('moon', 'w-5 h-5')
+          ) : (
+            getIcon('sun', 'w-5 h-5')
+          )}
+        </button>
+      )}
 
       {/* Icono del sello de lacre (perfil) a la derecha */}
       <button

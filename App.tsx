@@ -100,6 +100,11 @@ const App: React.FC = () => {
   const [securityPin, setSecurityPin] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showEssenceNotification, setShowEssenceNotification] = useState(false);
+  const [isNightMode, setIsNightMode] = useState<boolean>(false);
+
+  const toggleTheme = () => {
+    setIsNightMode(prev => !prev);
+  };
 
   // Estado global del Focus Timer
   const [focusState, setFocusState] = useState<{
@@ -890,6 +895,7 @@ const App: React.FC = () => {
             showLoginModal={showLoginModal}
             setShowLoginModal={setShowLoginModal}
             onAuthSuccess={handleAuthSuccess}
+            isNightMode={isNightMode}
           />
         );
       case NavView.SUBJECTS:
@@ -902,6 +908,7 @@ const App: React.FC = () => {
           onMaterialUpload={handleMaterialUpload}
           onAddEssence={handleAddEssence}
           studentProfileContext={studentProfileContext}
+          isNightMode={isNightMode}
         />;
       case NavView.CALENDAR:
         return <CalendarModule 
@@ -914,6 +921,7 @@ const App: React.FC = () => {
           onUpdateCustomEvent={handleUpdateCalendarEvent}
           isMobile={isMobile}
           userId={user?.id}
+          isNightMode={isNightMode}
         />;
       case NavView.FINANCE:
         return <FinanceModule 
@@ -923,7 +931,8 @@ const App: React.FC = () => {
           onAdd={handleAddTransaction} 
           onDelete={handleDeleteTransaction}
           onUpdate={handleUpdateTransaction}
-          isMobile={isMobile} 
+          isMobile={isMobile}
+          isNightMode={isNightMode}
         />;
       case NavView.FOCUS:
         return <FocusModule 
@@ -934,6 +943,7 @@ const App: React.FC = () => {
           isMobile={isMobile}
           focusState={focusState}
           onFocusStateChange={setFocusState}
+          isNightMode={isNightMode}
         />;
       case NavView.DIARY:
         const securityModule = modules.find(m => m.id === 'security');
@@ -946,6 +956,7 @@ const App: React.FC = () => {
           securityModuleActive={securityModule?.active || false}
           securityPin={securityPin || undefined}
           onVerifyPin={verifyPin}
+          isNightMode={isNightMode}
         />;
       case NavView.PROFILE:
         return <ProfileModule 
@@ -960,12 +971,14 @@ const App: React.FC = () => {
           modules={modules}
           monthlyBudget={monthlyBudget}
           setActiveView={handleViewChange}
+          isNightMode={isNightMode}
         />;
       case NavView.BAZAR:
         return <BazarArtefactos 
           isMobile={isMobile}
           essence={user ? essence : 0}
           onEssenceChange={setEssence}
+          isNightMode={isNightMode}
         />;
       case NavView.ORACLE:
         return <OraculoPage
@@ -978,24 +991,28 @@ const App: React.FC = () => {
           monthlyBudget={monthlyBudget}
           isMobile={isMobile}
           onAddJournalEntry={handleAddJournalEntry}
+          isNightMode={isNightMode}
         />;
       case NavView.PRIVACY_POLICY:
         return <PrivacyPolicy 
           onBack={() => handleViewChange(NavView.DASHBOARD)}
           isMobile={isMobile}
+          isNightMode={isNightMode}
         />;
       case NavView.TERMS_OF_SERVICE:
         return <TermsOfService 
           onBack={() => handleViewChange(NavView.DASHBOARD)}
           isMobile={isMobile}
+          isNightMode={isNightMode}
         />;
       case NavView.DOCS:
         return <DocsPage 
           onBack={() => handleViewChange(NavView.DASHBOARD)}
           isMobile={isMobile}
+          isNightMode={isNightMode}
         />;
       default:
-        return <Dashboard modules={modules} onActivate={toggleModule} isMobile={isMobile} setActiveView={setActiveView} />;
+        return <Dashboard modules={modules} onActivate={toggleModule} isMobile={isMobile} setActiveView={setActiveView} isNightMode={isNightMode} />;
     }
   };
 
@@ -1017,13 +1034,17 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} h-screen w-screen overflow-hidden`}>
+    <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} h-screen w-screen overflow-hidden transition-colors duration-500 ${
+      isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF9FA]'
+    }`}>
       {/* Mobile Top Bar - Solo visible en mobile */}
       {isMobile && !isPolicyPage && (
         <MobileTopBar
           user={user}
           userProfile={userProfile}
           onProfileClick={() => handleNavigationClick(NavView.PROFILE)}
+          isNightMode={isNightMode}
+          toggleTheme={toggleTheme}
         />
       )}
 
@@ -1037,12 +1058,18 @@ const App: React.FC = () => {
           modules={modules}
           user={user}
           userProfile={userProfile}
+          isNightMode={isNightMode}
+          toggleTheme={toggleTheme}
         />
       )}
       
       {/* Área de contenido principal */}
-      <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'pt-16 pb-28' : ''}`}>
-        <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pt-4' : ''}`}>
+      <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'pt-16 pb-28' : ''} transition-colors duration-500 ${
+        isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF9FA]'
+      }`}>
+        <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pt-4' : ''} transition-colors duration-500 ${
+          isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF9FA]'
+        }`}>
           {renderView()}
         </main>
       </div>
@@ -1057,6 +1084,8 @@ const App: React.FC = () => {
           modules={modules}
           user={user}
           userProfile={userProfile}
+          isNightMode={isNightMode}
+          toggleTheme={toggleTheme}
         />
       )}
 
@@ -1084,6 +1113,7 @@ const App: React.FC = () => {
           }}
           onOpen={() => setActiveView(NavView.FOCUS)}
           isMobile={isMobile}
+          isNightMode={isNightMode}
         />
       )}
 

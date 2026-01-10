@@ -18,6 +18,7 @@ interface ProfileModuleProps {
   modules?: Module[];
   monthlyBudget?: number;
   setActiveView?: (view: any) => void;
+  isNightMode?: boolean;
 }
 
 // Función para calcular el progreso del nivel arcano
@@ -53,6 +54,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
   modules = [],
   monthlyBudget = 0,
   setActiveView,
+  isNightMode = false
 }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -168,16 +170,26 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
     return (
       <div className="h-full flex items-center justify-center p-4 overflow-y-auto">
         <div className="w-full max-w-md">
-          <div className="glass-card p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-2xl border-2 border-[#D4AF37]/30">
+          <div className={`p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-2xl border-2 backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.95)] border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+              : 'glass-card border-[#D4AF37]/30'
+          }`}>
             <div className="text-center mb-6">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-[#E35B8F] to-[#D4AF37] flex items-center justify-center border-4 border-white shadow-lg">
+              <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center border-4 shadow-lg transition-colors duration-500 ${
+                isNightMode 
+                  ? 'bg-gradient-to-br from-[#C77DFF] to-[#A68A56] border-[rgba(48,43,79,0.8)]' 
+                  : 'bg-gradient-to-br from-[#E35B8F] to-[#D4AF37] border-white'
+              }`}>
                 {getIcon('profile', 'w-8 h-8 text-white')}
               </div>
-              <h1 className="font-cinzel text-3xl md:text-4xl font-bold text-[#4A233E] mb-2 uppercase tracking-widest">
+              <h1 className={`font-cinzel text-3xl md:text-4xl font-bold mb-2 uppercase tracking-widest transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              }`}>
                 Iniciar Sesión
               </h1>
             </div>
-            <AuthModule onAuthSuccess={onAuthSuccess} />
+            <AuthModule onAuthSuccess={onAuthSuccess} isNightMode={isNightMode} />
           </div>
         </div>
       </div>
@@ -259,7 +271,11 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
             </button>
             <button
               onClick={handleDownloadSPC}
-              className="flex-1 bg-[#D4AF37]/80 border-2 border-[#D4AF37] text-[#4A233E] py-2 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2"
+              className={`flex-1 border-2 py-2 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors duration-500 ${
+                isNightMode 
+                  ? 'bg-[#A68A56]/80 border-[#A68A56] text-[#E0E1DD]' 
+                  : 'bg-[#D4AF37]/80 border-[#D4AF37] text-[#4A233E]'
+              }`}
             >
               {getIcon('download', 'w-3 h-3')}
               Descargar SPC

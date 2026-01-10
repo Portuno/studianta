@@ -28,9 +28,10 @@ interface SubjectsModuleProps {
   onMaterialUpload: () => void;
   onAddEssence?: (amount: number) => void;
   studentProfileContext?: StudentProfileContext;
+  isNightMode?: boolean;
 }
 
-const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDelete, onUpdate, isMobile, onMaterialUpload, onAddEssence, studentProfileContext }) => {
+const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDelete, onUpdate, isMobile, onMaterialUpload, onAddEssence, studentProfileContext, isNightMode = false }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -73,8 +74,12 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
     <div className="h-full flex flex-col pb-10 max-w-7xl mx-auto w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="font-cinzel text-2xl md:text-4xl font-bold text-[#4A233E]">Laboratorio de Saberes</h1>
-          <p className="text-xs md:text-sm text-[#8B5E75] font-inter">Tu legado intelectual en construcción.</p>
+          <h1 className={`font-cinzel text-2xl md:text-4xl font-bold transition-colors duration-500 ${
+            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+          }`}>Laboratorio de Saberes</h1>
+          <p className={`text-xs md:text-sm font-inter transition-colors duration-500 ${
+            isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+          }`}>Tu legado intelectual en construcción.</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
@@ -94,7 +99,15 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
         {subjects.map(subject => (
           <div 
             key={subject.id} 
-            className={`glass-card p-5 sm:p-6 md:p-6 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] cursor-pointer transition-all duration-300 active:scale-95 border-l-4 group relative touch-manipulation min-h-[140px] ${subject.status === 'Aprobada' ? 'border-l-[#D4AF37]' : 'border-l-[#E35B8F]'}`}
+            className={`p-5 sm:p-6 md:p-6 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] cursor-pointer transition-all duration-300 active:scale-95 border-l-4 group relative touch-manipulation min-h-[140px] backdrop-blur-[15px] ${
+              isNightMode 
+                ? subject.status === 'Aprobada' 
+                  ? 'bg-[rgba(48,43,79,0.6)] border-l-[#A68A56] shadow-[0_0_20px_rgba(199,125,255,0.2)]' 
+                  : 'bg-[rgba(48,43,79,0.6)] border-l-[#C77DFF] shadow-[0_0_20px_rgba(199,125,255,0.2)]'
+                : subject.status === 'Aprobada' 
+                  ? 'glass-card border-l-[#D4AF37]' 
+                  : 'glass-card border-l-[#E35B8F]'
+            }`}
             onClick={() => setSelectedSubjectId(subject.id)}
           >
             <div className="flex justify-between items-start mb-4">
@@ -103,14 +116,22 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
               </span>
               <button 
                 onClick={(e) => { e.stopPropagation(); setSubjectToDelete(subject); }}
-                className="text-[#8B5E75] hover:text-red-500 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg active:bg-red-50 touch-manipulation"
+                className={`transition-colors duration-500 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg touch-manipulation ${
+                  isNightMode 
+                    ? 'text-[#7A748E] hover:text-red-400 active:bg-red-900/20' 
+                    : 'text-[#8B5E75] hover:text-red-500 active:bg-red-50'
+                }`}
                 aria-label="Eliminar asignatura"
               >
                 {getIcon('trash', 'w-5 h-5')}
               </button>
             </div>
-            <h3 className="font-cinzel text-lg md:text-xl text-[#4A233E] mb-1 truncate font-bold">{subject.name}</h3>
-            <p className="text-xs text-[#8B5E75] font-garamond italic">{subject.career}</p>
+            <h3 className={`font-cinzel text-lg md:text-xl mb-1 truncate font-bold transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>{subject.name}</h3>
+            <p className={`text-xs font-garamond italic transition-colors duration-500 ${
+              isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+            }`}>{subject.career}</p>
             <div className="mt-6 flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-[9px] md:text-[10px] text-[#D4AF37] font-bold font-inter">
                  {getIcon('sparkles', 'w-3 h-3')}
@@ -123,7 +144,9 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
       </div>
 
       {selectedSubject && (
-        <div className="fixed inset-0 z-[200] bg-[#FFF0F5] overflow-hidden flex flex-col">
+        <div className={`fixed inset-0 z-[200] overflow-hidden flex flex-col transition-colors duration-500 ${
+          isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF0F5]'
+        }`}>
           <SubjectDetail 
             subject={selectedSubject} 
             onClose={() => setSelectedSubjectId(null)} 
@@ -133,35 +156,60 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
             onMaterialUpload={onMaterialUpload}
             onAddEssence={onAddEssence}
             studentProfileContext={studentProfileContext}
+            isNightMode={isNightMode}
           />
         </div>
       )}
 
       {subjectToDelete && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#4A233E]/70 backdrop-blur-md p-4" onClick={() => setSubjectToDelete(null)}>
-          <div className="glass-card max-w-sm w-full p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
-             <h2 className="font-cinzel text-xl text-[#4A233E] mb-4 font-bold uppercase tracking-widest">¿Borrar Asignatura?</h2>
-             <p className="text-sm text-[#8B5E75] mb-8 font-garamond italic">Se perderán todos los registros de "{subjectToDelete.name}".</p>
+          <div className={`max-w-sm w-full p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] text-center shadow-2xl backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+              : 'glass-card'
+          }`} onClick={(e) => e.stopPropagation()}>
+             <h2 className={`font-cinzel text-xl mb-4 font-bold uppercase tracking-widest transition-colors duration-500 ${
+               isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+             }`}>¿Borrar Asignatura?</h2>
+             <p className={`text-sm mb-8 font-garamond italic transition-colors duration-500 ${
+               isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+             }`}>Se perderán todos los registros de "{subjectToDelete.name}".</p>
              <div className="flex flex-col gap-3">
                <button onClick={executeDelete} className="bg-red-500 text-white w-full py-4 rounded-2xl font-cinzel text-xs font-bold uppercase">ELIMINAR</button>
-               <button onClick={() => setSubjectToDelete(null)} className="text-[#8B5E75] w-full py-3 rounded-2xl font-inter text-xs font-bold uppercase">CANCELAR</button>
+               <button onClick={() => setSubjectToDelete(null)} className={`w-full py-3 rounded-2xl font-inter text-xs font-bold uppercase transition-colors duration-500 ${
+                 isNightMode ? 'text-[#7A748E] hover:text-[#E0E1DD]' : 'text-[#8B5E75]'
+               }`}>CANCELAR</button>
              </div>
           </div>
         </div>
       )}
 
       {showCelebration && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#E35B8F]/30 backdrop-blur-md p-4" onClick={() => setShowCelebration(false)}>
-          <div className="glass-card max-w-sm w-full p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] text-center shadow-2xl mx-4" onClick={(e) => e.stopPropagation()}>
-             <h2 className="font-cinzel text-2xl sm:text-3xl text-[#4A233E] mb-4 font-bold uppercase tracking-widest">¡TRIUNFO!</h2>
+        <div className={`fixed inset-0 z-[300] flex items-center justify-center backdrop-blur-md p-4 transition-colors duration-500 ${
+          isNightMode ? 'bg-[#C77DFF]/20' : 'bg-[#E35B8F]/30'
+        }`} onClick={() => setShowCelebration(false)}>
+          <div className={`max-w-sm w-full p-6 sm:p-8 rounded-[2rem] sm:rounded-[3rem] text-center shadow-2xl mx-4 backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+              : 'glass-card'
+          }`} onClick={(e) => e.stopPropagation()}>
+             <h2 className={`font-cinzel text-2xl sm:text-3xl mb-4 font-bold uppercase tracking-widest transition-colors duration-500 ${
+               isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+             }`}>¡TRIUNFO!</h2>
              <div className="mb-6 sm:mb-8">
-               <label className="block text-xs sm:text-[10px] uppercase font-bold text-[#8B5E75] mb-3 font-inter">Nota Obtenida</label>
+               <label className={`block text-xs sm:text-[10px] uppercase font-bold mb-3 font-inter transition-colors duration-500 ${
+                 isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+               }`}>Nota Obtenida</label>
                <input 
                  type="number" 
                  step="0.1" 
                  value={finalGrade} 
                  onChange={(e) => setFinalGrade(e.target.value)} 
-                 className="w-full text-center bg-white/60 border-2 border-[#D4AF37] rounded-xl px-4 py-4 font-inter text-2xl sm:text-3xl text-[#4A233E] outline-none focus:border-[#D4AF37] min-h-[56px]" 
+                 className={`w-full text-center border-2 rounded-xl px-4 py-4 font-inter text-2xl sm:text-3xl outline-none min-h-[56px] transition-colors duration-500 ${
+                   isNightMode 
+                     ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56] text-[#E0E1DD] focus:border-[#C77DFF]' 
+                     : 'bg-white/60 border-[#D4AF37] text-[#4A233E] focus:border-[#D4AF37]'
+                 }`} 
                  placeholder="0.0"
                  autoFocus
                />
@@ -177,23 +225,39 @@ const SubjectsModule: React.FC<SubjectsModuleProps> = ({ subjects, onAdd, onDele
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[#4A233E]/60 backdrop-blur-sm p-4 safe-area-inset" onClick={() => setShowAddModal(false)}>
-          <form onSubmit={handleAdd} className="glass-card w-full max-w-md p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-cinzel text-lg sm:text-xl text-[#4A233E] mb-6 text-center font-bold tracking-widest uppercase">REGISTRAR ASIGNATURA</h2>
+        <div className={`fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-sm p-4 safe-area-inset transition-colors duration-500 ${
+          isNightMode ? 'bg-[#1A1A2E]/90' : 'bg-[#4A233E]/60'
+        }`} onClick={() => setShowAddModal(false)}>
+          <form onSubmit={handleAdd} className={`w-full max-w-md p-6 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl animate-fade-in max-h-[90vh] overflow-y-auto backdrop-blur-[15px] transition-colors duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+              : 'glass-card'
+          }`} onClick={(e) => e.stopPropagation()}>
+            <h2 className={`font-cinzel text-lg sm:text-xl mb-6 text-center font-bold tracking-widest uppercase transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>REGISTRAR ASIGNATURA</h2>
             <div className="space-y-4 font-inter">
               <input 
                 required 
                 name="name" 
                 type="text" 
                 placeholder="Nombre de la Asignatura" 
-                className="w-full bg-white/40 border-2 border-[#F8C8DC] rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#E35B8F] min-h-[48px]" 
+                className={`w-full border-2 rounded-xl px-4 py-4 text-base focus:outline-none min-h-[48px] transition-colors duration-500 ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD] placeholder:text-[#7A748E]/50 focus:border-[#C77DFF]' 
+                    : 'bg-white/40 border-[#F8C8DC] text-[#4A233E] placeholder:text-[#8B5E75]/50 focus:border-[#E35B8F]'
+                }`}
               />
               <input 
                 required 
                 name="career" 
                 type="text" 
                 placeholder="Carrera / Área" 
-                className="w-full bg-white/40 border-2 border-[#F8C8DC] rounded-xl px-4 py-4 text-base focus:outline-none focus:border-[#E35B8F] min-h-[48px]" 
+                className={`w-full border-2 rounded-xl px-4 py-4 text-base focus:outline-none min-h-[48px] transition-colors duration-500 ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD] placeholder:text-[#7A748E]/50 focus:border-[#C77DFF]' 
+                    : 'bg-white/40 border-[#F8C8DC] text-[#4A233E] placeholder:text-[#8B5E75]/50 focus:border-[#E35B8F]'
+                }`} 
               />
             </div>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-8">
@@ -227,9 +291,10 @@ interface DetailProps {
   onMaterialUpload: () => void;
   onAddEssence?: (amount: number) => void;
   studentProfileContext?: StudentProfileContext;
+  isNightMode?: boolean;
 }
 
-const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onStatusChange, isMobile, onMaterialUpload, onAddEssence, studentProfileContext }) => {
+const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onStatusChange, isMobile, onMaterialUpload, onAddEssence, studentProfileContext, isNightMode = false }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'plan' | 'lab' | 'notas'>('info');
   const [loadingIa, setLoadingIa] = useState(false);
   const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ia', text: string}[]>([]);
@@ -862,27 +927,47 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
   ];
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-[#FFF0F5]">
+    <div className={`flex flex-col h-full overflow-hidden transition-colors duration-500 ${
+      isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF0F5]'
+    }`}>
       {/* Detail Header */}
-      <header className="bg-white/70 border-b border-[#F8C8DC] p-4 md:p-6 shrink-0 backdrop-blur-md z-30">
+      <header className={`border-b p-4 md:p-6 shrink-0 backdrop-blur-md z-30 transition-colors duration-500 ${
+        isNightMode 
+          ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40' 
+          : 'bg-white/70 border-[#F8C8DC]'
+      }`}>
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
-            <button onClick={handleCloseWithCheck} className="p-2 text-[#8B5E75] hover:bg-[#FFD1DC] rounded-full">
+            <button onClick={handleCloseWithCheck} className={`p-2 rounded-full transition-colors duration-500 ${
+              isNightMode ? 'text-[#7A748E] hover:bg-[rgba(199,125,255,0.2)]' : 'text-[#8B5E75] hover:bg-[#FFD1DC]'
+            }`}>
                <div className="rotate-180">{getIcon('chevron', 'w-6 h-6')}</div>
             </button>
             <div className="overflow-hidden">
-              <h1 className="font-cinzel text-lg md:text-2xl font-bold text-[#4A233E] truncate">{subject.name}</h1>
-              <p className="text-[10px] text-[#8B5E75] uppercase font-bold tracking-widest font-inter">{subject.career}</p>
+              <h1 className={`font-cinzel text-lg md:text-2xl font-bold truncate transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              }`}>{subject.name}</h1>
+              <p className={`text-[10px] uppercase font-bold tracking-widest font-inter transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>{subject.career}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-             <button onClick={downloadDossier} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2.5 bg-white/60 border border-[#D4AF37] rounded-xl text-[10px] font-cinzel font-bold text-[#4A233E] uppercase tracking-widest">
-                {getIcon('sparkles', 'w-4 h-4 text-[#D4AF37]')} Dossier
+             <button onClick={downloadDossier} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2.5 border rounded-xl text-[10px] font-cinzel font-bold uppercase tracking-widest transition-colors duration-500 ${
+               isNightMode 
+                 ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56] text-[#E0E1DD] hover:bg-[rgba(48,43,79,0.6)]' 
+                 : 'bg-white/60 border-[#D4AF37] text-[#4A233E]'
+             }`}>
+                {getIcon('sparkles', `w-4 h-4 ${isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'}`)} Dossier
               </button>
              <select 
                 value={subject.status} 
                 onChange={(e) => onStatusChange(e.target.value as SubjectStatus)}
-                className="flex-1 sm:flex-none bg-white border border-[#D4AF37] rounded-xl px-2 py-2.5 text-[10px] font-cinzel font-bold text-[#4A233E] uppercase outline-none"
+                className={`flex-1 sm:flex-none border rounded-xl px-2 py-2.5 text-[10px] font-cinzel font-bold uppercase outline-none transition-colors duration-500 ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56] text-[#E0E1DD]' 
+                    : 'bg-white border-[#D4AF37] text-[#4A233E]'
+                }`}
               >
                 <option value="Cursando">Cursando</option>
                 <option value="Final Pendiente">Pendiente</option>
@@ -893,13 +978,25 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
       </header>
 
       {/* Tabs Navigation (Scrollable) */}
-      <nav className="bg-white/40 border-b border-[#F8C8DC] overflow-x-auto no-scrollbar shrink-0">
+      <nav className={`border-b overflow-x-auto no-scrollbar shrink-0 backdrop-blur-md transition-colors duration-500 ${
+        isNightMode 
+          ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40' 
+          : 'bg-white/40 border-[#F8C8DC]'
+      }`}>
         <div className="max-w-7xl mx-auto flex px-2">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 min-w-[100px] flex flex-col items-center gap-1 py-4 px-2 transition-all border-b-2 font-cinzel text-[10px] font-bold uppercase tracking-widest ${activeTab === tab.id ? 'border-[#E35B8F] text-[#E35B8F] bg-[#E35B8F]/5' : 'border-transparent text-[#8B5E75]'}`}
+              className={`flex-1 min-w-[100px] flex flex-col items-center gap-1 py-4 px-2 transition-all border-b-2 font-cinzel text-[10px] font-bold uppercase tracking-widest ${
+                activeTab === tab.id 
+                  ? isNightMode
+                    ? 'border-[#C77DFF] text-[#C77DFF] bg-[#C77DFF]/10'
+                    : 'border-[#E35B8F] text-[#E35B8F] bg-[#E35B8F]/5'
+                  : isNightMode
+                    ? 'border-transparent text-[#7A748E]'
+                    : 'border-transparent text-[#8B5E75]'
+              }`}
             >
               {getIcon(tab.icon, "w-5 h-5")}
               <span>{tab.label}</span>
@@ -913,37 +1010,79 @@ const SubjectDetail: React.FC<DetailProps> = ({ subject, onClose, onUpdate, onSt
         
         {activeTab === 'info' && (
           <div className="space-y-6 animate-fade-in">
-            <section className="glass-card p-6 rounded-[2rem] shadow-sm">
-              <h3 className="font-cinzel text-lg text-[#4A233E] mb-6 flex items-center gap-3 font-bold uppercase tracking-widest border-b pb-4">
+            <section className={`p-6 rounded-[2rem] shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.6)] border border-[#A68A56]/40 shadow-[0_0_20px_rgba(199,125,255,0.2)]' 
+                : 'glass-card'
+            }`}>
+              <h3 className={`font-cinzel text-lg mb-6 flex items-center gap-3 font-bold uppercase tracking-widest border-b pb-4 transition-colors duration-500 ${
+                isNightMode 
+                  ? 'text-[#E0E1DD] border-[#A68A56]/40' 
+                  : 'text-[#4A233E] border-[#F8C8DC]'
+              }`}>
                 {getIcon('users', "w-5 h-5")} Información de Cátedra
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-[#8B5E75]">Profesor Titular</label>
-                  <input type="text" value={subject.professor || ''} onChange={(e) => onUpdate({...subject, professor: e.target.value})} placeholder="Nombre..." className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm outline-none" />
+                  <label className={`text-[10px] uppercase font-bold transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Profesor Titular</label>
+                  <input type="text" value={subject.professor || ''} onChange={(e) => onUpdate({...subject, professor: e.target.value})} placeholder="Nombre..." className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors duration-500 ${
+                    isNightMode 
+                      ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD] placeholder:text-[#7A748E]/50' 
+                      : 'bg-white/40 border-[#F8C8DC] text-[#4A233E] placeholder:text-[#8B5E75]/50'
+                  }`} />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-[#8B5E75]">Email / Contacto</label>
-                  <input type="email" value={subject.email || ''} onChange={(e) => onUpdate({...subject, email: e.target.value})} placeholder="Email..." className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm outline-none" />
+                  <label className={`text-[10px] uppercase font-bold transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Email / Contacto</label>
+                  <input type="email" value={subject.email || ''} onChange={(e) => onUpdate({...subject, email: e.target.value})} placeholder="Email..." className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors duration-500 ${
+                    isNightMode 
+                      ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD] placeholder:text-[#7A748E]/50' 
+                      : 'bg-white/40 border-[#F8C8DC] text-[#4A233E] placeholder:text-[#8B5E75]/50'
+                  }`} />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-[#8B5E75]">Aula</label>
-                  <input type="text" value={subject.aula || ''} onChange={(e) => onUpdate({...subject, aula: e.target.value})} placeholder="Aula donde está cursando..." className="w-full bg-white/40 border border-[#F8C8DC] rounded-xl px-4 py-3 text-sm outline-none" />
+                  <label className={`text-[10px] uppercase font-bold transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>Aula</label>
+                  <input type="text" value={subject.aula || ''} onChange={(e) => onUpdate({...subject, aula: e.target.value})} placeholder="Aula donde está cursando..." className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-colors duration-500 ${
+                    isNightMode 
+                      ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD] placeholder:text-[#7A748E]/50' 
+                      : 'bg-white/40 border-[#F8C8DC] text-[#4A233E] placeholder:text-[#8B5E75]/50'
+                  }`} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-[#8B5E75]">Inicio</label>
-                    <input type="date" value={subject.termStart || ''} onChange={(e) => onUpdate({...subject, termStart: e.target.value})} className="w-full bg-white border border-[#F8C8DC] rounded-xl px-2 py-3 text-xs outline-none" />
+                    <label className={`text-[10px] uppercase font-bold transition-colors duration-500 ${
+                      isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                    }`}>Inicio</label>
+                    <input type="date" value={subject.termStart || ''} onChange={(e) => onUpdate({...subject, termStart: e.target.value})} className={`w-full border rounded-xl px-2 py-3 text-xs outline-none transition-colors duration-500 ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD]' 
+                        : 'bg-white border-[#F8C8DC] text-[#4A233E]'
+                    }`} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-[#8B5E75]">Fin</label>
-                    <input type="date" value={subject.termEnd || ''} onChange={(e) => onUpdate({...subject, termEnd: e.target.value})} className="w-full bg-white border border-[#F8C8DC] rounded-xl px-2 py-3 text-xs outline-none" />
+                    <label className={`text-[10px] uppercase font-bold transition-colors duration-500 ${
+                      isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                    }`}>Fin</label>
+                    <input type="date" value={subject.termEnd || ''} onChange={(e) => onUpdate({...subject, termEnd: e.target.value})} className={`w-full border rounded-xl px-2 py-3 text-xs outline-none transition-colors duration-500 ${
+                      isNightMode 
+                        ? 'bg-[rgba(48,43,79,0.4)] border-[#A68A56]/40 text-[#E0E1DD]' 
+                        : 'bg-white border-[#F8C8DC] text-[#4A233E]'
+                    }`} />
                   </div>
                 </div>
               </div>
               
-              <div className="border-t border-[#F8C8DC] pt-6">
-                <h4 className="font-cinzel text-sm text-[#4A233E] mb-4 flex items-center gap-2 font-bold uppercase tracking-widest">
+              <div className={`border-t pt-6 transition-colors duration-500 ${
+                isNightMode ? 'border-[#A68A56]/40' : 'border-[#F8C8DC]'
+              }`}>
+                <h4 className={`font-cinzel text-sm mb-4 flex items-center gap-2 font-bold uppercase tracking-widest transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                }`}>
                   {getIcon('book', "w-4 h-4")} Programa / Syllabus
                 </h4>
                 <div className="space-y-4">

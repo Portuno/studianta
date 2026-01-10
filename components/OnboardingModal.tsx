@@ -12,9 +12,10 @@ interface OnboardingData {
 interface OnboardingModalProps {
   onComplete: (data?: OnboardingData, completeOnboarding?: boolean) => void;
   isMobile?: boolean;
+  isNightMode?: boolean;
 }
 
-const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, isMobile = false }) => {
+const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, isMobile = false, isNightMode = false }) => {
   const [currentStep, setCurrentStep] = useState(0); // 0 = inicio, 1-4 = Acto I, 5 = confirmación Acto I, 6 = Ati, 7-9 = Acto II
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showAtiAnimation, setShowAtiAnimation] = useState(false);
@@ -224,7 +225,9 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, isMobile 
                 size="large"
               />
             </div>
-            <p className="font-inter text-lg md:text-xl text-[#4A233E]/80 text-center max-w-2xl mx-auto leading-relaxed">
+            <p className={`font-inter text-lg md:text-xl text-center max-w-2xl mx-auto leading-relaxed transition-colors duration-500 ${
+              isNightMode ? 'text-[#7A748E]' : 'text-[#4A233E]/80'
+            }`}>
               Ahora que te conocemos, es momento de descubrir el ecosistema de Studianta.
             </p>
           </div>
@@ -243,14 +246,18 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, isMobile 
             {currentStep === 0 && (
               // Pantalla de Inicio
               <div className="w-full text-center space-y-8">
-                <h1 className="font-cinzel text-4xl md:text-5xl lg:text-6xl text-[#4A233E] font-bold">
+                <h1 className={`font-cinzel text-4xl md:text-5xl lg:text-6xl font-bold transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                }`}>
                   Bienvenida a Studianta.
                 </h1>
                 <div className="space-y-6 max-w-2xl mx-auto">
                   <p className="font-inter text-lg md:text-xl text-[#4A233E]/80 leading-relaxed">
                     Has entrado en un espacio diseñado para tu evolución. Aquí, tu curiosidad se transforma en maestría y tu esfuerzo en esencia.
                   </p>
-                  <p className="font-inter text-base md:text-lg text-[#4A233E]/70 leading-relaxed">
+                  <p className={`font-inter text-base md:text-lg leading-relaxed transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#4A233E]/70'
+                  }`}>
                     Antes de forjar tu Átanor, necesitamos conocerte un poquito más.
                   </p>
                 </div>
@@ -269,7 +276,11 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, isMobile 
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Tu nombre..."
-                    className="w-full bg-transparent text-center text-[#4A233E] font-inter text-xl md:text-2xl border-0 border-b-2 border-[#D4AF37] focus:outline-none focus:border-[#D4AF37] pb-3 transition-colors"
+                    className={`w-full bg-transparent text-center font-inter text-xl md:text-2xl border-0 border-b-2 pb-3 transition-colors ${
+                      isNightMode 
+                        ? 'text-[#E0E1DD] border-[#A68A56] focus:border-[#C77DFF]' 
+                        : 'text-[#4A233E] border-[#D4AF37] focus:border-[#D4AF37]'
+                    }`}
                     autoFocus
                   />
                 </div>
@@ -287,7 +298,11 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, isMobile 
                     <button
                       key={stage}
                       onClick={() => setAcademicStage(stage)}
-                      className={`w-full py-4 px-6 text-left font-inter text-lg text-[#4A233E] border-0 border-b-2 transition-all duration-300 ${
+                      className={`w-full py-4 px-6 text-left font-inter text-lg border-0 border-b-2 transition-all duration-300 ${
+                        isNightMode 
+                          ? 'text-[#E0E1DD] border-[#A68A56]/40 hover:border-[#C77DFF]' 
+                          : 'text-[#4A233E] border-[#F8C8DC] hover:border-[#D4AF37]'
+                      } ${
                         academicStage === stage
                           ? 'border-[#D4AF37] font-bold'
                           : 'border-[#D4AF37]/30 hover:border-[#D4AF37]/60'
@@ -314,7 +329,11 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, isMobile 
                     <button
                       key={interest}
                       onClick={() => toggleInterest(interest)}
-                      className={`w-full py-4 px-6 text-left font-inter text-lg text-[#4A233E] border-0 border-b-2 transition-all duration-300 ${
+                      className={`w-full py-4 px-6 text-left font-inter text-lg border-0 border-b-2 transition-all duration-300 ${
+                        isNightMode 
+                          ? 'text-[#E0E1DD] border-[#A68A56]/40 hover:border-[#C77DFF]' 
+                          : 'text-[#4A233E] border-[#F8C8DC] hover:border-[#D4AF37]'
+                      } ${
                         interests.includes(interest)
                           ? 'border-[#D4AF37] font-bold'
                           : 'border-[#D4AF37]/30 hover:border-[#D4AF37]/60'
@@ -338,7 +357,11 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ onComplete, isMobile 
                     <button
                       key={source}
                       onClick={() => setReferralSource(source)}
-                      className={`w-full py-4 px-6 text-left font-inter text-lg text-[#4A233E] border-0 border-b-2 transition-all duration-300 ${
+                      className={`w-full py-4 px-6 text-left font-inter text-lg border-0 border-b-2 transition-all duration-300 ${
+                        isNightMode 
+                          ? 'text-[#E0E1DD] border-[#A68A56]/40 hover:border-[#C77DFF]' 
+                          : 'text-[#4A233E] border-[#F8C8DC] hover:border-[#D4AF37]'
+                      } ${
                         referralSource === source
                           ? 'border-[#D4AF37] font-bold'
                           : 'border-[#D4AF37]/30 hover:border-[#D4AF37]/60'

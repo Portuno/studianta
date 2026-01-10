@@ -10,12 +10,14 @@ interface FocusFloatingWidgetProps {
   onStop: () => void;
   onOpen: () => void;
   isMobile: boolean;
+  isNightMode?: boolean;
 }
 
 const FocusFloatingWidget: React.FC<FocusFloatingWidgetProps> = ({
   timeLeft,
   isActive,
   isPaused,
+  isNightMode = false,
   onPause,
   onResume,
   onStop,
@@ -183,9 +185,11 @@ const FocusFloatingWidget: React.FC<FocusFloatingWidgetProps> = ({
       onTouchStart={handleTouchStart}
     >
       <div 
-        className={`glass-card rounded-2xl lg:rounded-3xl p-4 lg:p-5 border-2 border-[#D4AF37]/40 shadow-2xl backdrop-blur-xl transition-transform duration-200 ${
-          isDragging ? 'scale-95' : 'hover:scale-105'
-        }`}
+        className={`rounded-2xl lg:rounded-3xl p-4 lg:p-5 border-2 shadow-2xl backdrop-blur-xl transition-all duration-200 ${
+          isNightMode 
+            ? 'bg-[rgba(48,43,79,0.95)] border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.3)]' 
+            : 'glass-card border-[#D4AF37]/40'
+        } ${isDragging ? 'scale-95' : 'hover:scale-105'}`}
         style={{ width: isMobile ? '200px' : '280px' }}
         onClick={(e) => {
           // Solo abrir si fue un clic simple (no un drag)
@@ -200,10 +204,14 @@ const FocusFloatingWidget: React.FC<FocusFloatingWidgetProps> = ({
             {getIcon('hourglass', 'w-5 h-5 lg:w-6 lg:h-6 text-[#D4AF37]')}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-mono text-xl lg:text-2xl font-black text-[#4A233E] tabular-nums tracking-tighter">
+            <p className={`font-mono text-xl lg:text-2xl font-black tabular-nums tracking-tighter transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               {formatTime(timeLeft)}
             </p>
-            <p className="font-cinzel text-[8px] lg:text-[9px] uppercase tracking-widest text-[#8B5E75] opacity-70">
+            <p className={`font-cinzel text-[8px] lg:text-[9px] uppercase tracking-widest opacity-70 transition-colors duration-500 ${
+              isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+            }`}>
               {isPaused ? 'Pausado' : 'Enfoque Activo'}
             </p>
           </div>
@@ -228,7 +236,11 @@ const FocusFloatingWidget: React.FC<FocusFloatingWidgetProps> = ({
                 e.stopPropagation();
                 onPause();
               }}
-              className="flex-1 px-3 py-2 lg:px-4 lg:py-2.5 rounded-xl bg-white/80 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-[9px] lg:text-[10px] font-black uppercase tracking-wider hover:bg-white transition-colors"
+              className={`flex-1 px-3 py-2 lg:px-4 lg:py-2.5 rounded-xl border-2 font-cinzel text-[9px] lg:text-[10px] font-black uppercase tracking-wider transition-colors ${
+                isNightMode 
+                  ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 text-[#7A748E] hover:bg-[rgba(48,43,79,0.8)]' 
+                  : 'bg-white/80 border-[#F8C8DC] text-[#8B5E75] hover:bg-white'
+              }`}
             >
               {getIcon('pause', 'w-3 h-3 lg:w-4 lg:h-4 inline mr-1')}
               Pausar

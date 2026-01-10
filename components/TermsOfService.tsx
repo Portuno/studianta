@@ -5,9 +5,10 @@ import { ArrowLeft } from 'lucide-react';
 interface TermsOfServiceProps {
   onBack?: () => void;
   isMobile?: boolean;
+  isNightMode?: boolean;
 }
 
-const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack, isMobile = false }) => {
+const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack, isMobile = false, isNightMode = false }) => {
   const currentDate = new Date().toLocaleDateString('es-ES', { 
     year: 'numeric', 
     month: 'long', 
@@ -18,22 +19,36 @@ const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack, isMobile = fals
     <div className="min-h-screen bg-gradient-to-br from-[#FFF0F5] to-[#FFE4E9] py-8 px-4 md:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="glass-card rounded-2xl p-6 md:p-8 mb-6 shadow-xl">
+        <div className={`rounded-2xl p-6 md:p-8 mb-6 shadow-xl backdrop-blur-[15px] transition-colors duration-500 ${
+          isNightMode 
+            ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+            : 'glass-card'
+        }`}>
           <div className="flex items-center gap-4 mb-6">
             {onBack && (
               <button
                 onClick={onBack}
-                className="p-2 rounded-xl bg-white/60 border border-[#F8C8DC] hover:bg-[#FFF0F5] transition-all"
+                className={`p-2 rounded-xl border transition-all ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 hover:bg-[rgba(48,43,79,0.8)]' 
+                    : 'bg-white/60 border-[#F8C8DC] hover:bg-[#FFF0F5]'
+                }`}
                 aria-label="Volver"
               >
-                <ArrowLeft className="w-5 h-5 text-[#4A233E]" />
+                <ArrowLeft className={`w-5 h-5 transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                }`} />
               </button>
             )}
             <div className="flex-1">
-              <h1 className="font-cinzel text-3xl md:text-4xl font-black text-[#4A233E] mb-2">
+              <h1 className={`font-cinzel text-3xl md:text-4xl font-black mb-2 transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              }`}>
                 Términos y Condiciones de Uso
               </h1>
-              <p className="font-garamond text-[#8B5E75] text-sm">
+              <p className={`font-garamond text-sm transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>
                 Última actualización: {currentDate}
               </p>
             </div>
@@ -44,13 +59,21 @@ const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack, isMobile = fals
         </div>
 
         {/* Content */}
-        <div className="glass-card rounded-2xl p-6 md:p-8 shadow-xl space-y-8">
+        <div className={`rounded-2xl p-6 md:p-8 shadow-xl space-y-8 backdrop-blur-[15px] transition-colors duration-500 ${
+          isNightMode 
+            ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+            : 'glass-card'
+        }`}>
           {/* Aceptación de términos */}
           <section>
-            <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
+            <h2 className={`font-cinzel text-2xl font-bold mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               1. Aceptación de los Términos
             </h2>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Al acceder y utilizar Studianta - Sanctuary of Knowledge ("la Aplicación", "el Servicio"), 
               usted acepta estar sujeto a estos Términos y Condiciones de Uso. Si no está de acuerdo con 
               alguna parte de estos términos, no debe utilizar nuestro servicio.
@@ -67,7 +90,9 @@ const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack, isMobile = fals
             <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
               2. Descripción del Servicio
             </h2>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Studianta es una plataforma de gestión académica que ofrece las siguientes funcionalidades:
             </p>
             <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4">
@@ -123,7 +148,9 @@ const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack, isMobile = fals
             <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
               4. Uso Aceptable
             </h2>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Usted se compromete a utilizar el Servicio solo para fines legales y de manera que 
               no infrinja los derechos de otros. Está prohibido:
             </p>
@@ -178,7 +205,9 @@ const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack, isMobile = fals
             <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
               6. Servicios de Terceros
             </h2>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Studianta puede integrarse con servicios de terceros, incluyendo pero no limitado a:
             </p>
             <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4">
@@ -197,7 +226,9 @@ const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack, isMobile = fals
             <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
               7. Limitación de Responsabilidad
             </h2>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               EN LA MÁXIMA MEDIDA PERMITIDA POR LA LEY, STUDIANTA Y SUS PROVEEDORES NO SERÁN RESPONSABLES DE:
             </p>
             <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4">
@@ -231,7 +262,9 @@ const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack, isMobile = fals
             <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
               9. Terminación
             </h2>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Podemos suspender o terminar su acceso al servicio en cualquier momento, con o sin causa 
               o aviso previo, por cualquier motivo, incluyendo pero no limitado a:
             </p>
@@ -289,7 +322,9 @@ const TermsOfService: React.FC<TermsOfServiceProps> = ({ onBack, isMobile = fals
             <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
               13. Contacto
             </h2>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Si tiene preguntas sobre estos Términos y Condiciones, puede contactarnos:
             </p>
             <div className="bg-white/60 rounded-xl p-4 border border-[#F8C8DC]">

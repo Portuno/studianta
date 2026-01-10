@@ -18,22 +18,36 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
     <div className="min-h-screen bg-gradient-to-br from-[#FFF0F5] to-[#FFE4E9] py-8 px-4 md:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="glass-card rounded-2xl p-6 md:p-8 mb-6 shadow-xl">
+        <div className={`rounded-2xl p-6 md:p-8 mb-6 shadow-xl backdrop-blur-[15px] transition-colors duration-500 ${
+          isNightMode 
+            ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+            : 'glass-card'
+        }`}>
           <div className="flex items-center gap-4 mb-6">
             {onBack && (
               <button
                 onClick={onBack}
-                className="p-2 rounded-xl bg-white/60 border border-[#F8C8DC] hover:bg-[#FFF0F5] transition-all"
+                className={`p-2 rounded-xl border transition-all ${
+                  isNightMode 
+                    ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 hover:bg-[rgba(48,43,79,0.8)]' 
+                    : 'bg-white/60 border-[#F8C8DC] hover:bg-[#FFF0F5]'
+                }`}
                 aria-label="Volver"
               >
-                <ArrowLeft className="w-5 h-5 text-[#4A233E]" />
+                <ArrowLeft className={`w-5 h-5 transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                }`} />
               </button>
             )}
             <div className="flex-1">
-              <h1 className="font-cinzel text-3xl md:text-4xl font-black text-[#4A233E] mb-2">
+              <h1 className={`font-cinzel text-3xl md:text-4xl font-black mb-2 transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              }`}>
                 Política de Privacidad
               </h1>
-              <p className="font-garamond text-[#8B5E75] text-sm">
+              <p className={`font-garamond text-sm transition-colors duration-500 ${
+                isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>
                 Última actualización: {currentDate}
               </p>
             </div>
@@ -44,13 +58,21 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
         </div>
 
         {/* Content */}
-        <div className="glass-card rounded-2xl p-6 md:p-8 shadow-xl space-y-8">
+        <div className={`rounded-2xl p-6 md:p-8 shadow-xl space-y-8 backdrop-blur-[15px] transition-colors duration-500 ${
+          isNightMode 
+            ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
+            : 'glass-card'
+        }`}>
           {/* Introducción */}
           <section>
-            <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
+            <h2 className={`font-cinzel text-2xl font-bold mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               1. Introducción
             </h2>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Studianta - Sanctuary of Knowledge ("nosotros", "nuestra", "la aplicación") se compromete a proteger su privacidad. 
               Esta Política de Privacidad explica cómo recopilamos, usamos, divulgamos y protegemos su información cuando utiliza 
               nuestra plataforma de gestión académica.
@@ -168,12 +190,16 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
             <h4 className="font-cinzel text-lg font-semibold text-[#4A233E] mb-2 mt-4">
               4.1.1. Descripción de la Integración
             </h4>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Studianta ofrece la posibilidad de integrar su cuenta de Google Calendar de forma opcional. 
               Esta integración le permite sincronizar sus eventos académicos entre nuestra aplicación y su 
               Google Calendar, proporcionando una experiencia unificada de gestión de calendario.
             </p>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               <strong>La integración con Google Calendar es completamente opcional.</strong> Puede utilizar 
               Studianta sin conectar su cuenta de Google Calendar, y puede desconectar la integración en 
               cualquier momento desde la configuración de la aplicación o desde su cuenta de Google.
@@ -190,7 +216,9 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
               <li><strong>Información de eventos:</strong> Título, descripción, fecha, hora de inicio y fin de los eventos</li>
               <li><strong>Tokens de acceso:</strong> Almacenamos tokens de acceso y actualización de forma segura para mantener la sincronización</li>
             </ul>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               <strong>No accedemos a:</strong> correos electrónicos, contactos, archivos de Google Drive, 
               información de perfil personal más allá de lo necesario para la autenticación, ni ningún otro 
               dato de Google que no esté relacionado con la funcionalidad de calendario.
@@ -208,7 +236,9 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
               <li><strong>Actualizar eventos:</strong> Actualizar eventos existentes cuando realiza modificaciones en Studianta</li>
               <li><strong>Gestionar calendario académico:</strong> Mantener la coherencia entre los eventos en Studianta y su Google Calendar</li>
             </ul>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Estos datos se utilizan únicamente para proporcionar y mejorar la funcionalidad de sincronización 
               de calendario dentro de nuestra aplicación. No utilizamos estos datos para ningún otro propósito, 
               incluyendo publicidad, marketing, análisis de comportamiento fuera de la funcionalidad del calendario, 
@@ -233,13 +263,17 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
                 <li><strong>No se divulgan</strong> a terceros para ningún propósito</li>
               </ul>
             </div>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Los datos de Google Calendar se almacenan y procesan exclusivamente en nuestros servidores 
               (Supabase) y solo se utilizan para las operaciones de sincronización autorizadas. Los tokens 
               de acceso de Google se almacenan de forma segura y encriptada en nuestros servidores y solo 
               se utilizan para realizar las operaciones de sincronización que usted ha autorizado.
             </p>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               La única excepción a esta política sería si estuviéramos legalmente obligados a divulgar 
               información en respuesta a una orden judicial, citación o proceso legal válido, o para proteger 
               nuestros derechos, propiedad o seguridad, o la de nuestros usuarios.
@@ -270,7 +304,9 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
               <li>Revoca el acceso desde su cuenta de Google, eliminamos los tokens cuando detectamos que el acceso ha sido revocado</li>
               <li>Elimina su cuenta de Studianta, eliminamos todos los datos asociados, incluyendo los tokens de Google Calendar</li>
             </ul>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Los eventos creados en su Google Calendar permanecerán en su calendario incluso después de 
               desconectar la integración, ya que fueron creados en su cuenta de Google. Studianta no elimina 
               eventos de su Google Calendar cuando se desconecta la integración.
@@ -279,14 +315,18 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
             <h4 className="font-cinzel text-lg font-semibold text-[#4A233E] mb-2 mt-4">
               4.1.7. Revocación del Acceso
             </h4>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Puede revocar el acceso a Google Calendar en cualquier momento de las siguientes formas:
             </p>
             <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4 mb-4">
               <li><strong>Desde Studianta:</strong> Vaya a la configuración del módulo de Calendario y seleccione "Desconectar Google Calendar"</li>
               <li><strong>Desde Google:</strong> Visite <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-[#E35B8F] hover:text-[#4A233E] font-semibold underline-offset-2 hover:underline transition-colors">myaccount.google.com/permissions</a> y revoque el acceso de Studianta</li>
             </ul>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Una vez que revoque el acceso, Studianta dejará de poder acceder a su Google Calendar y 
               eliminaremos todos los tokens almacenados. La sincronización se detendrá inmediatamente.
             </p>
@@ -314,7 +354,9 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
             <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
               5. Almacenamiento y Seguridad
             </h2>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Implementamos medidas de seguridad técnicas y organizativas para proteger su información:
             </p>
             <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4">
@@ -335,7 +377,9 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
             <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
               6. Sus Derechos
             </h2>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Usted tiene los siguientes derechos respecto a sus datos personales:
             </p>
             <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4">
@@ -394,7 +438,9 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
             <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
               10. Contacto
             </h2>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mb-4">
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               Si tiene preguntas, inquietudes o solicitudes relacionadas con esta Política de Privacidad o el manejo 
               de sus datos personales, puede contactarnos:
             </p>

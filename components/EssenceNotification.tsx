@@ -4,9 +4,10 @@ interface EssenceNotificationProps {
   amount: number;
   onClose: () => void;
   isMobile?: boolean;
+  isNightMode?: boolean;
 }
 
-const EssenceNotification: React.FC<EssenceNotificationProps> = ({ amount, onClose, isMobile = false }) => {
+const EssenceNotification: React.FC<EssenceNotificationProps> = ({ amount, onClose, isMobile = false, isNightMode = false }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -29,7 +30,11 @@ const EssenceNotification: React.FC<EssenceNotificationProps> = ({ amount, onClo
       }`}
     >
       <div 
-        className="glass-card p-4 sm:p-6 rounded-2xl shadow-2xl border-2 border-[#D4AF37]/50 min-w-[280px] sm:min-w-[320px]"
+        className={`p-4 sm:p-6 rounded-2xl shadow-2xl border-2 min-w-[280px] sm:min-w-[320px] backdrop-blur-[15px] transition-colors duration-500 ${
+          isNightMode 
+            ? 'bg-[rgba(48,43,79,0.95)] border-[#A68A56]/50 shadow-[0_0_30px_rgba(199,125,255,0.3)]' 
+            : 'glass-card border-[#D4AF37]/50'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-4">
@@ -39,11 +44,17 @@ const EssenceNotification: React.FC<EssenceNotificationProps> = ({ amount, onClo
             </div>
           </div>
           <div className="flex-1">
-            <h3 className="font-cinzel text-lg sm:text-xl text-[#4A233E] font-bold uppercase tracking-wide mb-1">
+            <h3 className={`font-cinzel text-lg sm:text-xl font-bold uppercase tracking-wide mb-1 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               ¡Esencia Ganada!
             </h3>
-            <p className="font-garamond text-base sm:text-lg text-[#4A233E]">
-              Has ganado <span className="font-bold text-[#D4AF37]">+{amount} puntos</span> de Esencia
+            <p className={`font-garamond text-base sm:text-lg transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Has ganado <span className={`font-bold transition-colors duration-500 ${
+                isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+              }`}>+{amount} puntos</span> de Esencia
             </p>
           </div>
           <button
@@ -51,7 +62,9 @@ const EssenceNotification: React.FC<EssenceNotificationProps> = ({ amount, onClo
               setIsVisible(false);
               setTimeout(onClose, 300);
             }}
-            className="flex-shrink-0 p-2 text-[#8B5E75] hover:bg-[#FFD1DC] rounded-full transition-colors"
+            className={`flex-shrink-0 p-2 rounded-full transition-colors ${
+              isNightMode ? 'text-[#7A748E] hover:bg-[rgba(199,125,255,0.2)]' : 'text-[#8B5E75] hover:bg-[#FFD1DC]'
+            }`}
             aria-label="Cerrar notificación"
             tabIndex={0}
           >

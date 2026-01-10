@@ -4,6 +4,7 @@ import { getIcon } from '../constants';
 interface DocsPageProps {
   onBack?: () => void;
   isMobile?: boolean;
+  isNightMode?: boolean;
 }
 
 interface Section {
@@ -131,7 +132,11 @@ const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
             {onBack && (
               <button
                 onClick={onBack}
-                className="w-9 h-9 md:w-10 md:h-10 rounded-lg border-2 border-[#D4AF37] flex items-center justify-center text-[#4A233E] hover:bg-[#D4AF37]/10 active:bg-[#D4AF37]/10 transition-all flex-shrink-0 touch-manipulation"
+                className={`w-9 h-9 md:w-10 md:h-10 rounded-lg border-2 flex items-center justify-center transition-all flex-shrink-0 touch-manipulation ${
+                  isNightMode 
+                    ? 'border-[#A68A56] text-[#E0E1DD] hover:bg-[#A68A56]/10 active:bg-[#A68A56]/10' 
+                    : 'border-[#D4AF37] text-[#4A233E] hover:bg-[#D4AF37]/10 active:bg-[#D4AF37]/10'
+                }`}
                 aria-label="Volver"
                 tabIndex={0}
               >
