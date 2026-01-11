@@ -335,8 +335,8 @@ export const INITIAL_MODULES: Module[] = [
   },
   {
     id: 'scientific-calculator',
-    name: 'Calculadora Científica',
-    description: 'Herramienta avanzada con funciones matemáticas completas, historial de operaciones y conversor de unidades',
+    name: 'Calculadora',
+    description: 'Calculos y conversiones',
     cost: 0,
     active: false,
     icon: 'calculator',

@@ -32,8 +32,8 @@ const ARTIFACTS: Artifact[] = [
   },
   {
     id: 'scientific-calculator',
-    name: 'Calculadora Científica',
-    description: 'Herramienta avanzada con funciones matemáticas completas, historial de operaciones y conversor de unidades.',
+    name: 'Calculadora',
+    description: 'Calculos y conversiones',
     category: 'Productividad y Carrera',
     icon: 'calculator',
     status: 'available'

@@ -1064,12 +1064,12 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
               No hay movimientos registrados
             </p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
               {filteredTransactions.map(transaction => (
                 <button
                   key={transaction.id}
                   onClick={() => handleEditTransaction(transaction)}
-                  className={`p-3 rounded-xl border-2 transition-all hover:scale-105 active:scale-95 text-left ${
+                  className={`p-3 md:p-4 rounded-xl border-2 transition-all hover:scale-105 active:scale-95 text-left min-h-[120px] md:min-h-[140px] ${
                     transaction.type === 'Ingreso'
                       ? isNightMode
                         ? 'bg-[rgba(166,138,86,0.2)] border-[#A68A56]/40 hover:border-[#A68A56]/60'
@@ -1079,22 +1079,24 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
                         : 'bg-[#E35B8F]/10 border-[#E35B8F]/40 hover:border-[#E35B8F]/60'
                   }`}
                 >
-                  <p className={`text-xs font-black truncate mb-1 transition-colors duration-500 ${
+                  <p className={`text-xs md:text-sm font-black line-clamp-2 mb-2 transition-colors duration-500 ${
                     isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
                   }`}>
                     {transaction.description || 'Sin descripción'}
                   </p>
-                  <p className={`text-[9px] mb-1 transition-colors duration-500 ${
-                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                  }`}>
-                    {transaction.date}
-                  </p>
-                  <p className={`text-[9px] mb-2 transition-colors duration-500 ${
-                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                  }`}>
-                    {transaction.type} • {transaction.payment_method}
-                  </p>
-                  <p className={`text-sm font-black transition-colors duration-500 ${
+                  <div className="space-y-1 mb-3">
+                    <p className={`text-[10px] md:text-xs transition-colors duration-500 ${
+                      isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                    }`}>
+                      {transaction.date}
+                    </p>
+                    <p className={`text-[10px] md:text-xs transition-colors duration-500 ${
+                      isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                    }`}>
+                      {transaction.type} • {transaction.payment_method}
+                    </p>
+                  </div>
+                  <p className={`text-base md:text-lg font-black transition-colors duration-500 ${
                     transaction.type === 'Ingreso'
                       ? isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
                       : isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'

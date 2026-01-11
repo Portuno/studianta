@@ -475,8 +475,8 @@ const App: React.FC = () => {
           // Crear el módulo localmente
           const newModule = {
             id: 'scientific-calculator',
-            name: 'Calculadora Científica',
-            description: 'Herramienta avanzada con funciones matemáticas completas, historial de operaciones y conversor de unidades',
+            name: 'Calculadora',
+            description: 'Calculos y conversiones',
             cost: 0,
             active: true,
             icon: 'calculator',
