@@ -109,6 +109,42 @@ export class GeminiService {
       messageHistory: messageHistory || [],
     });
   }
+
+  async generateExam(
+    subjectName: string,
+    materialsText: string | string[],
+    examType: 'multiple-choice' | 'true-false' | 'open-ended' | 'cloze' | 'case-study',
+    questionCount: number,
+    difficulty: 'easy' | 'medium' | 'hard' | 'mixed' = 'mixed'
+  ): Promise<any> {
+    try {
+      const response = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'exam-generation',
+          subjectName,
+          materialsText: Array.isArray(materialsText) ? materialsText : [materialsText],
+          examType,
+          questionCount,
+          difficulty,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.exam || data;
+    } catch (error: any) {
+      console.error('Error generating exam:', error);
+      throw new Error(`Error al generar el examen: ${error.message || 'Error desconocido'}`);
+    }
+  }
 }
 
 export const geminiService = new GeminiService();

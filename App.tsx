@@ -23,6 +23,7 @@ import BazarModule from './components/BazarModule';
 import BalanzaModule from './components/BalanzaModule';
 import CalculatorModule from './components/CalculatorModule';
 import CalculatorFloatingWidget from './components/CalculatorFloatingWidget';
+import ExamGeneratorModule from './components/ExamGeneratorModule';
 import Footer from './components/Footer';
 import OnboardingModal from './components/OnboardingModal';
 import CookieConsentBanner from './components/CookieConsentBanner';
@@ -481,6 +482,38 @@ const App: React.FC = () => {
             cost: 0,
             active: true,
             icon: 'calculator',
+          };
+          setModules([...modules, newModule]);
+          mod = newModule;
+        }
+        if (!mod.active) {
+          const updatedModules = modules.map(m => m.id === moduleId ? { ...m, active: true } : m);
+          setModules(updatedModules);
+          try {
+            await supabaseService.updateModule(user.id, moduleId, { active: true });
+          } catch (error) {
+            console.error('Error updating module:', error);
+          }
+        }
+      }
+      return;
+    }
+
+    // Si es el generador de exámenes, navegar directamente (es gratuito y siempre disponible)
+    if (moduleId === 'exam-generator') {
+      setActiveView(NavView.EXAM_GENERATOR);
+      // Si hay usuario, intentar activar el módulo en segundo plano
+      if (user) {
+        let mod = modules.find(m => m.id === moduleId);
+        if (!mod) {
+          // Crear el módulo localmente
+          const newModule = {
+            id: 'exam-generator',
+            name: 'Generador de Exámenes',
+            description: 'Crea tests personalizados a partir de tus apuntes mediante IA',
+            cost: 0,
+            active: true,
+            icon: 'target',
           };
           setModules([...modules, newModule]);
           mod = newModule;
@@ -1006,12 +1039,23 @@ const App: React.FC = () => {
           onPurchaseModule={toggleModule}
           userModules={modules}
           onNavigateToCalculator={() => setActiveView(NavView.CALCULATOR)}
+          onNavigateToExamGenerator={() => setActiveView(NavView.EXAM_GENERATOR)}
         />;
       case NavView.CALCULATOR:
         return <CalculatorModule 
           isMobile={isMobile}
           isNightMode={isNightMode}
           onFloatingMode={() => setShowCalculatorFloating(true)}
+        />;
+      case NavView.EXAM_GENERATOR:
+        if (!user) {
+          setShowLoginModal(true);
+          return null;
+        }
+        return <ExamGeneratorModule 
+          subjects={subjects}
+          isMobile={isMobile}
+          isNightMode={isNightMode}
         />;
       default:
         return <Dashboard modules={modules} onActivate={toggleModule} isMobile={isMobile} setActiveView={setActiveView} isNightMode={isNightMode} />;

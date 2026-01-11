@@ -206,6 +206,129 @@ INSTRUCCIÓN FINAL: Tu objetivo es que la alumna sienta que tiene el control de 
       return res.status(200).json({ text: response.text });
     }
 
+    if (type === 'exam-generation') {
+      // Generación de exámenes
+      const { subjectName, materialsText, examType, questionCount, difficulty } = params;
+      
+      if (!subjectName || !materialsText || !examType || !questionCount) {
+        return res.status(400).json({ 
+          error: 'Parámetros incompletos',
+          message: 'Se requieren: subjectName, materialsText, examType, questionCount'
+        });
+      }
+
+      // System prompt pedagógico estricto
+      const systemPrompt = `Actúas como un Experto Pedagogo y Evaluador Académico. Tu objetivo es crear un examen basado únicamente en el contexto proporcionado por los apuntes de la usuaria.
+
+REGLAS ESTRICTAS:
+
+1. FIDELIDAD AL TEXTO:
+   - NO incluyas información externa que no esté en los documentos proporcionados.
+   - Si no hay suficiente información en el material para crear una pregunta, omítela.
+   - Cita el material fuente cuando sea relevante.
+
+2. DISTRIBUCIÓN DE DIFICULTAD:
+   - 20% fácil (conceptos básicos, definiciones directas)
+   - 60% intermedio (aplicación de conceptos, análisis básico)
+   - 20% difícil (análisis crítico, síntesis, evaluación)
+
+3. DISTRACTORES PLAUSIBLES:
+   - En preguntas de opción múltiple, las respuestas incorrectas deben parecer lógicas para alguien que no estudió bien.
+   - Evita opciones absurdas o obviamente incorrectas.
+   - Los distractores deben basarse en conceptos relacionados pero incorrectos del material.
+
+4. EXPLICACIÓN PEDAGÓGICA:
+   - Para cada pregunta, genera una 'explicación' que explique por qué la respuesta es correcta.
+   - Genera una 'racionalidad' que explique la lógica detrás de la respuesta basándote en el material.
+   - Incluye el nombre del material fuente cuando sea relevante.
+
+5. FORMATO DE SALIDA:
+   - Responde SIEMPRE en formato JSON válido.
+   - Estructura: { "exam": { "title": "...", "questions": [...] } }
+   - Cada pregunta debe tener: number, type, text, options (si aplica), correctAnswer, explanation, rationale, sourceMaterial, difficulty
+
+TIPOS DE PREGUNTAS:
+- multiple-choice: 4 opciones, una correcta
+- true-false: Solo verdadero o falso
+- open-ended: Pregunta abierta con respuesta esperada
+- cloze: Completar el párrafo con palabra clave
+- case-study: Situación práctica que requiere aplicar teoría
+
+IMPORTANTE: Si el material no tiene suficiente contenido para generar ${questionCount} preguntas del tipo ${examType}, genera las que puedas y ajusta la cantidad.`;
+
+      // Construir el prompt con el material
+      const materialsContext = Array.isArray(materialsText) 
+        ? materialsText.map((text, idx) => `--- Material ${idx + 1} ---\n${text}\n`).join('\n')
+        : `--- Material de Estudio ---\n${materialsText}\n`;
+
+      const examPrompt = `Genera un examen de ${questionCount} preguntas de tipo "${examType}" para la asignatura "${subjectName}".
+
+Dificultad solicitada: ${difficulty || 'mixed'}
+
+Material de estudio:
+${materialsContext}
+
+Responde ÚNICAMENTE con un JSON válido en el siguiente formato:
+{
+  "exam": {
+    "title": "Título descriptivo del examen",
+    "questions": [
+      {
+        "number": 1,
+        "type": "${examType}",
+        "text": "Texto de la pregunta",
+        "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
+        "correctAnswer": 0,
+        "explanation": "Explicación pedagógica de por qué esta es la respuesta correcta",
+        "rationale": "Razonamiento basado en el material",
+        "sourceMaterial": "Nombre del material fuente",
+        "difficulty": "easy|intermediate|hard"
+      }
+    ]
+  }
+}
+
+IMPORTANTE: 
+- Para true-false, options debe ser ["Verdadero", "Falso"] y correctAnswer debe ser 0 o 1
+- Para open-ended, options debe ser null y correctAnswer debe ser la respuesta esperada
+- Para cloze, el texto debe tener [_____] donde va la palabra clave
+- Para case-study, incluye el caso práctico en el texto de la pregunta`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: examPrompt,
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: 0.7,
+          responseMimeType: 'application/json',
+        }
+      });
+
+      // Verificar que la respuesta tenga texto
+      if (!response.text) {
+        console.error('Respuesta sin texto:', response);
+        throw new Error('No se pudo generar el examen. Por favor, intenta nuevamente.');
+      }
+
+      // Intentar parsear el JSON
+      let examData;
+      try {
+        examData = JSON.parse(response.text);
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        console.error('Response text:', response.text);
+        // Intentar extraer JSON del texto si está envuelto en markdown
+        const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          examData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('La respuesta no es un JSON válido. Por favor, intenta nuevamente.');
+        }
+      }
+
+      return res.status(200).json({ exam: examData.exam || examData });
+    }
+
     return res.status(400).json({ error: 'Tipo de consulta no válido' });
   } catch (error) {
     console.error('Gemini API Error:', error);

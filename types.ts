@@ -135,6 +135,7 @@ export enum NavView {
   DOCS = 'Documentación',
   BAZAR = 'Bazar',
   CALCULATOR = 'Calculadora',
+  EXAM_GENERATOR = 'Generador de Exámenes',
   PRIVACY_POLICY = 'Política de Privacidad',
   TERMS_OF_SERVICE = 'Términos y Condiciones'
 }
@@ -309,4 +310,91 @@ export interface CalculatorSettings {
   soundVolume: number;
   angleMode: 'deg' | 'rad';
   floatingPosition?: { x: number; y: number };
+}
+
+// Exam Generator Interfaces
+export type ExamType = 'multiple-choice' | 'true-false' | 'open-ended' | 'cloze' | 'case-study';
+export type ExamMode = 'real' | 'guided';
+export type ExamDifficulty = 'easy' | 'medium' | 'hard' | 'mixed';
+export type QuestionDifficulty = 'easy' | 'intermediate' | 'hard';
+export type MasteryLevel = 'beginner' | 'intermediate' | 'advanced' | 'expert';
+
+export interface Exam {
+  id: string;
+  user_id: string;
+  subject_id: string;
+  title: string;
+  exam_type: ExamType;
+  difficulty: ExamDifficulty;
+  question_count: number;
+  mode: ExamMode;
+  material_ids: string[];
+  created_at: string;
+  completed_at?: string;
+  updated_at: string;
+}
+
+export interface ExamQuestion {
+  id: string;
+  exam_id: string;
+  question_number: number;
+  question_type: ExamType;
+  question_text: string;
+  options?: string[]; // Para multiple-choice
+  correct_answer: string;
+  explanation?: string;
+  rationale?: string;
+  source_material?: string;
+  difficulty_level: QuestionDifficulty;
+  created_at: string;
+}
+
+export interface ExamResponse {
+  id: string;
+  exam_id: string;
+  question_id: string;
+  user_answer: string;
+  is_correct: boolean;
+  time_spent_seconds: number;
+  created_at: string;
+}
+
+export interface ExamResult {
+  id: string;
+  exam_id: string;
+  total_questions: number;
+  correct_answers: number;
+  score_percentage: number;
+  time_spent_total: number;
+  mastery_level: MasteryLevel;
+  created_at: string;
+}
+
+export interface ExamFlashcard {
+  id: string;
+  exam_id: string;
+  question_id: string;
+  front_text: string;
+  back_text: string;
+  reviewed_count: number;
+  last_reviewed_at?: string;
+  created_at: string;
+}
+
+export interface ExamGenerationRequest {
+  subjectId: string;
+  materialIds: string[];
+  examType: ExamType;
+  questionCount: number;
+  difficulty: ExamDifficulty;
+  mode: ExamMode;
+}
+
+export interface ExamConfig {
+  subjectId: string;
+  materialIds: string[];
+  examType: ExamType;
+  questionCount: number;
+  difficulty: ExamDifficulty;
+  mode: ExamMode;
 }

@@ -341,5 +341,13 @@ export const INITIAL_MODULES: Module[] = [
     active: false,
     icon: 'calculator',
   },
+  {
+    id: 'exam-generator',
+    name: 'Generador de Exámenes',
+    description: 'Crea tests personalizados a partir de tus apuntes mediante IA',
+    cost: 0,
+    active: false,
+    icon: 'target',
+  },
 ];
 

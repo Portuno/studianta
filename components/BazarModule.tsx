@@ -18,6 +18,7 @@ interface BazarModuleProps {
   onPurchaseModule?: (moduleId: string) => void;
   userModules?: Array<{ id: string; active: boolean }>;
   onNavigateToCalculator?: () => void;
+  onNavigateToExamGenerator?: () => void;
 }
 
 const ARTIFACTS: Artifact[] = [
@@ -27,8 +28,8 @@ const ARTIFACTS: Artifact[] = [
     name: 'Generador de Exámenes',
     description: 'Crea tests de opción múltiple, verdadero/falso o preguntas abiertas a partir de tus propios apuntes mediante IA.',
     category: 'Productividad y Carrera',
-    icon: 'file',
-    status: 'coming_soon'
+    icon: 'target',
+    status: 'available'
   },
   {
     id: 'scientific-calculator',
@@ -146,7 +147,7 @@ const CATEGORIES = [
   'Personalización y Comunidad'
 ];
 
-const BazarModule: React.FC<BazarModuleProps> = ({ isMobile, isNightMode = false, onPurchaseModule, userModules = [], onNavigateToCalculator }) => {
+const BazarModule: React.FC<BazarModuleProps> = ({ isMobile, isNightMode = false, onPurchaseModule, userModules = [], onNavigateToCalculator, onNavigateToExamGenerator }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -311,6 +312,18 @@ const BazarModule: React.FC<BazarModuleProps> = ({ isMobile, isNightMode = false
                               {artifact.id === 'scientific-calculator' && onNavigateToCalculator && (
                                 <button
                                   onClick={onNavigateToCalculator}
+                                  className={`w-full py-2 rounded-xl font-marcellus text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95 ${
+                                    isNightMode 
+                                      ? 'bg-[#C77DFF] text-white hover:bg-[#B56DE8]' 
+                                      : 'bg-[#E35B8F] text-white hover:bg-[#D24A7E]'
+                                  }`}
+                                >
+                                  Abrir
+                                </button>
+                              )}
+                              {artifact.id === 'exam-generator' && onNavigateToExamGenerator && (
+                                <button
+                                  onClick={onNavigateToExamGenerator}
                                   className={`w-full py-2 rounded-xl font-marcellus text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95 ${
                                     isNightMode 
                                       ? 'bg-[#C77DFF] text-white hover:bg-[#B56DE8]' 
