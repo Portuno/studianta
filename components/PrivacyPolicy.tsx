@@ -5,9 +5,10 @@ import { ArrowLeft } from 'lucide-react';
 interface PrivacyPolicyProps {
   onBack?: () => void;
   isMobile?: boolean;
+  isNightMode?: boolean;
 }
 
-const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false }) => {
+const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false, isNightMode = false }) => {
   const currentDate = new Date().toLocaleDateString('es-ES', { 
     year: 'numeric', 
     month: 'long', 
@@ -147,15 +148,152 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack, isMobile = false 
               <li>Tokens de acceso y actualización de Google (almacenados de forma segura y encriptada)</li>
               <li>Información necesaria para sincronizar eventos entre Studianta y Google Calendar</li>
             </ul>
-            <p className="font-garamond text-[#4A233E] leading-relaxed mt-2">
+            <p className={`font-garamond leading-relaxed mt-2 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               <strong>Nota:</strong> Esta integración es completamente opcional. Puede utilizar Studianta 
               sin conectar su cuenta de Google Calendar.
             </p>
           </section>
 
+          {/* Cookies y Tecnologías Similares */}
+          <section id="cookie-section">
+            <h2 className={`font-cinzel text-2xl font-bold mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              2.7. Cookies y Tecnologías Similares
+            </h2>
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Utilizamos cookies y tecnologías similares para mejorar su experiencia en nuestra aplicación, 
+              analizar el uso del sitio y personalizar el contenido. Esta sección explica qué cookies utilizamos 
+              y cómo puede gestionarlas.
+            </p>
+
+            <h3 className={`font-cinzel text-xl font-semibold mb-3 mt-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              2.7.1. ¿Qué son las Cookies?
+            </h3>
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Las cookies son pequeños archivos de texto que se almacenan en su dispositivo cuando visita un sitio web. 
+              Nos ayudan a recordar sus preferencias y mejorar su experiencia de navegación.
+            </p>
+
+            <h3 className={`font-cinzel text-xl font-semibold mb-3 mt-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              2.7.2. Tipos de Cookies que Utilizamos
+            </h3>
+
+            <h4 className={`font-cinzel text-lg font-semibold mb-2 mt-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Cookies Necesarias (Siempre Activas)
+            </h4>
+            <p className={`font-garamond leading-relaxed mb-2 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Estas cookies son esenciales para el funcionamiento de la aplicación y no se pueden desactivar:
+            </p>
+            <ul className={`list-disc list-inside space-y-2 font-garamond ml-4 mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              <li><strong>Cookies de Sesión de Supabase:</strong> Utilizadas para mantener su sesión de autenticación activa</li>
+              <li><strong>Cookies de Preferencias:</strong> Almacenan sus preferencias de usuario (tema, configuración)</li>
+              <li><strong>LocalStorage:</strong> Almacena datos locales como historial de calculadora, sesiones de enfoque, y preferencias</li>
+            </ul>
+
+            <h4 className={`font-cinzel text-lg font-semibold mb-2 mt-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Cookies Funcionales (Opcionales)
+            </h4>
+            <p className={`font-garamond leading-relaxed mb-2 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Estas cookies mejoran la funcionalidad y personalización:
+            </p>
+            <ul className={`list-disc list-inside space-y-2 font-garamond ml-4 mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              <li>Recordar sus preferencias de navegación</li>
+              <li>Mejorar la experiencia de usuario personalizada</li>
+            </ul>
+
+            <h4 className={`font-cinzel text-lg font-semibold mb-2 mt-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Cookies Analíticas (Opcionales)
+            </h4>
+            <p className={`font-garamond leading-relaxed mb-2 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Estas cookies nos ayudan a entender cómo utiliza la aplicación:
+            </p>
+            <ul className={`list-disc list-inside space-y-2 font-garamond ml-4 mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              <li>Análisis de uso del sitio (si se implementa en el futuro)</li>
+              <li>Métricas de rendimiento y errores</li>
+            </ul>
+
+            <h3 className={`font-cinzel text-xl font-semibold mb-3 mt-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              2.7.3. Gestión de Cookies
+            </h3>
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Puede gestionar sus preferencias de cookies en cualquier momento:
+            </p>
+            <ul className={`list-disc list-inside space-y-2 font-garamond ml-4 mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              <li>Utilizando el banner de cookies que aparece en su primera visita</li>
+              <li>Desde la configuración de su perfil (si se implementa)</li>
+              <li>Configurando las preferencias de cookies en su navegador</li>
+            </ul>
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              <strong>Nota:</strong> Desactivar las cookies necesarias puede afectar el funcionamiento de la aplicación. 
+              Las cookies de sesión son esenciales para mantener su sesión de autenticación activa.
+            </p>
+
+            <h3 className={`font-cinzel text-xl font-semibold mb-3 mt-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              2.7.4. Cookies de Terceros
+            </h3>
+            <p className={`font-garamond leading-relaxed mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Algunos servicios de terceros que utilizamos pueden establecer sus propias cookies:
+            </p>
+            <ul className={`list-disc list-inside space-y-2 font-garamond ml-4 mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              <li><strong>Supabase:</strong> Cookies de autenticación y sesión</li>
+              <li><strong>Google Calendar:</strong> Si utiliza la integración opcional, Google puede establecer cookies</li>
+              <li><strong>Google Gemini AI:</strong> Cookies relacionadas con el servicio de IA (si aplica)</li>
+            </ul>
+            <p className={`font-garamond leading-relaxed transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
+              Estas cookies están sujetas a las políticas de privacidad de los respectivos proveedores de servicios.
+            </p>
+          </section>
+
           {/* Cómo usamos la información */}
           <section>
-            <h2 className="font-cinzel text-2xl font-bold text-[#4A233E] mb-4">
+            <h2 className={`font-cinzel text-2xl font-bold mb-4 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            }`}>
               3. Cómo Utilizamos su Información
             </h2>
             <ul className="list-disc list-inside space-y-2 font-garamond text-[#4A233E] ml-4">

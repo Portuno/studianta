@@ -25,6 +25,7 @@ import CalculatorModule from './components/CalculatorModule';
 import CalculatorFloatingWidget from './components/CalculatorFloatingWidget';
 import Footer from './components/Footer';
 import OnboardingModal from './components/OnboardingModal';
+import CookieConsentBanner from './components/CookieConsentBanner';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -1133,6 +1134,8 @@ const App: React.FC = () => {
         />
       )}
 
+      {/* Banner de Consentimiento de Cookies */}
+      <CookieConsentBanner isNightMode={isNightMode} />
 
       <Analytics />
     </div>
