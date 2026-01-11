@@ -47,6 +47,8 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [examHistory, setExamHistory] = useState<Exam[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
 
   const {
     currentExam,
@@ -108,6 +110,14 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
     };
     loadHistory();
   }, [view]);
+
+  // Resetear estado de flashcards cuando cambia la vista o se cargan nuevas flashcards
+  useEffect(() => {
+    if (view === 'flashcards') {
+      setCurrentFlashcardIndex(0);
+      setIsFlipped(false);
+    }
+  }, [view, flashcards.length]);
 
   const handleSubjectChange = (subjectId: string) => {
     setSelectedSubjectId(subjectId);
@@ -934,8 +944,6 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
 
   // Vista de flashcards
   if (view === 'flashcards' && flashcards.length > 0) {
-    const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
-    const [isFlipped, setIsFlipped] = useState(false);
     const currentFlashcard = flashcards[currentFlashcardIndex];
 
     return (
