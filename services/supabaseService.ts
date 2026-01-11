@@ -1674,30 +1674,126 @@ export class SupabaseService {
   // ============ STRIPE SUBSCRIPTIONS ============
 
   async createCheckoutSession(userId: string): Promise<{ url: string }> {
-    // Get current session for auth token
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw new Error('No active session');
+    // Get current session explicitly to ensure we have a valid access token
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !sessionData?.session) {
+      throw new Error('No active session. Please log in again.');
     }
 
-    // Call edge function directly with fetch for better control
-    const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-        'apikey': supabaseAnonKey,
-        'x-client-info': 'studianta-web',
-      },
-      body: JSON.stringify({ userId }),
+    const accessToken = sessionData.session.access_token;
+    if (!accessToken) {
+      throw new Error('No access token available. Please log in again.');
+    }
+
+    // Log token info for debugging (first 20 chars only for security)
+    console.log('Access token present:', !!accessToken);
+    console.log('Access token length:', accessToken?.length);
+    console.log('Access token preview:', accessToken?.substring(0, 20) + '...');
+
+    // Verify userId matches the authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Session expired. Please log in again.');
+    }
+
+    if (user.id !== userId) {
+      throw new Error('User ID mismatch');
+    }
+
+    // Use supabase.functions.invoke - the SDK automatically attaches the Authorization header
+    // from the active session, so we don't need to pass it explicitly
+    // Passing custom headers might interfere with the SDK's automatic auth handling
+    console.log('Calling create-checkout-session with userId:', userId);
+    console.log('Session active:', !!sessionData.session);
+    console.log('Access token available:', !!accessToken);
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/be5fe312-731a-4030-9815-a589dbcd35eb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabaseService.ts:1711',message:'Before invoke call',data:{userId,hasSession:!!sessionData.session,hasAccessToken:!!accessToken,accessTokenLength:accessToken?.length||0,accessTokenPreview:accessToken?.substring(0,30)||'missing',supabaseUrl:supabaseUrl?.substring(0,40)||'missing',hasAnonKey:!!supabaseAnonKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
+    const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+      body: { userId },
+      // Don't pass headers - let the SDK handle auth automatically
+      // The SDK will automatically attach Authorization header from the active session
     });
+    
+    // #region agent log - Also try direct fetch for debugging
+    if (error) {
+      try {
+        const functionUrl = `${supabaseUrl}/functions/v1/create-checkout-session`;
+        const directResponse = await fetch(functionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+            'apikey': supabaseAnonKey,
+          },
+          body: JSON.stringify({ userId }),
+        });
+        const responseText = await directResponse.text();
+        let responseBody = null;
+        try {
+          responseBody = JSON.parse(responseText);
+        } catch (e) {
+          responseBody = responseText;
+        }
+        fetch('http://127.0.0.1:7242/ingest/be5fe312-731a-4030-9815-a589dbcd35eb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabaseService.ts:1725',message:'Direct fetch response (debug only)',data:{status:directResponse.status,statusText:directResponse.statusText,responseBody},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      } catch (directError: any) {
+        fetch('http://127.0.0.1:7242/ingest/be5fe312-731a-4030-9815-a589dbcd35eb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabaseService.ts:1735',message:'Direct fetch failed',data:{error:directError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      }
+    }
+    // #endregion
+    
+    // #region agent log
+    const errorDetails = error ? {
+      message: error.message,
+      name: error.name,
+      status: (error as any).status || (error as any).context?.status || 'none',
+      hasContext: !!(error as any).context,
+      contextType: (error as any).context ? typeof (error as any).context : 'none',
+    } : null;
+    fetch('http://127.0.0.1:7242/ingest/be5fe312-731a-4030-9815-a589dbcd35eb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabaseService.ts:1720',message:'After invoke call',data:{hasError:!!error,errorDetails,hasData:!!data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(`Error creating checkout session: ${errorData.error || response.statusText}`);
+    if (error) {
+      console.error('createCheckoutSession error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        context: error.context,
+        status: (error as any).status || (error as any).context?.status,
+        name: error.name,
+      });
+      
+      // Try to extract error message from response body
+      let errorMessage = error.message || 'Unknown error';
+      try {
+        // The error.context might be a Response object
+        if (error.context && typeof error.context.json === 'function') {
+          const errorBody = await error.context.json();
+          if (errorBody?.error) {
+            errorMessage = errorBody.error;
+            console.error('Error from function body:', errorBody);
+          }
+        } else if (error.context && typeof error.context.text === 'function') {
+          const errorText = await error.context.text();
+          console.error('Error text from function:', errorText);
+          try {
+            const errorBody = JSON.parse(errorText);
+            if (errorBody?.error) {
+              errorMessage = errorBody.error;
+            }
+          } catch {
+            errorMessage = errorText || errorMessage;
+          }
+        }
+      } catch (e) {
+        console.error('Could not parse error response:', e);
+      }
+      
+      throw new Error(`Error creating checkout session: ${errorMessage}`);
     }
 
-    const data = await response.json();
     if (!data?.url) {
       throw new Error('No checkout URL returned from server');
     }
@@ -1706,30 +1802,43 @@ export class SupabaseService {
   }
 
   async createPortalSession(userId: string): Promise<{ url: string }> {
-    // Get current session for auth token
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw new Error('No active session');
+    // Get current session explicitly to ensure we have a valid access token
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !sessionData?.session) {
+      throw new Error('No active session. Please log in again.');
     }
 
-    // Call edge function directly with fetch for better control
-    const response = await fetch(`${supabaseUrl}/functions/v1/create-portal-session`, {
-      method: 'POST',
+    const accessToken = sessionData.session.access_token;
+    if (!accessToken) {
+      throw new Error('No access token available. Please log in again.');
+    }
+
+    // Verify userId matches the authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Session expired. Please log in again.');
+    }
+
+    if (user.id !== userId) {
+      throw new Error('User ID mismatch');
+    }
+
+    // Use supabase.functions.invoke with explicit Authorization header
+    // This ensures the gateway receives the token even if SDK doesn't attach it automatically
+    const { data, error } = await supabase.functions.invoke('create-portal-session', {
+      body: { userId },
+      // Attach headers explicitly to ensure gateway receives the token
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-        'apikey': supabaseAnonKey,
-        'x-client-info': 'studianta-web',
+        Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ userId }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(`Error creating portal session: ${errorData.error || response.statusText}`);
+    if (error) {
+      console.error('createPortalSession error:', error);
+      throw new Error(`Error creating portal session: ${error.message || 'Unknown error'}`);
     }
 
-    const data = await response.json();
     if (!data?.url) {
       throw new Error('No portal URL returned from server');
     }
