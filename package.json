@@ -9,7 +9,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:functions": "supabase functions deploy",
+    "deploy:checkout": "supabase functions deploy create-checkout-session",
+    "deploy:portal": "supabase functions deploy create-portal-session",
+    "deploy:webhook": "supabase functions deploy stripe-webhook",
+    "deploy:all": "npm run deploy:checkout && npm run deploy:portal && npm run deploy:webhook"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",

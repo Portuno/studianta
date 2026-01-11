@@ -3,12 +3,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Subject, NavView, CustomCalendarEvent } from '../types';
 import { getIcon, COLORS } from '../constants';
 import { saveFocusSession } from '../utils/focusTracker';
+import { supabaseService } from '../services/supabaseService';
 
 interface FocusModuleProps {
   subjects: Subject[];
   onUpdateSubject: (subject: Subject) => void;
   onAddCalendarEvent?: (event: Omit<CustomCalendarEvent, 'id'>) => void;
   isMobile: boolean;
+  userId?: string;
   // Estado global del focus
   focusState?: {
     isActive: boolean;
@@ -34,6 +36,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
   onUpdateSubject, 
   onAddCalendarEvent, 
   isMobile,
+  userId,
   focusState,
   onFocusStateChange,
   isNightMode = false
@@ -63,8 +66,26 @@ const FocusModule: React.FC<FocusModuleProps> = ({
   });
   const [showCustomTimeModal, setShowCustomTimeModal] = useState(false);
   const [customMinutes, setCustomMinutes] = useState('');
+  const [showFocusAnnotations, setShowFocusAnnotations] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cargar preferencia de mostrar anotaciones de enfoque
+  useEffect(() => {
+    const loadFocusPreference = async () => {
+      if (userId) {
+        try {
+          const profile = await supabaseService.getProfile(userId);
+          if (profile) {
+            setShowFocusAnnotations(profile.show_focus_annotations ?? false);
+          }
+        } catch (error) {
+          console.error('Error loading focus preference:', error);
+        }
+      }
+    };
+    loadFocusPreference();
+  }, [userId]);
 
   // Función para actualizar estado (global o local)
   const updateState = (updates: Partial<{
@@ -197,8 +218,8 @@ const FocusModule: React.FC<FocusModuleProps> = ({
       });
     }
 
-    // Agregar evento al calendario
-    if (onAddCalendarEvent && subject) {
+    // Agregar evento al calendario solo si la preferencia está activada
+    if (onAddCalendarEvent && subject && showFocusAnnotations) {
       const calendarEvent: Omit<CustomCalendarEvent, 'id'> = {
         title: `Sesión de Enfoque: ${subject.name}`,
         description: `${minutesStudied} minutos de estudio${reflectionData.wasInterrupted ? ' (Interrumpida)' : ' (Completada)'}${reflectionData.harvest ? ` - ${reflectionData.harvest.substring(0, 50)}${reflectionData.harvest.length > 50 ? '...' : ''}` : ''}`,

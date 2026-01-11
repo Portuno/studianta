@@ -96,11 +96,17 @@ export interface UserProfile {
   career?: string;
   institution?: string; // Renombrado de university a institution
   avatar_url?: string;
+  tier?: 'Free' | 'Premium'; // Tier de suscripción
   onboarding_completed?: boolean; // Si el usuario completó el onboarding
   academic_stage?: string; // Etapa académica del usuario
   interests?: string[]; // Array de áreas de interés
   referral_source?: string; // Cómo nos conoció
   currency?: string; // Código de moneda ISO 4217 (EUR, USD, ARS, etc.)
+  show_focus_annotations?: boolean; // Si el usuario quiere ver las anotaciones de enfoque en el calendario
+  stripe_customer_id?: string; // ID del cliente en Stripe
+  stripe_subscription_id?: string; // ID de la suscripción activa
+  subscription_status?: string; // Estado: active, canceled, past_due, etc.
+  subscription_current_period_end?: string; // Fecha de fin del período actual
   created_at: string;
   updated_at: string;
 }
@@ -271,10 +277,16 @@ export class SupabaseService {
         career: data.career,
         institution: data.institution, // Mapear institution (antes university)
         avatar_url: data.avatar_url,
+        tier: data.tier || 'Free',
         onboarding_completed: data.onboarding_completed ?? false,
         academic_stage: data.academic_stage,
         interests: data.interests || [],
         referral_source: data.referral_source,
+        currency: data.currency,
+        stripe_customer_id: data.stripe_customer_id,
+        stripe_subscription_id: data.stripe_subscription_id,
+        subscription_status: data.subscription_status,
+        subscription_current_period_end: data.subscription_current_period_end,
         created_at: data.created_at,
         updated_at: data.updated_at,
       };
@@ -297,6 +309,8 @@ export class SupabaseService {
     if (updates.academic_stage !== undefined) dbUpdates.academic_stage = updates.academic_stage;
     if (updates.interests !== undefined) dbUpdates.interests = updates.interests;
     if (updates.referral_source !== undefined) dbUpdates.referral_source = updates.referral_source;
+    if (updates.currency !== undefined) dbUpdates.currency = updates.currency;
+    if (updates.show_focus_annotations !== undefined) dbUpdates.show_focus_annotations = updates.show_focus_annotations;
 
     try {
       const { data, error } = await retryWithBackoff(async () => {
@@ -1655,6 +1669,89 @@ export class SupabaseService {
       }
       throw error;
     }
+  }
+
+  // ============ STRIPE SUBSCRIPTIONS ============
+
+  async createCheckoutSession(userId: string): Promise<{ url: string }> {
+    // Get current session for auth token
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('No active session');
+    }
+
+    // Call edge function directly with fetch for better control
+    const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': supabaseAnonKey,
+        'x-client-info': 'studianta-web',
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(`Error creating checkout session: ${errorData.error || response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!data?.url) {
+      throw new Error('No checkout URL returned from server');
+    }
+
+    return { url: data.url };
+  }
+
+  async createPortalSession(userId: string): Promise<{ url: string }> {
+    // Get current session for auth token
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('No active session');
+    }
+
+    // Call edge function directly with fetch for better control
+    const response = await fetch(`${supabaseUrl}/functions/v1/create-portal-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': supabaseAnonKey,
+        'x-client-info': 'studianta-web',
+      },
+      body: JSON.stringify({ userId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(`Error creating portal session: ${errorData.error || response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!data?.url) {
+      throw new Error('No portal URL returned from server');
+    }
+
+    return { url: data.url };
+  }
+
+  async getSubscriptionStatus(userId: string): Promise<{
+    tier: 'Free' | 'Premium';
+    status?: string;
+    currentPeriodEnd?: string;
+  }> {
+    const profile = await this.getProfile(userId);
+    if (!profile) {
+      return { tier: 'Free' };
+    }
+
+    return {
+      tier: profile.tier || 'Free',
+      status: profile.subscription_status,
+      currentPeriodEnd: profile.subscription_current_period_end,
+    };
   }
 }
 

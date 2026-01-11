@@ -94,6 +94,17 @@ const FocusFloatingWidget: React.FC<FocusFloatingWidgetProps> = ({
   };
 
   useEffect(() => {
+    let rafId: number | null = null;
+    let pendingPosition: { x: number; y: number } | null = null;
+
+    const updatePosition = () => {
+      if (pendingPosition) {
+        setPosition(pendingPosition);
+        pendingPosition = null;
+      }
+      rafId = null;
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
         // Detectar si realmente se está arrastrando (más de 5px de movimiento)
@@ -112,10 +123,16 @@ const FocusFloatingWidget: React.FC<FocusFloatingWidgetProps> = ({
         const minX = 0;
         const minY = 0;
         
-        setPosition({
+        // Acumular posición pendiente en lugar de actualizar inmediatamente
+        pendingPosition = {
           x: Math.max(minX, Math.min(maxX, newX)),
           y: Math.max(minY, Math.min(maxY, newY))
-        });
+        };
+
+        // Usar requestAnimationFrame para limitar actualizaciones a 60fps
+        if (rafId === null) {
+          rafId = requestAnimationFrame(updatePosition);
+        }
       }
     };
 
@@ -139,10 +156,16 @@ const FocusFloatingWidget: React.FC<FocusFloatingWidgetProps> = ({
         const minX = 0;
         const minY = 0;
         
-        setPosition({
+        // Acumular posición pendiente en lugar de actualizar inmediatamente
+        pendingPosition = {
           x: Math.max(minX, Math.min(maxX, newX)),
           y: Math.max(minY, Math.min(maxY, newY))
-        });
+        };
+
+        // Usar requestAnimationFrame para limitar actualizaciones a 60fps
+        if (rafId === null) {
+          rafId = requestAnimationFrame(updatePosition);
+        }
       }
     };
 
@@ -155,17 +178,20 @@ const FocusFloatingWidget: React.FC<FocusFloatingWidgetProps> = ({
     };
 
     if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mousemove', handleMouseMove, { passive: true });
       window.addEventListener('mouseup', handleMouseUp);
       window.addEventListener('touchmove', handleTouchMove, { passive: false });
       window.addEventListener('touchend', handleMouseUp);
     }
 
-      return () => {
+    return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleMouseUp);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, [isDragging, dragOffset, isMobile, initialClickPos]);
 

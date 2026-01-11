@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Subject, Transaction, JournalEntry, MoodType, CustomCalendarEvent } from '../types';
 import { getIcon, COLORS } from '../constants';
 import { googleCalendarService } from '../services/googleCalendarService';
-import { supabase } from '../services/supabaseService';
+import { supabase, supabaseService } from '../services/supabaseService';
 
 interface CalendarModuleProps {
   subjects: Subject[];
@@ -60,6 +60,35 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showConnectivitySection, setShowConnectivitySection] = useState(false);
+  const [showFocusAnnotations, setShowFocusAnnotations] = useState(false);
+
+  // Cargar preferencia de mostrar anotaciones de enfoque
+  const loadFocusPreference = async () => {
+    if (userId) {
+      try {
+        const profile = await supabaseService.getProfile(userId);
+        if (profile) {
+          setShowFocusAnnotations(profile.show_focus_annotations ?? false);
+        }
+      } catch (error) {
+        console.error('Error loading focus preference:', error);
+      }
+    }
+  };
+
+  // Cargar preferencia al montar y cuando cambie userId
+  useEffect(() => {
+    loadFocusPreference();
+  }, [userId]);
+
+  // Recargar preferencia cuando cambien los eventos (para detectar cambios en la preferencia del usuario)
+  // Esto asegura que si el usuario cambia la preferencia en el perfil, se actualice en el calendario
+  useEffect(() => {
+    if (userId && customEvents.length > 0) {
+      // Solo recargar si hay eventos, para evitar recargas innecesarias
+      loadFocusPreference();
+    }
+  }, [customEvents.length, userId]);
 
   // Verificar conexión de Google Calendar al cargar
   useEffect(() => {
@@ -287,6 +316,16 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
 
     customEvents.forEach(ev => {
       if (ev.date === isoDateStr) {
+        // Filtrar eventos de enfoque si la preferencia está desactivada
+        // Los eventos de enfoque siempre empiezan con "Sesión de Enfoque:"
+        const isFocusEvent = ev.title && ev.title.startsWith('Sesión de Enfoque:');
+        if (isFocusEvent) {
+          // Solo mostrar eventos de enfoque si la preferencia está activada
+          if (!showFocusAnnotations) {
+            return; // Saltar este evento
+          }
+        }
+        
         events.push({
           id: ev.id,
           title: ev.title,

@@ -43,10 +43,12 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
   const [career, setCareer] = useState('');
   const [institution, setInstitution] = useState('');
   const [currency, setCurrency] = useState<string>('EUR');
+  const [showFocusAnnotations, setShowFocusAnnotations] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [hoveringAvatar, setHoveringAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [balanzaProTransactions, setBalanzaProTransactions] = useState<BalanzaProTransaction[]>([]);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   // Cargar transacciones de Balanza Pro si el módulo está activo
   useEffect(() => {
@@ -117,6 +119,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
         setCareer(userProfile.career || '');
         setInstitution(userProfile.institution || '');
         setCurrency(userProfile.currency || 'EUR');
+        setShowFocusAnnotations(userProfile.show_focus_annotations ?? false);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -163,11 +166,38 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
         career: career,
         institution: institution,
         currency: currency,
+        show_focus_annotations: showFocusAnnotations,
       });
       await loadProfile();
       setEditing(false);
     } catch (error) {
       console.error('Error updating profile:', error);
+    }
+  };
+
+  const handleSubscribe = async () => {
+    if (!user) return;
+    setSubscriptionLoading(true);
+    try {
+      const { url } = await supabaseService.createCheckoutSession(user.id);
+      window.location.href = url;
+    } catch (error: any) {
+      console.error('Error creating checkout session:', error);
+      alert('Error al crear la sesión de pago. Por favor, intenta nuevamente.');
+      setSubscriptionLoading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    if (!user) return;
+    setSubscriptionLoading(true);
+    try {
+      const { url } = await supabaseService.createPortalSession(user.id);
+      window.location.href = url;
+    } catch (error: any) {
+      console.error('Error creating portal session:', error);
+      alert('Error al abrir el portal de gestión. Por favor, intenta nuevamente.');
+      setSubscriptionLoading(false);
     }
   };
 
@@ -254,6 +284,74 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
               <p className="font-garamond text-[#2D1A26]">{displayInstitution}</p>
             </div>
           </div>
+          
+          {/* Suscripción Premium - Mobile */}
+          <div className="mt-4 bg-gradient-to-r from-[#D4AF37]/20 to-[#E35B8F]/20 rounded-xl p-4 border-2 border-[#D4AF37]/40">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                {getIcon('crown', 'w-5 h-5 text-[#D4AF37]')}
+                <h3 className="font-cinzel text-base font-bold text-[#2D1A26] uppercase tracking-wider">
+                  Plan {profile?.tier === 'Premium' ? 'Premium' : 'Gratuito'}
+                </h3>
+              </div>
+              {profile?.tier === 'Premium' && (
+                <span className="px-3 py-1 bg-gradient-to-r from-[#D4AF37] to-[#E35B8F] text-white rounded-full font-cinzel text-xs font-bold uppercase tracking-wider">
+                  Premium
+                </span>
+              )}
+            </div>
+            
+            {profile?.tier === 'Free' ? (
+              <div>
+                <p className="font-garamond text-sm text-[#2D1A26] mb-3">
+                  Actualiza a Premium por <strong className="font-bold">14,99€/mes</strong>
+                </p>
+                <button
+                  onClick={handleSubscribe}
+                  disabled={subscriptionLoading}
+                  className="w-full btn-primary py-2 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {subscriptionLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      {getIcon('crown', 'w-4 h-4')}
+                      Actualizar a Premium
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div>
+                {profile?.subscription_status === 'active' && profile?.subscription_current_period_end && (
+                  <p className="font-garamond text-xs text-[#8B5E75] mb-3">
+                    Renovación: {new Date(profile.subscription_current_period_end).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                  </p>
+                )}
+                <button
+                  onClick={handleManageSubscription}
+                  disabled={subscriptionLoading}
+                  className="w-full bg-[#D4AF37]/80 border-2 border-[#D4AF37] text-[#2D1A26] py-2 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {subscriptionLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-[#2D1A26] border-t-transparent rounded-full animate-spin"></div>
+                      Cargando...
+                    </>
+                  ) : (
+                    <>
+                      {getIcon('settings', 'w-4 h-4')}
+                      Gestionar
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+          
           <div className="mt-6 flex flex-col gap-2">
             <button
               onClick={() => setEditing(true)}
@@ -497,6 +595,117 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Bloque 3: Configuración de Calendario */}
+            <div className="bg-white/40 rounded-xl p-4 border border-[#F8C8DC]/50">
+              <div className="flex items-center gap-2 mb-3">
+                {getIcon('calendar', 'w-4 h-4 text-[#8B5E75]')}
+                <label className="text-[8px] uppercase font-bold text-[#8B5E75] font-inter tracking-[0.3em]">
+                  CONFIGURACIÓN DE CALENDARIO
+                </label>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="font-garamond text-sm text-[#2D1A26] mb-1">
+                    Mostrar anotaciones de enfoque
+                  </p>
+                  <p className="font-garamond text-xs text-[#8B5E75] opacity-70">
+                    Mostrar sesiones de enfoque en el calendario
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showFocusAnnotations}
+                    onChange={(e) => setShowFocusAnnotations(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className={`w-11 h-6 rounded-full peer transition-colors duration-200 ${
+                    showFocusAnnotations 
+                      ? 'bg-[#E35B8F]' 
+                      : 'bg-gray-300'
+                  }`}>
+                    <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ${
+                      showFocusAnnotations ? 'translate-x-5' : 'translate-x-0.5'
+                    } mt-0.5`}></div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Bloque 4: Suscripción Premium */}
+            {!editing && (
+              <div className="mt-4 bg-gradient-to-r from-[#D4AF37]/20 to-[#E35B8F]/20 rounded-xl p-6 border-2 border-[#D4AF37]/40">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    {getIcon('crown', 'w-6 h-6 text-[#D4AF37]')}
+                    <div>
+                      <h3 className="font-cinzel text-xl font-bold text-[#2D1A26] uppercase tracking-wider">
+                        Plan {profile?.tier === 'Premium' ? 'Premium' : 'Gratuito'}
+                      </h3>
+                      {profile?.tier === 'Premium' && profile?.subscription_status === 'active' && profile?.subscription_current_period_end && (
+                        <p className="font-garamond text-sm text-[#8B5E75] mt-1">
+                          Renovación: {new Date(profile.subscription_current_period_end).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {profile?.tier === 'Premium' && (
+                    <span className="px-4 py-2 bg-gradient-to-r from-[#D4AF37] to-[#E35B8F] text-white rounded-full font-cinzel text-sm font-bold uppercase tracking-wider shadow-lg">
+                      Premium
+                    </span>
+                  )}
+                </div>
+                
+                {profile?.tier === 'Free' ? (
+                  <div>
+                    <p className="font-garamond text-[#2D1A26] mb-4">
+                      Actualiza a Premium por solo <strong className="font-bold">14,99€/mes</strong> y desbloquea todas las funcionalidades avanzadas.
+                    </p>
+                    <button
+                      onClick={handleSubscribe}
+                      disabled={subscriptionLoading}
+                      className="w-full btn-primary py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {subscriptionLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Procesando...
+                        </>
+                      ) : (
+                        <>
+                          {getIcon('crown', 'w-5 h-5')}
+                          Actualizar a Premium
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="font-garamond text-[#2D1A26] mb-4">
+                      Gestiona tu suscripción, actualiza tu método de pago o cancela cuando quieras.
+                    </p>
+                    <button
+                      onClick={handleManageSubscription}
+                      disabled={subscriptionLoading}
+                      className="w-full bg-[#D4AF37]/80 border-2 border-[#D4AF37] text-[#2D1A26] py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest hover:bg-[#D4AF37] transition-colors shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {subscriptionLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-[#2D1A26] border-t-transparent rounded-full animate-spin"></div>
+                          Cargando...
+                        </>
+                      ) : (
+                        <>
+                          {getIcon('settings', 'w-5 h-5')}
+                          Gestionar Suscripción
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

@@ -39,6 +39,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [draggedElement, setDraggedElement] = useState<HTMLElement | null>(null);
   const touchMoveHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
   const touchEndHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
+  const touchRafIdRef = useRef<number | null>(null);
+  const pendingTouchDataRef = useRef<{ clientX: number; clientY: number } | null>(null);
 
   // Asegurar que el modal se cierre si el usuario ya está autenticado
   useEffect(() => {
@@ -297,17 +299,22 @@ const Dashboard: React.FC<DashboardProps> = ({
         document.removeEventListener('touchcancel', touchEndHandlerRef.current, { passive: false } as any);
         touchEndHandlerRef.current = null;
       }
+      if (touchRafIdRef.current !== null) {
+        cancelAnimationFrame(touchRafIdRef.current);
+        touchRafIdRef.current = null;
+      }
+      pendingTouchDataRef.current = null;
       resetTouchState();
     };
 
-    // Handler para touchmove
-    const touchMoveHandler = (e: TouchEvent) => {
-      if (!currentStartPos || !currentModuleId || !currentElement) {
-        cleanup();
+    // Handler para touchmove - optimizado con requestAnimationFrame
+    const processTouchMove = () => {
+      if (!pendingTouchDataRef.current || !currentStartPos || !currentModuleId || !currentElement) {
+        touchRafIdRef.current = null;
         return;
       }
-      
-      const touch = e.touches[0];
+
+      const touch = pendingTouchDataRef.current;
       const deltaX = touch.clientX - currentStartPos.x;
       const deltaY = touch.clientY - currentStartPos.y;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -317,8 +324,6 @@ const Dashboard: React.FC<DashboardProps> = ({
         if (!isCurrentlyDragging) {
           isCurrentlyDragging = true;
           setIsDragging(true);
-          e.preventDefault();
-          e.stopPropagation();
           
           // Prevenir scroll del body mientras se arrastra
           document.body.style.overflow = 'hidden';
@@ -329,9 +334,6 @@ const Dashboard: React.FC<DashboardProps> = ({
             currentElement.style.zIndex = '1000';
             currentElement.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.3)';
           }
-        } else {
-          e.preventDefault();
-          e.stopPropagation();
         }
         
         setTouchCurrentPos({ x: touch.clientX, y: touch.clientY });
@@ -378,6 +380,31 @@ const Dashboard: React.FC<DashboardProps> = ({
             }
           }
         }
+      }
+
+      pendingTouchDataRef.current = null;
+      touchRafIdRef.current = null;
+    };
+
+    const touchMoveHandler = (e: TouchEvent) => {
+      if (!currentStartPos || !currentModuleId || !currentElement) {
+        cleanup();
+        return;
+      }
+      
+      const touch = e.touches[0];
+      if (!touch) return;
+
+      // Prevenir scroll siempre durante el drag
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Acumular datos del touch para procesar en el siguiente frame
+      pendingTouchDataRef.current = { clientX: touch.clientX, clientY: touch.clientY };
+      
+      // Usar requestAnimationFrame para limitar actualizaciones a 60fps
+      if (touchRafIdRef.current === null) {
+        touchRafIdRef.current = requestAnimationFrame(processTouchMove);
       }
     };
 

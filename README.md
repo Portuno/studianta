@@ -84,6 +84,7 @@ Mercado de artefactos y herramientas adicionales para expandir las capacidades d
 - **npm** o gestor de paquetes compatible
 - **Cuenta de Google** (para autenticación y sincronización de calendario)
 - **API Key de Gemini** (para funcionalidades de IA)
+- **Cuenta de Stripe** (para suscripciones premium)
 
 ---
 
@@ -120,6 +121,44 @@ Disfruta de sesiones de estudio prolongadas con nuestro modo nocturno cuidadosam
 - **Almacenamiento de Materiales**: Sube y organiza tus PDFs y documentos de estudio
 - **Widgets Flotantes**: Acceso rápido a herramientas esenciales
 - **Onboarding Intuitivo**: Guía paso a paso para nuevos usuarios
+
+---
+
+## 💳 Configuración de Stripe (Suscripciones Premium)
+
+Para habilitar las suscripciones premium, necesitas configurar las siguientes variables de entorno:
+
+### Variables de Entorno Frontend (.env)
+```
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+```
+
+### Variables de Entorno Supabase Edge Functions
+Configura estas en el dashboard de Supabase bajo Settings > Edge Functions > Secrets:
+
+```
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_ID=price_...
+```
+
+### Configuración de Webhooks en Stripe
+
+1. Ve a tu Dashboard de Stripe > Developers > Webhooks
+2. Agrega un nuevo endpoint: `https://[tu-proyecto].supabase.co/functions/v1/stripe-webhook`
+3. Selecciona los siguientes eventos:
+   - `checkout.session.completed`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+   - `invoice.payment_failed`
+4. Copia el "Signing secret" y úsalo como `STRIPE_WEBHOOK_SECRET`
+
+### Crear Producto y Precio en Stripe
+
+1. Ve a Products en Stripe Dashboard
+2. Crea un nuevo producto "Studianta Premium"
+3. Agrega un precio de 14,99€/mes (recurring)
+4. Copia el Price ID y úsalo como `STRIPE_PRICE_ID`
 
 ---
 

@@ -411,12 +411,26 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    
     const handleResize = () => {
-      setDeviceType(getDeviceType());
+      // Throttle resize events para evitar actualizaciones excesivas
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      timeoutId = setTimeout(() => {
+        setDeviceType(getDeviceType());
+      }, 150); // Actualizar máximo cada 150ms
     };
     
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, []);
 
   // Guardar cambios en Supabase cuando cambian los datos
@@ -977,6 +991,7 @@ const App: React.FC = () => {
           onUpdateSubject={updateSubject} 
           onAddCalendarEvent={handleAddCalendarEvent}
           isMobile={isMobile}
+          userId={user?.id}
           focusState={focusState}
           onFocusStateChange={setFocusState}
           isNightMode={isNightMode}
