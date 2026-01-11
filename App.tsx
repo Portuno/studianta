@@ -1022,16 +1022,17 @@ const App: React.FC = () => {
   const isPolicyPage = activeView === NavView.PRIVACY_POLICY || activeView === NavView.TERMS_OF_SERVICE || activeView === NavView.DOCS;
 
   const handleNavigationClick = (view: NavView) => {
-    // Si no hay usuario y se intenta acceder a un módulo que no sea Dashboard, mostrar login
-    if (!user && view !== NavView.DASHBOARD && view !== NavView.PROFILE && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE && view !== NavView.DOCS) {
+    // Si no hay usuario y se intenta acceder a un módulo que no sea Dashboard o páginas públicas, mostrar login
+    if (!user && view !== NavView.DASHBOARD && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE && view !== NavView.DOCS) {
       setShowLoginModal(true);
+      return;
+    }
+    
+    // Usar handleViewChange para políticas y docs, setActiveView normal para otras vistas
+    if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE || view === NavView.DOCS) {
+      handleViewChange(view);
     } else {
-      // Usar handleViewChange para políticas y docs, setActiveView normal para otras vistas
-      if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE || view === NavView.DOCS) {
-        handleViewChange(view);
-      } else {
-        setActiveView(view);
-      }
+      setActiveView(view);
     }
   };
 
@@ -1136,6 +1137,54 @@ const App: React.FC = () => {
 
       {/* Banner de Consentimiento de Cookies */}
       <CookieConsentBanner isNightMode={isNightMode} />
+
+      {/* Modal de Login Global - Se muestra desde cualquier vista */}
+      {showLoginModal && (
+        <div 
+          className={`fixed inset-0 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-fade-in transition-colors duration-500 ${
+            isNightMode ? 'bg-[#1A1A2E]/90' : 'bg-black/50'
+          }`}
+          onClick={() => setShowLoginModal(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setShowLoginModal(false);
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="login-modal-title"
+        >
+          <div 
+            className={`relative w-full max-w-md rounded-3xl p-6 shadow-2xl transition-colors duration-500 ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.95)] border-2 border-[#A68A56]/50' 
+                : 'glass-card border-2 border-[#F8C8DC]/50'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowLoginModal(false)}
+              className={`absolute top-4 right-4 p-2 rounded-full transition-all hover:scale-110 active:scale-95 ${
+                isNightMode 
+                  ? 'text-[#A68A56] hover:bg-[rgba(166,138,86,0.2)]' 
+                  : 'text-[#8B5E75] hover:text-[#E35B8F]'
+              }`}
+              aria-label="Cerrar modal"
+              tabIndex={0}
+            >
+              {getIcon('x', 'w-5 h-5')}
+            </button>
+            <AuthModule 
+              onAuthSuccess={() => {
+                handleAuthSuccess();
+                setShowLoginModal(false);
+              }}
+              isMobile={isMobile}
+              isNightMode={isNightMode}
+            />
+          </div>
+        </div>
+      )}
 
       <Analytics />
     </div>

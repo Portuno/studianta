@@ -1,10 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BalanzaProTransaction, RecurringConfig } from '../types';
 import { getIcon } from '../constants';
-import { supabaseService } from '../services/supabaseService';
+import { supabaseService, UserProfile } from '../services/supabaseService';
 import { recurringTransactionsService } from '../services/recurringTransactionsService';
 import { exportToCSV, exportToExcel, formatFilename } from '../utils/exportUtils';
 import { formatCurrency } from '../utils/currencyFormatter';
+import { geminiService } from '../services/geminiService';
+import OracleTextRenderer from './OracleTextRenderer';
+import PetAnimation from './PetAnimation';
+import { addSealToPDF } from '../utils/pdfSeal';
+import { jsPDF } from 'jspdf';
+import { processMarkdownToHTML } from '../utils/markdownProcessor';
+
+// Importación dinámica de html2canvas para evitar problemas con esbuild
+let html2canvas: any;
+const loadHtml2Canvas = async () => {
+  if (!html2canvas) {
+    const module = await import('html2canvas');
+    html2canvas = module.default || module;
+  }
+  return html2canvas;
+};
 
 interface BalanzaModuleProps {
   userId: string;
@@ -425,6 +441,10 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [modalType, setModalType] = useState<'Ingreso' | 'Egreso' | 'Recurrente'>('Egreso');
   const [editingTransaction, setEditingTransaction] = useState<BalanzaProTransaction | null>(null);
+  const [showOracleModal, setShowOracleModal] = useState(false);
+  const [oracleResponse, setOracleResponse] = useState<string>('');
+  const [isLoadingOracle, setIsLoadingOracle] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   // Cargar perfil del usuario para obtener la moneda
   useEffect(() => {
@@ -432,6 +452,7 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
       if (userId) {
         try {
           const profile = await supabaseService.getProfile(userId);
+          setUserProfile(profile);
           if (profile?.currency) {
             setCurrency(profile.currency);
           }
@@ -755,6 +776,423 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
     setShowReportModal(true);
   };
 
+  const handleCallOracle = async () => {
+    if (isLoadingOracle) return;
+
+    setIsLoadingOracle(true);
+    setOracleResponse('');
+    setShowOracleModal(true);
+
+    try {
+      // Filtrar transacciones por las fechas seleccionadas
+      const startDate = new Date(customStartDate);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(customEndDate);
+      endDate.setHours(23, 59, 59, 999);
+
+      const filteredBalanzaTransactions = transactions.filter(t => {
+        const transDate = new Date(t.date);
+        return transDate >= startDate && transDate <= endDate;
+      });
+
+      // Cargar datos necesarios para el contexto
+      const [subjects, journalEntries, customEvents, modulesData, monthlyBudget] = await Promise.all([
+        supabaseService.getSubjects(userId).catch(() => []),
+        supabaseService.getJournalEntries(userId).catch(() => []),
+        supabaseService.getCalendarEvents(userId).catch(() => []),
+        supabaseService.getModules(userId).catch(() => []),
+        supabaseService.getProfile(userId).then(p => p?.monthly_budget || 0).catch(() => 0),
+      ]);
+
+      // Preparar el contexto manualmente (no podemos usar hooks en funciones async)
+      const now = new Date();
+      const lastSync = now.toISOString();
+
+      const user_profile = {
+        full_name: userProfile?.full_name || undefined,
+        email: userProfile?.email || '',
+        career: userProfile?.career || undefined,
+        institution: userProfile?.institution || undefined,
+        account_created: userProfile?.created_at || now.toISOString(),
+      };
+
+      // Calcular estadísticas de Balanza Pro
+      const totalIngresos = filteredBalanzaTransactions
+        .filter(t => t.type === 'Ingreso')
+        .reduce((acc, t) => acc + t.amount, 0);
+      
+      const totalEgresos = filteredBalanzaTransactions
+        .filter(t => t.type === 'Egreso')
+        .reduce((acc, t) => acc + t.amount, 0);
+      
+      const gastosFijos = filteredBalanzaTransactions
+        .filter(t => t.type === 'Egreso' && t.is_recurring)
+        .reduce((acc, t) => acc + t.amount, 0);
+      
+      const gastosExtra = filteredBalanzaTransactions
+        .filter(t => t.type === 'Egreso' && t.is_extra)
+        .reduce((acc, t) => acc + t.amount, 0);
+      
+      const balance = totalIngresos - totalEgresos;
+      
+      let status: 'saludable' | 'precario' | 'crítico' = 'saludable';
+      if (balance < 0) {
+        status = 'crítico';
+      } else if (balance < totalIngresos * 0.2) {
+        status = 'precario';
+      }
+
+      // Método de pago más usado
+      const paymentMethodCounts: Record<string, number> = {};
+      filteredBalanzaTransactions.forEach(t => {
+        paymentMethodCounts[t.payment_method] = (paymentMethodCounts[t.payment_method] || 0) + 1;
+      });
+      const mostUsedPaymentMethod = Object.entries(paymentMethodCounts)
+        .sort(([, a], [, b]) => b - a)[0]?.[0];
+
+      // Tags más frecuentes
+      const tagCounts: Record<string, number> = {};
+      filteredBalanzaTransactions.forEach(t => {
+        t.tags.forEach(tag => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
+      });
+      const mostFrequentTags = Object.entries(tagCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([tag]) => tag);
+
+      // Balance por método de pago
+      const paymentMethodsBalance: Record<string, number> = {};
+      filteredBalanzaTransactions.forEach(t => {
+        if (!paymentMethodsBalance[t.payment_method]) {
+          paymentMethodsBalance[t.payment_method] = 0;
+        }
+        if (t.type === 'Ingreso') {
+          paymentMethodsBalance[t.payment_method] += t.amount;
+        } else {
+          paymentMethodsBalance[t.payment_method] -= t.amount;
+        }
+      });
+
+      // Ordenar transacciones por fecha
+      const sortedBalanzaProTransactions = [...filteredBalanzaTransactions].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      const balanza_pro_state = {
+        balance,
+        total_ingresos: totalIngresos,
+        total_egresos: totalEgresos,
+        gastos_fijos: gastosFijos,
+        gastos_extra: gastosExtra,
+        status,
+        transactions: sortedBalanzaProTransactions.map(t => ({
+          id: t.id,
+          type: t.type,
+          amount: t.amount,
+          payment_method: t.payment_method,
+          is_extra: t.is_extra,
+          is_recurring: t.is_recurring,
+          tags: t.tags,
+          status: t.status,
+          date: t.date,
+          description: t.description,
+        })),
+        summary: {
+          most_used_payment_method: mostUsedPaymentMethod,
+          most_frequent_tags: mostFrequentTags,
+          payment_methods_balance: paymentMethodsBalance,
+        },
+      };
+
+      // Crear el contexto completo
+      const studentProfileContext = {
+        last_sync: lastSync,
+        user_profile,
+        financial_state: {
+          budget: monthlyBudget,
+          balance: 0,
+          total_spent: 0,
+          total_income: 0,
+          status: 'saludable' as const,
+          transactions: [],
+          summary: {
+            most_frequent_category: undefined,
+            monthly_trend: 'estable' as const,
+          },
+        },
+        subjects: subjects.map(s => ({
+          id: s.id,
+          name: s.name,
+          career: s.career,
+          status: s.status,
+          grade: s.grade,
+          professor: s.professor,
+          email: s.email,
+          aula: s.aula,
+          term_start: s.termStart,
+          term_end: s.termEnd,
+          milestones: s.milestones.map(m => ({
+            id: m.id,
+            title: m.title,
+            date: m.date,
+            time: m.time,
+            type: m.type,
+          })),
+          schedules: s.schedules.map(sch => ({
+            id: sch.id,
+            day: sch.day,
+            start_time: sch.startTime,
+            end_time: sch.endTime,
+          })),
+          notes: s.notes.map(n => ({
+            id: n.id,
+            title: n.title,
+            content: n.content,
+            date: n.date,
+            important_fragments: n.importantFragments,
+            is_sealed: n.isSealed || false,
+          })),
+        })),
+        academic_summary: {
+          active_subjects_count: subjects.filter(s => s.status === 'Cursando').length,
+          upcoming_deadlines: 0,
+          next_critical_date: undefined,
+          total_milestones: subjects.reduce((acc, s) => acc + s.milestones.length, 0),
+        },
+        calendar: {
+          custom_events: customEvents.map(e => ({
+            id: e.id,
+            title: e.title,
+            description: e.description,
+            date: e.date,
+            time: e.time,
+            color: e.color,
+            priority: e.priority,
+          })),
+          upcoming_events_count: customEvents.filter(e => {
+            const eventDate = new Date(e.date);
+            const daysDiff = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+            return daysDiff >= 0 && daysDiff <= 30;
+          }).length,
+        },
+        journal: {
+          entries: journalEntries.map(e => ({
+            id: e.id,
+            date: e.date,
+            mood: e.mood,
+            content: e.content,
+            is_locked: e.isLocked,
+          })),
+          summary: {
+            total_entries: journalEntries.length,
+            last_entry_days_ago: 0,
+            most_common_mood: undefined,
+            writing_frequency: 'baja' as const,
+            mood_distribution: {},
+          },
+        },
+        focus: {
+          sessions: [],
+          summary: {
+            total_hours: 0,
+            sessions_this_week: 0,
+            consistency_score: 0,
+            average_session_duration: 0,
+          },
+        },
+        active_modules: modulesData.map(m => ({
+          id: m.id,
+          name: m.name,
+          active: m.active,
+        })),
+        balanza_pro_state,
+      };
+
+      // Prompt específico para análisis financiero
+      const prompt = `Analiza mi situación financiera en el período del ${customStartDate} al ${customEndDate}. 
+
+Proporcióname:
+1. **Diagnóstico Financiero:** Un análisis claro de mi balance, ingresos y egresos en este período.
+2. **Patrones Detectados:** Identifica tendencias, categorías más frecuentes, y métodos de pago más utilizados.
+3. **Recomendaciones:** Sugerencias concretas para mejorar mi gestión financiera basadas en los datos.
+4. **Alertas:** Si hay algo que requiera atención inmediata (gastos excesivos, desequilibrios, etc.).
+
+Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de balanza_pro_state para el análisis.`;
+
+      const response = await geminiService.queryPersonalOracle(
+        prompt,
+        studentProfileContext,
+        []
+      );
+
+      setOracleResponse(response);
+    } catch (error: any) {
+      setOracleResponse(`📌 RECONOCIMIENTO: Se ha detectado una interferencia en el Atanor.\n\n📖 CONTEXTO: ${error.message || 'Error desconocido'}\n\n💡 EXPLICACIÓN: Por favor, intenta nuevamente o verifica tu conexión.`);
+    } finally {
+      setIsLoadingOracle(false);
+    }
+  };
+
+  const handleDownloadParchment = async () => {
+    if (!oracleResponse) {
+      alert('No hay respuesta del Oráculo para descargar.');
+      return;
+    }
+
+    try {
+      // Crear un elemento HTML temporal oculto con el contenido estilizado
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '210mm'; // Ancho A4
+      tempDiv.style.backgroundColor = '#FFFFFF';
+      tempDiv.style.fontFamily = "'EB Garamond', 'Times New Roman', serif";
+      tempDiv.style.padding = '20mm';
+      tempDiv.style.color = '#374151';
+      tempDiv.style.lineHeight = '1.75';
+      tempDiv.style.fontSize = '12pt';
+
+      // Procesar el markdown a HTML
+      const processedHTML = processMarkdownToHTML(oracleResponse);
+
+      // Crear el HTML completo con estilos
+      const chatHTML = `
+        <div style="background-color: #FFF9FB; border: 2px solid #D4AF37; border-radius: 8px; padding: 20px; font-family: 'EB Garamond', serif; color: #374151; line-height: 1.75;">
+          <h2 style="font-family: 'Cinzel', serif; color: #4A233E; font-size: 24px; margin-bottom: 20px; text-align: center; letter-spacing: 1px;">
+            ORÁCULO FINANCIERO
+          </h2>
+          ${processedHTML}
+        </div>
+      `;
+
+      tempDiv.innerHTML = chatHTML;
+      document.body.appendChild(tempDiv);
+
+      // Esperar a que las fuentes y la imagen se carguen
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Cargar html2canvas dinámicamente
+      const html2canvasLib = await loadHtml2Canvas();
+      
+      // Renderizar el HTML a canvas con html2canvas
+      const canvas = await html2canvasLib(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#FFFFFF',
+        width: 210 * 3.779527559, // Convertir mm a px (1mm = 3.779527559px a 96dpi)
+      });
+
+      // Limpiar el elemento temporal
+      document.body.removeChild(tempDiv);
+
+      // Crear el PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      // Convertir píxeles a mm (96 DPI: 1px = 0.264583mm)
+      const pxToMm = 0.264583;
+      const imgWidthMm = imgWidth * pxToMm;
+      const imgHeightMm = imgHeight * pxToMm;
+      const scale = pdfWidth / imgWidthMm;
+      const imgScaledWidth = pdfWidth;
+      const imgScaledHeight = imgHeightMm * scale;
+
+      // Calcular cuántas páginas necesitamos basado en el área útil
+      const usableHeightMm = pdfHeight - 20; // Altura útil dentro del recuadro
+      const totalPages = Math.ceil(imgScaledHeight / usableHeightMm);
+
+      // Agregar el sello en la primera página
+      await addSealToPDF(pdf);
+
+      // Dividir la imagen en páginas respetando el área del recuadro dorado
+      const usableHeightPx = Math.floor(usableHeightMm / (pxToMm * scale));
+      
+      let sourceY = 0;
+      let pageIndex = 0;
+      
+      while (sourceY < imgHeight && pageIndex < totalPages) {
+        if (pageIndex > 0) {
+          pdf.addPage();
+        }
+
+        const currentPageHeightPx = Math.min(usableHeightPx, imgHeight - sourceY);
+        const currentPageHeightMm = currentPageHeightPx * pxToMm * scale;
+
+        try {
+          // Crear un canvas temporal para esta página
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = imgWidth;
+          pageCanvas.height = currentPageHeightPx;
+          const pageCtx = pageCanvas.getContext('2d');
+          
+          if (!pageCtx) {
+            throw new Error('No se pudo obtener el contexto del canvas');
+          }
+
+          // Copiar la porción correspondiente de la imagen original
+          pageCtx.drawImage(
+            canvas,
+            0, sourceY, imgWidth, currentPageHeightPx,
+            0, 0, imgWidth, currentPageHeightPx
+          );
+
+          const pageImgData = pageCanvas.toDataURL('image/png');
+
+          // Agregar la imagen al PDF, posicionada dentro del recuadro (10mm desde arriba)
+          if (pageImgData && pageImgData.startsWith('data:image/png')) {
+            pdf.addImage(pageImgData, 'PNG', 0, 10, imgScaledWidth, currentPageHeightMm);
+          } else {
+            throw new Error('DataURL inválido');
+          }
+        } catch (drawError) {
+          console.error(`Error al procesar página ${pageIndex + 1}:`, drawError);
+          break;
+        }
+
+        sourceY += currentPageHeightPx;
+        pageIndex++;
+      }
+
+      // Agregar numeración de páginas y marco decorativo en cada página
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        
+        // Marco decorativo dorado (se dibuja en cada página, siempre completo)
+        pdf.setDrawColor(212, 175, 55); // #D4AF37
+        pdf.setLineWidth(0.5);
+        pdf.rect(10, 10, pdfWidth - 20, pdfHeight - 20);
+        
+        // Numeración de página (footer, abajo a la derecha)
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(
+          `Página ${i}`,
+          pdfWidth - 15,
+          pdfHeight - 10,
+          { align: 'right' }
+        );
+      }
+
+      pdf.save(`oraculo-financiero-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      alert('Error al generar el pergamino. Por favor, intenta nuevamente.');
+    }
+  };
+
   const handleExportCSV = () => {
     const reportData = filteredTransactions.filter(t => {
       const transDate = new Date(t.date);
@@ -799,10 +1237,35 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
           ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/30' 
           : 'bg-[#FFF0F5]/80 border-[#F8C8DC]/30'
       }`}>
-        <div className="max-w-7xl mx-auto w-full">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
           <h1 className={`font-marcellus text-lg md:text-2xl font-black tracking-widest uppercase mb-1 transition-colors duration-500 ${
             isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
           }`}>Balanza</h1>
+          <button
+            onClick={handleCallOracle}
+            disabled={isLoadingOracle}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl border backdrop-blur-sm transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+              isNightMode
+                ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/60 hover:bg-[rgba(48,43,79,0.9)] text-[#E0E1DD]'
+                : 'bg-white/60 border-[#D4AF37]/60 hover:bg-white/80 text-[#4A233E]'
+            }`}
+          >
+            {isLoadingOracle ? (
+              <>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <span className={`text-xs font-black uppercase tracking-wider transition-colors duration-500 ${
+                  isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+                }`}>Consultando...</span>
+              </>
+            ) : (
+              <>
+                {getIcon('sparkles', 'w-4 h-4')}
+                <span className={`text-xs font-black uppercase tracking-wider transition-colors duration-500 ${
+                  isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+                }`}>Llamar al Oráculo</span>
+              </>
+            )}
+          </button>
         </div>
       </header>
 
@@ -1815,6 +2278,135 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
                 Cerrar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal del Oráculo Financiero */}
+      {showOracleModal && (
+        <div 
+          className={`fixed inset-0 z-[500] backdrop-blur-2xl flex items-center justify-center p-0 md:p-4 transition-colors duration-500 ${
+            isNightMode ? 'bg-[#1A1A2E]/95' : 'bg-[#FFF0F5]/95'
+          }`}
+        >
+          <div 
+            className={`w-full h-full md:h-auto md:max-w-4xl md:max-h-[90vh] md:rounded-[2rem] shadow-2xl backdrop-blur-[15px] transition-colors duration-500 flex flex-col ${
+              isNightMode 
+                ? 'bg-[rgba(48,43,79,0.95)] border-0 md:border border-[#A68A56]/40 shadow-[0_0_40px_rgba(199,125,255,0.3)]' 
+                : 'glass-card border-0 md:border-[#F8C8DC] bg-white/90'
+            }`}
+          >
+            <div className={`flex-shrink-0 flex items-center justify-between p-4 md:p-6 border-b transition-colors duration-500 ${
+              isNightMode ? 'border-[#A68A56]/40' : 'border-[#F8C8DC]/50'
+            }`}>
+              <h2 className={`font-marcellus text-xl md:text-2xl lg:text-3xl font-black uppercase tracking-[0.3em] transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              }`}>
+                Oráculo Financiero
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowOracleModal(false)}
+                className={`p-2 rounded-xl transition-colors duration-500 ${
+                  isNightMode 
+                    ? 'hover:bg-[rgba(48,43,79,0.8)] text-[#E0E1DD]' 
+                    : 'hover:bg-white/80 text-[#4A233E]'
+                }`}
+              >
+                {getIcon('x', 'w-5 h-5')}
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 md:p-8">
+              {isLoadingOracle ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="mb-6 relative">
+                    <style>{`
+                      @keyframes owlFloat {
+                        0%, 100% {
+                          transform: translateY(0px) scale(1.5) rotate(0deg);
+                        }
+                        25% {
+                          transform: translateY(-15px) scale(1.55) rotate(2deg);
+                        }
+                        50% {
+                          transform: translateY(-10px) scale(1.5) rotate(0deg);
+                        }
+                        75% {
+                          transform: translateY(-15px) scale(1.55) rotate(-2deg);
+                        }
+                      }
+                      @keyframes owlPulse {
+                        0%, 100% {
+                          filter: brightness(1) drop-shadow(0 0 10px rgba(212, 175, 55, 0.5));
+                        }
+                        50% {
+                          filter: brightness(1.2) drop-shadow(0 0 20px rgba(212, 175, 55, 0.8));
+                        }
+                      }
+                      .owl-animated {
+                        animation: owlFloat 3s ease-in-out infinite, owlPulse 2s ease-in-out infinite;
+                      }
+                    `}</style>
+                    <div className="owl-animated">
+                      <PetAnimation show={true} size="xlarge" />
+                    </div>
+                  </div>
+                  <p className={`font-garamond text-xl md:text-2xl transition-colors duration-500 ${
+                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                  }`}>
+                    El Oráculo está analizando tus finanzas...
+                  </p>
+                </div>
+              ) : oracleResponse ? (
+                <>
+                  <div className={`rounded-xl p-6 border transition-colors duration-500 ${
+                    isNightMode
+                      ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40'
+                      : 'bg-white/60 border-[#F8C8DC]/60'
+                  }`}>
+                    <OracleTextRenderer text={oracleResponse} />
+                  </div>
+                </>
+              ) : (
+                <p className={`font-garamond text-center py-12 transition-colors duration-500 ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>
+                  No hay respuesta del Oráculo.
+                </p>
+              )}
+            </div>
+
+            {/* Botones fijos en la parte inferior */}
+            {oracleResponse && (
+              <div className={`flex-shrink-0 flex flex-col gap-3 p-4 md:p-6 border-t backdrop-blur-sm transition-colors duration-500 ${
+                isNightMode 
+                  ? 'border-[#A68A56]/40 bg-[rgba(48,43,79,0.8)]' 
+                  : 'border-[#F8C8DC]/50 bg-white/60'
+              }`}>
+                <button
+                  onClick={handleDownloadParchment}
+                  className={`w-full py-4 md:py-5 rounded-[2rem] font-marcellus text-base md:text-lg font-black uppercase tracking-[0.3em] shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${
+                    isNightMode 
+                      ? 'bg-[#A68A56] text-[#1A1A2E] hover:bg-[#B89A66] border border-[#A68A56]/40' 
+                      : 'bg-gradient-to-r from-[#D4AF37] to-[#F4D03F] text-[#4A233E] hover:from-[#E5C158] hover:to-[#F5E169] border-2 border-[#D4AF37]/60 shadow-[0_4px_15px_rgba(212,175,55,0.4)]'
+                  }`}
+                >
+                  {getIcon('download', 'w-6 h-6')}
+                  <span>Descargar Pergamino</span>
+                </button>
+                <button
+                  onClick={() => setShowOracleModal(false)}
+                  className={`w-full py-4 md:py-5 rounded-[2rem] font-marcellus text-base md:text-lg font-black uppercase tracking-[0.3em] shadow-2xl transition-all active:scale-95 ${
+                    isNightMode 
+                      ? 'bg-[rgba(48,43,79,0.8)] text-[#A68A56] border border-[#A68A56]/40 hover:bg-[rgba(48,43,79,1)]' 
+                      : 'bg-[#4A233E] text-[#D4AF37] hover:bg-[#321829]'
+                  }`}
+                >
+                  Cerrar
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

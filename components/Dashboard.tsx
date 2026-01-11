@@ -645,8 +645,16 @@ const Dashboard: React.FC<DashboardProps> = ({
                       // Si se hace click en un botón, no ejecutar el onClick del contenedor
                       if ((e.target as HTMLElement).closest('button')) return;
                       
-                      if (isActive) setActiveView(MODULE_TO_VIEW[mod.id] || NavView.DASHBOARD);
-                      else onActivate(mod.id);
+                      if (isActive) {
+                        // Si no hay usuario, mostrar modal de login
+                        if (!user) {
+                          setShowLoginModal(true);
+                          return;
+                        }
+                        setActiveView(MODULE_TO_VIEW[mod.id] || NavView.DASHBOARD);
+                      } else {
+                        onActivate(mod.id);
+                      }
                     }}
                     className={`aspect-square rounded-[1.5rem] sm:rounded-[2rem] flex flex-col items-center justify-center p-3 sm:p-4 transition-all duration-300 active:scale-95 relative border-2 min-h-[120px] touch-manipulation backdrop-blur-[15px] ${
                       isActive 
@@ -874,6 +882,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                   if (!isActive) {
                     onActivate(mod.id);
                   } else {
+                    // Si no hay usuario, mostrar modal de login
+                    if (!user) {
+                      setShowLoginModal(true);
+                      return;
+                    }
                     setActiveView(MODULE_TO_VIEW[mod.id] || NavView.DASHBOARD);
                   }
                 }}
@@ -921,6 +934,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
+                        // Si no hay usuario, mostrar modal de login
+                        if (!user) {
+                          setShowLoginModal(true);
+                          return;
+                        }
                         setActiveView(MODULE_TO_VIEW[mod.id] || NavView.DASHBOARD);
                       }}
                       className="btn-primary w-full px-6 py-3 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest shadow-xl bg-[#D4AF37]/20 text-[#D4AF37] border-2 border-[#D4AF37]/30 hover:bg-[#D4AF37]/30"
