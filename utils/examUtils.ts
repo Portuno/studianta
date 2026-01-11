@@ -106,16 +106,39 @@ export const getDifficultyColor = (difficulty: QuestionDifficulty): string => {
 /**
  * Obtiene el texto de la dificultad
  */
-export const getDifficultyText = (difficulty: QuestionDifficulty): string => {
+export const getDifficultyText = (difficulty: QuestionDifficulty | 'medium' | 'mixed'): string => {
   switch (difficulty) {
     case 'easy':
       return 'Fácil';
     case 'intermediate':
-      return 'Intermedio';
+    case 'medium':
+      return 'Media';
     case 'hard':
       return 'Difícil';
+    case 'mixed':
+      return 'Mixta';
     default:
       return 'Desconocido';
+  }
+};
+
+/**
+ * Obtiene el texto del tipo de examen
+ */
+export const getExamTypeText = (examType: string): string => {
+  switch (examType) {
+    case 'multiple-choice':
+      return 'Opción Múltiple';
+    case 'true-false':
+      return 'Verdadero/Falso';
+    case 'open-ended':
+      return 'Preguntas Abiertas';
+    case 'cloze':
+      return 'Completar Párrafo';
+    case 'case-study':
+      return 'Casos Prácticos';
+    default:
+      return examType;
   }
 };
 

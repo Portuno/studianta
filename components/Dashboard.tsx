@@ -225,6 +225,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     'security': NavView.SECURITY,
     'social': NavView.SOCIAL,
     'bazar': NavView.BAZAR,
+    'exam-generator': NavView.EXAM_GENERATOR,
   };
 
   // Ordenar módulos: pendientes primero, adquiridos al final

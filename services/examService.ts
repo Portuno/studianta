@@ -35,18 +35,107 @@ export class ExamService {
       }
 
       // Extraer texto de los PDFs
-      const materialUrls = selectedMaterials
-        .filter(m => m.fileUrl && isValidPDFUrl(m.fileUrl))
-        .map(m => m.fileUrl!);
+      // Los materiales pueden tener fileUrl (Supabase Storage) o content (base64)
+      const materialUrls: string[] = [];
+      
+      console.log('[ExamService] Materiales seleccionados:', selectedMaterials.map(m => ({
+        id: m.id,
+        name: m.name,
+        type: m.type,
+        hasFileUrl: !!m.fileUrl,
+        hasContent: !!m.content,
+        contentLength: m.content?.length || 0,
+        fileUrl: m.fileUrl?.substring(0, 100) || 'N/A'
+      })));
+      
+      for (const material of selectedMaterials) {
+        // Prioridad 1: Material con URL de Supabase Storage
+        if (material.fileUrl) {
+          const isValid = isValidPDFUrl(material.fileUrl);
+          console.log(`[ExamService] Material ${material.name}: fileUrl=${material.fileUrl.substring(0, 50)}..., isValid=${isValid}`);
+          if (isValid) {
+            materialUrls.push(material.fileUrl);
+            continue;
+          }
+        }
+        
+        // Prioridad 2: Material con content base64 (PDF o tipo que pueda ser PDF)
+        if (material.content) {
+          const isPDFType = material.type === 'PDF' || material.name.toLowerCase().endsWith('.pdf');
+          console.log(`[ExamService] Material ${material.name}: hasContent=true, isPDFType=${isPDFType}, contentLength=${material.content.length}`);
+          
+          if (isPDFType) {
+            try {
+              // Extraer el base64 (puede venir con prefijo data:application/pdf;base64,)
+              let base64Data = material.content;
+              if (base64Data.includes(',')) {
+                base64Data = base64Data.split(',')[1];
+              }
+              
+              // Decodificar base64 a bytes
+              const byteCharacters = atob(base64Data);
+              const byteNumbers = new Array(byteCharacters.length);
+              for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+              }
+              const byteArray = new Uint8Array(byteNumbers);
+              
+              // Crear blob y URL temporal
+              const blob = new Blob([byteArray], { type: 'application/pdf' });
+              const blobUrl = URL.createObjectURL(blob);
+              materialUrls.push(blobUrl);
+              console.log(`[ExamService] Material ${material.name}: Convertido a blob URL exitosamente`);
+              continue;
+            } catch (error) {
+              console.error(`[ExamService] Error converting base64 to blob for material ${material.name}:`, error);
+              // Continuar con otros materiales
+            }
+          }
+        }
+        
+        // Si llegamos aquí, el material no pudo ser procesado
+        console.warn(`[ExamService] Material ${material.name} no pudo ser procesado: type=${material.type}, hasFileUrl=${!!material.fileUrl}, hasContent=${!!material.content}`);
+      }
+      
+      console.log(`[ExamService] Total de URLs de materiales válidos: ${materialUrls.length}`);
 
       if (materialUrls.length === 0) {
-        throw new Error('No se encontraron PDFs válidos en los materiales seleccionados');
+        const materialInfo = selectedMaterials.map(m => 
+          `- ${m.name} (${m.type}${m.fileUrl ? ', tiene URL' : m.content ? ', tiene contenido base64' : ', sin archivo'})`
+        ).join('\n');
+        throw new Error(
+          `No se encontraron PDFs válidos en los materiales seleccionados.\n\n` +
+          `Materiales seleccionados:\n${materialInfo}\n\n` +
+          `Asegúrate de que:\n` +
+          `1. Los materiales sean archivos PDF\n` +
+          `2. Los archivos estén correctamente cargados\n` +
+          `3. Si usas Supabase Storage, verifica que los archivos estén subidos correctamente`
+        );
       }
 
       // Extraer texto de todos los PDFs
-      const materialsText = await extractTextFromMultiplePDFs(materialUrls);
+      let materialsText: string;
+      try {
+        materialsText = await extractTextFromMultiplePDFs(materialUrls);
+        
+        // Limpiar blob URLs temporales
+        materialUrls.forEach(url => {
+          if (url.startsWith('blob:')) {
+            URL.revokeObjectURL(url);
+          }
+        });
+      } catch (error) {
+        // Limpiar blob URLs temporales en caso de error
+        materialUrls.forEach(url => {
+          if (url.startsWith('blob:')) {
+            URL.revokeObjectURL(url);
+          }
+        });
+        throw error;
+      }
 
       // Generar examen con Gemini
+      console.log('[ExamService] Generando examen con Gemini...');
       const examData = await geminiService.generateExam(
         subject.name,
         materialsText,
@@ -55,18 +144,44 @@ export class ExamService {
         request.difficulty
       );
 
-      if (!examData || !examData.exam || !examData.exam.questions) {
-        throw new Error('La respuesta del examen no tiene el formato esperado');
+      console.log('[ExamService] Respuesta de Gemini recibida:', {
+        hasExam: !!examData?.exam,
+        hasQuestions: !!examData?.exam?.questions,
+        questionsCount: examData?.exam?.questions?.length || 0,
+        examDataKeys: examData ? Object.keys(examData) : []
+      });
+
+      if (!examData) {
+        throw new Error('No se recibió respuesta del generador de exámenes. Por favor, intenta nuevamente.');
+      }
+
+      // Aceptar tanto { exam: {...} } como directamente { questions: [...] }
+      let examQuestions;
+      let examTitle;
+      
+      if (examData.exam) {
+        examQuestions = examData.exam.questions;
+        examTitle = examData.exam.title;
+      } else if (examData.questions && Array.isArray(examData.questions)) {
+        examQuestions = examData.questions;
+        examTitle = examData.title;
+      } else {
+        console.error('[ExamService] Estructura inválida recibida:', examData);
+        throw new Error('La respuesta del examen no tiene el formato esperado. Debe contener "exam.questions" o "questions".');
+      }
+
+      if (!examQuestions || !Array.isArray(examQuestions) || examQuestions.length === 0) {
+        throw new Error('No se generaron preguntas. El material puede ser insuficiente o el formato no es válido.');
       }
 
       // Crear examen en la base de datos
       const exam = await this.saveExam({
         user_id: '', // Se llenará en saveExam
         subject_id: request.subjectId,
-        title: examData.exam.title || `Examen de ${subject.name}`,
+        title: examTitle || `Examen de ${subject.name}`,
         exam_type: request.examType,
         difficulty: request.difficulty,
-        question_count: examData.exam.questions.length,
+        question_count: examQuestions.length,
         mode: request.mode,
         material_ids: request.materialIds,
         created_at: new Date().toISOString(),
@@ -75,7 +190,7 @@ export class ExamService {
 
       // Guardar preguntas
       const questions: ExamQuestion[] = [];
-      for (const q of examData.exam.questions) {
+      for (const q of examQuestions) {
         const question = await this.saveQuestion({
           exam_id: exam.id,
           question_number: q.number || questions.length + 1,

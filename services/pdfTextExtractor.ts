@@ -15,7 +15,15 @@ const loadPdfJs = async () => {
       
       // Configurar worker (necesario para pdfjs-dist)
       if (typeof window !== 'undefined') {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        // Obtener la versión real de la librería cargada
+        const version = pdfjsLib.version || '4.0.379';
+        console.log(`[pdfTextExtractor] pdfjs-dist version: ${version}`);
+        
+        // Usar jsdelivr con la versión real de la librería
+        // Intentar con .mjs primero (formato moderno para ES modules)
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/build/pdf.worker.min.mjs`;
+        
+        console.log(`[pdfTextExtractor] Worker configurado: ${pdfjsLib.GlobalWorkerOptions.workerSrc}`);
       }
       
       return pdfjsLib;
@@ -130,17 +138,24 @@ export const extractTextFromMultiplePDFs = async (fileUrls: string[]): Promise<s
 export const isValidPDFUrl = (fileUrl: string): boolean => {
   if (!fileUrl) return false;
   
-  // Verificar extensión
-  const urlLower = fileUrl.toLowerCase();
-  if (!urlLower.includes('.pdf') && !urlLower.includes('application/pdf')) {
-    return false;
-  }
-  
-  // Verificar que sea una URL válida
+  // Verificar que sea una URL válida o blob URL
   try {
+    if (fileUrl.startsWith('blob:')) {
+      return true; // Blob URLs son válidas (se generan desde base64)
+    }
     new URL(fileUrl);
-    return true;
   } catch {
     return false;
   }
+  
+  // Verificar extensión o tipo MIME
+  const urlLower = fileUrl.toLowerCase();
+  if (urlLower.includes('.pdf') || 
+      urlLower.includes('application/pdf') ||
+      urlLower.includes('pdf') ||
+      urlLower.includes('/storage/v1/object/')) {
+    return true; // URLs de Supabase Storage o que contengan 'pdf'
+  }
+  
+  return false;
 };

@@ -310,23 +310,56 @@ IMPORTANTE:
         throw new Error('No se pudo generar el examen. Por favor, intenta nuevamente.');
       }
 
+      console.log('[Gemini API] Respuesta recibida (primeros 500 chars):', response.text.substring(0, 500));
+
       // Intentar parsear el JSON
       let examData;
       try {
         examData = JSON.parse(response.text);
+        console.log('[Gemini API] JSON parseado correctamente');
       } catch (parseError) {
-        console.error('Error parsing JSON:', parseError);
-        console.error('Response text:', response.text);
-        // Intentar extraer JSON del texto si está envuelto en markdown
+        console.error('[Gemini API] Error parsing JSON:', parseError);
+        console.error('[Gemini API] Response text completo:', response.text);
+        
+        // Intentar extraer JSON del texto si está envuelto en markdown o tiene texto adicional
         const jsonMatch = response.text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          examData = JSON.parse(jsonMatch[0]);
+          try {
+            examData = JSON.parse(jsonMatch[0]);
+            console.log('[Gemini API] JSON extraído de markdown correctamente');
+          } catch (extractError) {
+            console.error('[Gemini API] Error parseando JSON extraído:', extractError);
+            throw new Error('La respuesta contiene JSON pero no es válido. Por favor, intenta nuevamente.');
+          }
         } else {
-          throw new Error('La respuesta no es un JSON válido. Por favor, intenta nuevamente.');
+          throw new Error('La respuesta no contiene JSON válido. Por favor, intenta nuevamente.');
         }
       }
 
-      return res.status(200).json({ exam: examData.exam || examData });
+      // Validar estructura del examen
+      if (!examData) {
+        throw new Error('La respuesta está vacía. Por favor, intenta nuevamente.');
+      }
+
+      // Aceptar tanto { exam: {...} } como directamente { questions: [...] }
+      if (examData.exam) {
+        if (!examData.exam.questions || !Array.isArray(examData.exam.questions)) {
+          console.error('[Gemini API] Estructura inválida - exam.questions no es un array:', examData);
+          throw new Error('La respuesta no tiene el formato esperado: falta el array de preguntas.');
+        }
+        return res.status(200).json({ exam: examData.exam });
+      } else if (examData.questions && Array.isArray(examData.questions)) {
+        // Si viene directamente con questions, envolver en exam
+        return res.status(200).json({ 
+          exam: {
+            title: examData.title || `Examen de ${subjectName}`,
+            questions: examData.questions
+          }
+        });
+      } else {
+        console.error('[Gemini API] Estructura inválida:', examData);
+        throw new Error('La respuesta no tiene el formato esperado. Debe contener "exam.questions" o "questions".');
+      }
     }
 
     return res.status(400).json({ error: 'Tipo de consulta no válido' });

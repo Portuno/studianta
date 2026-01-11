@@ -518,15 +518,23 @@ const App: React.FC = () => {
           setModules([...modules, newModule]);
           mod = newModule;
         }
+        
+        // Intentar activar/crear el módulo en la base de datos (en segundo plano, no bloquear)
         if (!mod.active) {
           const updatedModules = modules.map(m => m.id === moduleId ? { ...m, active: true } : m);
           setModules(updatedModules);
-          try {
-            await supabaseService.updateModule(user.id, moduleId, { active: true });
-          } catch (error) {
-            console.error('Error updating module:', error);
-          }
         }
+        
+        // Intentar guardar en la base de datos (silenciosamente, no bloquear la UI)
+        supabaseService.updateModule(user.id, moduleId, { active: true })
+          .then(() => {
+            console.log('[App] Módulo exam-generator activado correctamente');
+          })
+          .catch((error: any) => {
+            // Error no crítico, solo loguear
+            console.warn('[App] No se pudo guardar el estado del módulo en la BD (no crítico):', error?.message || error);
+            // El módulo seguirá funcionando localmente
+          });
       }
       return;
     }

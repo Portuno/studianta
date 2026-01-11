@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Subject, ExamType, ExamMode, ExamDifficulty, ExamConfig } from '../types';
+import { Subject, ExamType, ExamMode, ExamDifficulty, ExamConfig, Exam } from '../types';
 import { getIcon } from '../constants';
 import { useExamGenerator } from '../hooks/useExamGenerator';
 import { exportExamToPDF } from '../utils/examPdfExporter';
+import { examService } from '../services/examService';
+import { supabase } from '../services/supabaseService';
 import {
   calculateMasteryLevel,
   formatTimeSpent,
@@ -12,6 +14,7 @@ import {
   getDifficultyText,
   isAnswerCorrect,
   formatScore,
+  getExamTypeText,
 } from '../utils/examUtils';
 
 interface ExamGeneratorModuleProps {
@@ -20,7 +23,7 @@ interface ExamGeneratorModuleProps {
   isNightMode?: boolean;
 }
 
-type View = 'config' | 'exam' | 'results' | 'flashcards';
+type View = 'config' | 'exam' | 'results' | 'flashcards' | 'history';
 
 const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
   subjects,
@@ -42,6 +45,8 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
   const [timer, setTimer] = useState(0);
   const [questionStartTime, setQuestionStartTime] = useState(Date.now());
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [examHistory, setExamHistory] = useState<Exam[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const {
     currentExam,
@@ -55,6 +60,7 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
     submitResponse,
     finishExam,
     resetExam,
+    loadExam,
   } = useExamGenerator();
 
   const selectedSubject = subjects.find(s => s.id === selectedSubjectId);
@@ -81,6 +87,27 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
       setQuestionStartTime(Date.now());
     }
   }, [currentQuestionIndex, view, questions.length]);
+
+  // Cargar historial cuando se abre la vista de historial
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (view === 'history') {
+        setLoadingHistory(true);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const history = await examService.getExamHistory(user.id);
+            setExamHistory(history);
+          }
+        } catch (error: any) {
+          console.error('Error loading exam history:', error);
+        } finally {
+          setLoadingHistory(false);
+        }
+      }
+    };
+    loadHistory();
+  }, [view]);
 
   const handleSubjectChange = (subjectId: string) => {
     setSelectedSubjectId(subjectId);
@@ -194,13 +221,28 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
           }`}>Crea tests personalizados a partir de tus apuntes mediante IA</p>
         </div>
 
+        {/* Botón Ver Historial */}
+        <div className="mb-6">
+          <button
+            onClick={() => setView('history')}
+            className={`w-full py-3 rounded-xl font-cinzel font-bold transition-all hover:scale-105 active:scale-95 ${
+              isNightMode
+                ? 'bg-[rgba(48,43,79,0.6)] text-[#E0E1DD] border-2 border-[#A68A56]/40'
+                : 'bg-white/40 text-[#2D1A26] border-2 border-[#F8C8DC]'
+            }`}
+          >
+            Ver Exámenes Generados
+          </button>
+        </div>
+
         {error && (
-          <div className={`mb-6 p-4 rounded-xl border-2 ${
+          <div className={`mb-6 p-4 rounded-xl border-2 whitespace-pre-line ${
             isNightMode 
               ? 'bg-red-900/20 border-red-500/50 text-red-300' 
               : 'bg-red-50 border-red-200 text-red-700'
           }`}>
-            {error}
+            <div className="font-cinzel font-bold mb-2">Error</div>
+            <div className="text-sm">{error}</div>
           </div>
         )}
 
@@ -235,7 +277,10 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
                 isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
               }`}>Materiales (selecciona uno o más)</label>
               <div className="space-y-2 max-h-60 overflow-y-auto">
-                {selectedSubject.materials.filter(m => m.category === 'contenido').map(material => (
+                {selectedSubject.materials.filter(m => 
+                  m.category === 'contenido' && 
+                  (m.type === 'PDF' || m.type === 'Apunte' || m.fileUrl || m.content)
+                ).map(material => (
                   <label
                     key={material.id}
                     className={`flex items-center p-3 rounded-xl border-2 cursor-pointer transition-all ${
@@ -261,9 +306,12 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
                   </label>
                 ))}
               </div>
-              {selectedSubject.materials.filter(m => m.category === 'contenido').length === 0 && (
+              {selectedSubject.materials.filter(m => 
+                m.category === 'contenido' && 
+                (m.type === 'PDF' || m.type === 'Apunte' || m.fileUrl || m.content)
+              ).length === 0 && (
                 <p className={`text-sm mt-2 ${isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'}`}>
-                  No hay materiales de contenido disponibles. Sube materiales en la sección de Asignaturas.
+                  No hay materiales de contenido disponibles. Sube materiales PDF en la sección de Asignaturas.
                 </p>
               )}
             </div>
@@ -448,8 +496,19 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
               {currentQuestion.options.map((option, index) => {
                 const optionLabel = ['A', 'B', 'C', 'D', 'E', 'F'][index] || String(index);
                 const isSelected = currentResponse?.user_answer === String(index);
-                const isCorrect = currentResponse?.is_correct && isSelected;
+                const correctAnswerIndex = parseInt(currentQuestion.correct_answer);
+                const isCorrectAnswer = index === correctAnswerIndex;
                 const showFeedback = examConfig.mode === 'guided' && currentResponse;
+                
+                // Determinar el estado visual de la opción
+                let optionState: 'correct' | 'incorrect' | 'neutral' = 'neutral';
+                if (showFeedback) {
+                  if (isCorrectAnswer) {
+                    optionState = 'correct';
+                  } else if (isSelected && !currentResponse.is_correct) {
+                    optionState = 'incorrect';
+                  }
+                }
 
                 return (
                   <button
@@ -457,17 +516,21 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
                     onClick={() => !currentResponse && handleAnswerSubmit(String(index))}
                     disabled={!!currentResponse}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                      isSelected
-                        ? isCorrect
+                      optionState === 'correct'
+                        ? isNightMode
+                          ? 'bg-green-900/30 border-green-500'
+                          : 'bg-green-50 border-green-500'
+                        : optionState === 'incorrect'
                           ? isNightMode
-                            ? 'bg-green-900/30 border-green-500'
-                            : 'bg-green-50 border-green-500'
-                          : isNightMode
                             ? 'bg-red-900/30 border-red-500'
                             : 'bg-red-50 border-red-500'
-                        : isNightMode
-                          ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 hover:border-[#A68A56]'
-                          : 'bg-white/40 border-[#F8C8DC] hover:border-[#E35B8F]'
+                          : isSelected
+                            ? isNightMode
+                              ? 'bg-[rgba(199,125,255,0.2)] border-[#C77DFF]'
+                              : 'bg-[#FFF0F5] border-[#E35B8F]'
+                            : isNightMode
+                              ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 hover:border-[#A68A56]'
+                              : 'bg-white/40 border-[#F8C8DC] hover:border-[#E35B8F]'
                     } ${currentResponse ? 'cursor-not-allowed' : 'cursor-pointer hover:scale-105 active:scale-95'}`}
                   >
                     <div className="flex items-center justify-between">
@@ -475,8 +538,14 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
                         {optionLabel}) {option}
                       </span>
                       {showFeedback && (
-                        <span className={`text-xl ${isCorrect ? 'text-green-500' : 'text-red-500'}`}>
-                          {isCorrect ? '✓' : '✗'}
+                        <span className={`text-xl ${
+                          optionState === 'correct' 
+                            ? 'text-green-500' 
+                            : optionState === 'incorrect'
+                              ? 'text-red-500'
+                              : ''
+                        }`}>
+                          {optionState === 'correct' ? '✓' : optionState === 'incorrect' ? '✗' : ''}
                         </span>
                       )}
                     </div>
@@ -713,6 +782,152 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
             Nuevo Examen
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // Vista de historial
+  if (view === 'history') {
+    return (
+      <div className={`h-full flex flex-col pb-10 max-w-7xl mx-auto w-full transition-colors duration-500 ${
+        isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF9FA]'
+      }`}>
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className={`font-cinzel text-3xl md:text-5xl font-bold transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
+            }`}>Exámenes Generados</h1>
+            <button
+              onClick={() => setView('config')}
+              className={`px-6 py-3 rounded-xl font-cinzel font-bold transition-all hover:scale-105 active:scale-95 ${
+                isNightMode
+                  ? 'bg-[rgba(48,43,79,0.6)] text-[#E0E1DD] border-2 border-[#A68A56]/40'
+                  : 'bg-white/40 text-[#2D1A26] border-2 border-[#F8C8DC]'
+              }`}
+            >
+              Volver
+            </button>
+          </div>
+        </div>
+
+        {loadingHistory ? (
+          <div className={`text-center py-12 ${isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'}`}>
+            <div className="font-cinzel">Cargando historial...</div>
+          </div>
+        ) : examHistory.length === 0 ? (
+          <div className={`text-center py-12 ${isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'}`}>
+            <div className="font-cinzel text-xl mb-2">No hay exámenes generados aún</div>
+            <div className="text-sm">Genera tu primer examen para verlo aquí</div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {examHistory.map((exam) => {
+              const subject = subjects.find(s => s.id === exam.subject_id);
+              const examDate = new Date(exam.created_at);
+              const formattedDate = examDate.toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+
+              return (
+                <div
+                  key={exam.id}
+                  className={`p-6 rounded-xl border-2 transition-all hover:scale-[1.02] ${
+                    isNightMode
+                      ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40'
+                      : 'bg-white/40 border-[#F8C8DC]'
+                  }`}
+                >
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className={`font-cinzel text-xl font-bold mb-2 ${
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
+                      }`}>
+                        {exam.title}
+                      </h3>
+                      <div className={`space-y-1 text-sm ${isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'}`}>
+                        <div>
+                          <span className="font-semibold">Asignatura:</span> {subject?.name || 'Desconocida'}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Tipo:</span> {getExamTypeText(exam.exam_type)}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Preguntas:</span> {exam.question_count}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Dificultad:</span> {getDifficultyText(exam.difficulty)}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Modo:</span> {exam.mode === 'real' ? 'Examen Real' : 'Estudio Guiado'}
+                        </div>
+                        <div>
+                          <span className="font-semibold">Fecha:</span> {formattedDate}
+                        </div>
+                        {exam.completed_at && (
+                          <div className={`text-xs ${isNightMode ? 'text-green-400' : 'text-green-600'}`}>
+                            ✓ Completado
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 md:flex-row">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await loadExam(exam.id);
+                            if (exam.completed_at) {
+                              // Si está completado, mostrar resultados
+                              setView('results');
+                            } else {
+                              // Si no está completado, continuar el examen
+                              setView('exam');
+                              setCurrentQuestionIndex(0);
+                              setTimer(0);
+                            }
+                          } catch (error: any) {
+                            alert(`Error al cargar el examen: ${error.message}`);
+                          }
+                        }}
+                        className={`px-6 py-3 rounded-xl font-cinzel font-bold transition-all hover:scale-105 active:scale-95 ${
+                          isNightMode
+                            ? 'bg-[#A68A56] text-[#1A1A2E]'
+                            : 'bg-[#E35B8F] text-white'
+                        }`}
+                      >
+                        {exam.completed_at ? 'Ver Resultados' : 'Continuar'}
+                      </button>
+                      {exam.completed_at && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await loadExam(exam.id);
+                              const { questions: examQuestions } = await examService.getExamWithQuestions(exam.id);
+                              const examResponses = await examService.getExamResponses(exam.id);
+                              await exportExamToPDF(exam, examQuestions, examResponses);
+                            } catch (error: any) {
+                              alert(`Error al exportar PDF: ${error.message}`);
+                            }
+                          }}
+                          className={`px-6 py-3 rounded-xl font-cinzel font-bold transition-all hover:scale-105 active:scale-95 ${
+                            isNightMode
+                              ? 'bg-[rgba(48,43,79,0.6)] text-[#E0E1DD] border-2 border-[#A68A56]/40'
+                              : 'bg-white/40 text-[#2D1A26] border-2 border-[#F8C8DC]'
+                          }`}
+                        >
+                          Descargar PDF
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }
