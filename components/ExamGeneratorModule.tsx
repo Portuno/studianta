@@ -49,6 +49,7 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [openEndedAnswer, setOpenEndedAnswer] = useState<string>('');
 
   const {
     currentExam,
@@ -87,8 +88,16 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
   useEffect(() => {
     if (view === 'exam' && questions.length > 0) {
       setQuestionStartTime(Date.now());
+      // Resetear respuesta de pregunta abierta cuando cambia la pregunta
+      const currentQ = questions[currentQuestionIndex];
+      if (currentQ && (!currentQ.options || currentQ.options.length === 0)) {
+        const existingResponse = responses.find(r => r.question_id === currentQ.id);
+        setOpenEndedAnswer(existingResponse?.user_answer || '');
+      } else {
+        setOpenEndedAnswer('');
+      }
     }
-  }, [currentQuestionIndex, view, questions.length]);
+  }, [currentQuestionIndex, view, questions.length, questions, responses]);
 
   // Cargar historial cuando se abre la vista de historial
   useEffect(() => {
@@ -567,36 +576,44 @@ const ExamGeneratorModule: React.FC<ExamGeneratorModuleProps> = ({
 
           {/* Input para preguntas abiertas */}
           {(!currentQuestion.options || currentQuestion.options.length === 0) && (
-            <textarea
-              value={currentResponse?.user_answer || ''}
-              onChange={(e) => {
-                if (!currentResponse) {
-                  // Guardar respuesta mientras escribe (solo en modo guiado)
-                  if (examConfig.mode === 'guided') {
+            <div>
+              <textarea
+                value={openEndedAnswer}
+                onChange={(e) => {
+                  // Solo actualizar el estado local, no guardar aún
+                  setOpenEndedAnswer(e.target.value);
+                }}
+                onBlur={() => {
+                  // Guardar respuesta cuando el usuario termina de escribir
+                  if (openEndedAnswer.trim() && !currentResponse) {
                     const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
-                    submitResponse(currentQuestion.id, e.target.value, timeSpent);
+                    submitResponse(currentQuestion.id, openEndedAnswer.trim(), timeSpent);
                   }
-                }
-              }}
-              onBlur={() => {
-                if (currentResponse && examConfig.mode === 'guided') {
-                  // Verificar respuesta al perder foco
-                  const isCorrect = isAnswerCorrect(
-                    currentResponse.user_answer,
-                    currentQuestion.correct_answer,
-                    currentQuestion.question_type
-                  );
-                  // La respuesta ya se guardó, solo mostrar feedback
-                }
-              }}
-              disabled={!!currentResponse && examConfig.mode === 'real'}
-              placeholder="Escribe tu respuesta aquí..."
-              className={`w-full p-4 rounded-xl border-2 min-h-[120px] transition-colors duration-500 ${
-                isNightMode
-                  ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 text-[#E0E1DD]'
-                  : 'bg-white/40 border-[#F8C8DC] text-[#2D1A26]'
-              }`}
-            />
+                }}
+                disabled={!!currentResponse}
+                placeholder="Escribe tu respuesta aquí..."
+                className={`w-full p-4 rounded-xl border-2 min-h-[120px] transition-colors duration-500 ${
+                  isNightMode
+                    ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 text-[#E0E1DD]'
+                    : 'bg-white/40 border-[#F8C8DC] text-[#2D1A26]'
+                }`}
+              />
+              {!currentResponse && openEndedAnswer.trim() && (
+                <button
+                  onClick={() => {
+                    const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
+                    submitResponse(currentQuestion.id, openEndedAnswer.trim(), timeSpent);
+                  }}
+                  className={`mt-3 px-6 py-2 rounded-xl font-cinzel font-bold transition-all hover:scale-105 active:scale-95 ${
+                    isNightMode
+                      ? 'bg-[#A68A56] text-[#1A1A2E]'
+                      : 'bg-[#E35B8F] text-white'
+                  }`}
+                >
+                  Enviar Respuesta
+                </button>
+              )}
+            </div>
           )}
 
           {/* Feedback en modo guiado */}

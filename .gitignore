@@ -26,3 +26,9 @@ dist-ssr
 
 #Ignore cursor AI rules
 .cursor\rules\codacy.mdc
+
+# Supabase
+supabase/
+
+# Cursor AI
+.cursor/
