@@ -87,37 +87,6 @@ Mercado de artefactos y herramientas adicionales para expandir las capacidades d
 
 ---
 
-## 🚀 Instalación y Configuración
-
-### 1. Instalar dependencias
-
-```bash
-npm install
-```
-
-### 2. Configurar variables de entorno
-
-Crea un archivo `.env.local` en la raíz del proyecto y configura:
-
-```env
-GEMINI_API_KEY=tu_api_key_de_gemini
-```
-
-### 3. Ejecutar en desarrollo
-
-```bash
-npm run dev
-```
-
-La aplicación estará disponible en `http://localhost:5173`
-
-### 4. Compilar para producción
-
-```bash
-npm run build
-```
-
----
 
 ## 📱 Experiencia Multiplataforma
 
@@ -130,7 +99,7 @@ Studianta está diseñada para funcionar perfectamente en:
 
 ## 🎯 Filosofía de Diseño
 
-Studianta no es solo una herramienta, es un **santuario de conocimiento** donde cada estudiante puede:
+Studianta es un **santuario de conocimiento** donde cada estudiante puede:
 - Organizar su vida académica de manera integral
 - Mantener el equilibrio entre estudio y bienestar personal
 - Potenciar su productividad con tecnología inteligente

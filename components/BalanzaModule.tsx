@@ -1238,7 +1238,7 @@ Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de bala
           : 'bg-[#FFF0F5]/80 border-[#F8C8DC]/30'
       }`}>
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-          <h1 className={`font-marcellus text-lg md:text-2xl font-black tracking-widest uppercase mb-1 transition-colors duration-500 ${
+          <h1 className={`font-marcellus text-base md:text-lg lg:text-2xl font-black tracking-widest uppercase mb-1 transition-colors duration-500 truncate ${
             isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
           }`}>Balanza</h1>
           <button
@@ -1260,7 +1260,7 @@ Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de bala
             ) : (
               <>
                 {getIcon('sparkles', 'w-4 h-4')}
-                <span className={`text-xs font-black uppercase tracking-wider transition-colors duration-500 ${
+                <span className={`text-[10px] md:text-xs font-black uppercase tracking-wider transition-colors duration-500 truncate ${
                   isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
                 }`}>Llamar al Oráculo</span>
               </>
@@ -1468,16 +1468,16 @@ Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de bala
                 setTransType('Ingreso');
                 setShowTransactionModal(true);
               }}
-              className={`p-6 md:p-8 rounded-xl border-2 transition-all active:scale-95 hover:scale-105 flex flex-col items-center justify-center gap-3 min-h-[100px] md:min-h-[120px] ${
+              className={`p-4 md:p-6 lg:p-8 rounded-xl border-2 transition-all active:scale-95 hover:scale-105 flex flex-col items-center justify-center gap-2 md:gap-3 min-h-[100px] md:min-h-[120px] overflow-hidden ${
                 isNightMode
                   ? 'bg-[rgba(166,138,86,0.2)] border-[#A68A56] hover:bg-[rgba(166,138,86,0.3)]'
                   : 'bg-[#D4AF37]/10 border-[#D4AF37] hover:bg-[#D4AF37]/20'
               }`}
             >
-              <div className={`text-5xl md:text-6xl lg:text-7xl font-black transition-colors duration-500 ${
+              <div className={`text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black transition-colors duration-500 flex-shrink-0 ${
                 isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
               }`}>+</div>
-              <p className={`font-marcellus text-lg md:text-xl font-black uppercase tracking-wider transition-colors duration-500 ${
+              <p className={`font-marcellus text-sm md:text-lg lg:text-xl font-black uppercase tracking-wider transition-colors duration-500 truncate w-full text-center ${
                 isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
               }`}>Ingreso</p>
             </button>
@@ -1489,16 +1489,16 @@ Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de bala
                 setTransType('Egreso');
                 setShowTransactionModal(true);
               }}
-              className={`p-6 md:p-8 rounded-xl border-2 transition-all active:scale-95 hover:scale-105 flex flex-col items-center justify-center gap-3 min-h-[100px] md:min-h-[120px] ${
+              className={`p-4 md:p-6 lg:p-8 rounded-xl border-2 transition-all active:scale-95 hover:scale-105 flex flex-col items-center justify-center gap-2 md:gap-3 min-h-[100px] md:min-h-[120px] overflow-hidden ${
                 isNightMode
                   ? 'bg-[rgba(199,125,255,0.2)] border-[#C77DFF] hover:bg-[rgba(199,125,255,0.3)]'
                   : 'bg-[#E35B8F]/10 border-[#E35B8F] hover:bg-[#E35B8F]/20'
               }`}
             >
-              <div className={`text-5xl md:text-6xl lg:text-7xl font-black transition-colors duration-500 ${
+              <div className={`text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black transition-colors duration-500 flex-shrink-0 ${
                 isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
               }`}>-</div>
-              <p className={`font-marcellus text-lg md:text-xl font-black uppercase tracking-wider transition-colors duration-500 ${
+              <p className={`font-marcellus text-sm md:text-lg lg:text-xl font-black uppercase tracking-wider transition-colors duration-500 truncate w-full text-center ${
                 isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
               }`}>Gasto</p>
             </button>
@@ -1511,16 +1511,16 @@ Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de bala
                 setIsRecurring(true);
                 setShowTransactionModal(true);
               }}
-              className={`p-6 md:p-8 rounded-xl border-2 transition-all active:scale-95 hover:scale-105 flex flex-col items-center justify-center gap-3 min-h-[100px] md:min-h-[120px] ${
+              className={`p-4 md:p-6 lg:p-8 rounded-xl border-2 transition-all active:scale-95 hover:scale-105 flex flex-col items-center justify-center gap-2 md:gap-3 min-h-[100px] md:min-h-[120px] overflow-hidden ${
                 isNightMode
                   ? 'bg-[rgba(122,116,142,0.2)] border-[#7A748E] hover:bg-[rgba(122,116,142,0.3)]'
                   : 'bg-[#8B5E75]/10 border-[#8B5E75] hover:bg-[#8B5E75]/20'
               }`}
             >
-              <div className={`text-4xl md:text-5xl lg:text-6xl font-black transition-colors duration-500 ${
+              <div className={`text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black transition-colors duration-500 flex-shrink-0 ${
                 isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
               }`}>↻</div>
-              <p className={`font-marcellus text-lg md:text-xl font-black uppercase tracking-wider transition-colors duration-500 ${
+              <p className={`font-marcellus text-sm md:text-lg lg:text-xl font-black uppercase tracking-wider transition-colors duration-500 truncate w-full text-center ${
                 isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
               }`}>Recurrente</p>
             </button>
@@ -1537,7 +1537,7 @@ Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de bala
           <div className="grid grid-cols-3 gap-2 mb-4 md:mb-6">
             <button
               onClick={() => setViewTab('movements')}
-              className={`p-3 md:p-4 rounded-xl border-2 transition-all active:scale-95 ${
+              className={`p-2 md:p-3 lg:p-4 rounded-xl border-2 transition-all active:scale-95 overflow-hidden ${
                 viewTab === 'movements'
                   ? isNightMode
                     ? 'bg-[rgba(166,138,86,0.3)] border-[#A68A56]'
@@ -1547,7 +1547,7 @@ Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de bala
                     : 'bg-white/80 border-[#F8C8DC] hover:border-[#D4AF37]/40'
               }`}
             >
-              <p className={`text-xs md:text-sm font-black uppercase tracking-wider transition-colors duration-500 ${
+              <p className={`text-[10px] md:text-xs lg:text-sm font-black uppercase tracking-wider transition-colors duration-500 truncate ${
                 viewTab === 'movements'
                   ? isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
                   : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
@@ -1563,7 +1563,7 @@ Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de bala
 
             <button
               onClick={() => setViewTab('payment_method')}
-              className={`p-3 md:p-4 rounded-xl border-2 transition-all active:scale-95 ${
+              className={`p-2 md:p-3 lg:p-4 rounded-xl border-2 transition-all active:scale-95 overflow-hidden ${
                 viewTab === 'payment_method'
                   ? isNightMode
                     ? 'bg-[rgba(166,138,86,0.3)] border-[#A68A56]'
@@ -1573,7 +1573,7 @@ Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de bala
                     : 'bg-white/80 border-[#F8C8DC] hover:border-[#D4AF37]/40'
               }`}
             >
-              <p className={`text-xs md:text-sm font-black uppercase tracking-wider transition-colors duration-500 ${
+              <p className={`text-[10px] md:text-xs lg:text-sm font-black uppercase tracking-wider transition-colors duration-500 truncate ${
                 viewTab === 'payment_method'
                   ? isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
                   : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
@@ -1589,7 +1589,7 @@ Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de bala
 
             <button
               onClick={() => setViewTab('classification')}
-              className={`p-3 md:p-4 rounded-xl border-2 transition-all active:scale-95 ${
+              className={`p-2 md:p-3 lg:p-4 rounded-xl border-2 transition-all active:scale-95 overflow-hidden ${
                 viewTab === 'classification'
                   ? isNightMode
                     ? 'bg-[rgba(199,125,255,0.3)] border-[#C77DFF]'
@@ -1599,7 +1599,7 @@ Sé directo, práctico y enfocado en acciones concretas. Usa el contexto de bala
                     : 'bg-white/80 border-[#F8C8DC] hover:border-[#E35B8F]/40'
               }`}
             >
-              <p className={`text-xs md:text-sm font-black uppercase tracking-wider transition-colors duration-500 ${
+              <p className={`text-[10px] md:text-xs lg:text-sm font-black uppercase tracking-wider transition-colors duration-500 truncate ${
                 viewTab === 'classification'
                   ? isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
                   : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
