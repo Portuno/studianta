@@ -42,6 +42,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
   const [fullName, setFullName] = useState('');
   const [career, setCareer] = useState('');
   const [institution, setInstitution] = useState('');
+  const [currency, setCurrency] = useState<string>('EUR');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [hoveringAvatar, setHoveringAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -115,6 +116,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
         setFullName(userProfile.full_name || '');
         setCareer(userProfile.career || '');
         setInstitution(userProfile.institution || '');
+        setCurrency(userProfile.currency || 'EUR');
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -160,6 +162,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
         full_name: fullName,
         career: career,
         institution: institution,
+        currency: currency,
       });
       await loadProfile();
       setEditing(false);
@@ -450,7 +453,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
               </div>
             </div>
 
-            {/* Bloque 2: Fecha de Ingreso + Estado */}
+            {/* Bloque 2: Fecha de Ingreso + Moneda */}
             <div className="grid grid-cols-2 gap-4">
               {/* Fecha de Ingreso */}
               <div className="bg-white/40 rounded-xl p-4 border border-[#F8C8DC]/50">
@@ -463,15 +466,35 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
                 <p className="font-garamond text-base md:text-xl text-[#2D1A26] capitalize">{joinDate}</p>
               </div>
 
-              {/* Estado de Cursada */}
+              {/* Moneda */}
               <div className="bg-white/40 rounded-xl p-4 border border-[#F8C8DC]/50">
                 <div className="flex items-center gap-2 mb-2">
-                  {getIcon('check', 'w-4 h-4 text-[#8B5E75]')}
+                  {getIcon('crystal', 'w-4 h-4 text-[#8B5E75]')}
                   <label className="text-[8px] uppercase font-bold text-[#8B5E75] font-inter tracking-[0.3em]">
-                    ESTADO
+                    MONEDA
                   </label>
                 </div>
-                <p className="font-garamond text-base md:text-xl text-[#2D1A26]">Activa</p>
+                {editing ? (
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full bg-white/80 border border-[#F8C8DC] rounded-lg px-3 py-2 text-base font-garamond text-[#2D1A26] focus:outline-none focus:border-[#E35B8F]"
+                  >
+                    <option value="EUR">Euro (€)</option>
+                    <option value="USD">Dólar ($)</option>
+                    <option value="ARS">Peso Argentino ($)</option>
+                    <option value="GBP">Libra Esterlina (£)</option>
+                    <option value="MXN">Peso Mexicano ($)</option>
+                    <option value="CLP">Peso Chileno ($)</option>
+                    <option value="COP">Peso Colombiano ($)</option>
+                    <option value="BRL">Real Brasileño (R$)</option>
+                    <option value="PEN">Sol Peruano (S/)</option>
+                  </select>
+                ) : (
+                  <p className="font-garamond text-base md:text-xl text-[#2D1A26]">
+                    {currency === 'EUR' ? '€' : currency === 'USD' ? '$' : currency === 'GBP' ? '£' : currency === 'BRL' ? 'R$' : currency === 'PEN' ? 'S/' : '$'} {currency}
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -100,6 +100,7 @@ export interface UserProfile {
   academic_stage?: string; // Etapa académica del usuario
   interests?: string[]; // Array de áreas de interés
   referral_source?: string; // Cómo nos conoció
+  currency?: string; // Código de moneda ISO 4217 (EUR, USD, ARS, etc.)
   created_at: string;
   updated_at: string;
 }

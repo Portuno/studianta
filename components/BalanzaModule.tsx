@@ -4,6 +4,7 @@ import { getIcon } from '../constants';
 import { supabaseService } from '../services/supabaseService';
 import { recurringTransactionsService } from '../services/recurringTransactionsService';
 import { exportToCSV, exportToExcel, formatFilename } from '../utils/exportUtils';
+import { formatCurrency } from '../utils/currencyFormatter';
 
 interface BalanzaModuleProps {
   userId: string;
@@ -11,7 +12,7 @@ interface BalanzaModuleProps {
   isNightMode?: boolean;
 }
 
-type ViewTab = 'general' | 'payment_method' | 'classification' | 'table';
+type ViewTab = 'movements' | 'payment_method' | 'classification';
 type TimeFilter = 'week' | 'month' | 'year' | 'custom';
 
 const DEFAULT_PAYMENT_METHODS = ['Efectivo', 'Tarjeta', 'Teléfono', 'Cripto'];
@@ -102,7 +103,8 @@ const DonutChart: React.FC<{
   totalIngresos?: number;
   totalEgresos?: number;
   showLegend?: boolean;
-}> = ({ data, size = 200, isNightMode = false, viewMode = 'total', balance = 0, totalIngresos = 0, totalEgresos = 0, showLegend = true }) => {
+  currency?: string;
+}> = ({ data, size = 200, isNightMode = false, viewMode = 'total', balance = 0, totalIngresos = 0, totalEgresos = 0, showLegend = true, currency = 'EUR' }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const total = data.reduce((sum, item) => sum + item.value, 0);
@@ -266,7 +268,7 @@ const DonutChart: React.FC<{
                     ? 'text-red-500' 
                     : isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
                 }`}>
-                  ${balance.toFixed(2)}
+                  {formatCurrency(balance, currency)}
                 </p>
               </>
             ) : viewMode === 'ingresos' ? (
@@ -277,7 +279,7 @@ const DonutChart: React.FC<{
                 <p className={`font-marcellus text-xl md:text-2xl font-black transition-colors duration-500 ${
                   isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
                 }`}>
-                  ${totalIngresos.toFixed(2)}
+                  {formatCurrency(totalIngresos, currency)}
                 </p>
               </>
             ) : (
@@ -288,7 +290,7 @@ const DonutChart: React.FC<{
                 <p className={`font-marcellus text-xl md:text-2xl font-black transition-colors duration-500 ${
                   isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
                 }`}>
-                  ${totalEgresos.toFixed(2)}
+                  {formatCurrency(totalEgresos, currency)}
                 </p>
               </>
             )}
@@ -316,7 +318,7 @@ const DonutChart: React.FC<{
               <p className={`text-sm font-black transition-colors duration-500 ${
                 isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
               }`}>
-                ${normalizedData[hoveredIndex]?.normalizedValue.toFixed(2)}
+                {formatCurrency(normalizedData[hoveredIndex]?.normalizedValue || 0, currency)}
               </p>
               <p className={`text-[10px] transition-colors duration-500 ${
                 isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
@@ -364,7 +366,7 @@ const DonutChart: React.FC<{
                   <p className={`text-[10px] font-black transition-colors duration-500 ${
                     isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
                   }`}>
-                    ${item.normalizedValue.toFixed(2)}
+                    {formatCurrency(item.normalizedValue, currency)}
                   </p>
                   <p className={`text-[10px] transition-colors duration-500 ${
                     isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
@@ -384,6 +386,7 @@ const DonutChart: React.FC<{
 const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNightMode = false }) => {
   const [transactions, setTransactions] = useState<BalanzaProTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState<string>('EUR');
   const [transType, setTransType] = useState<'Ingreso' | 'Egreso'>('Egreso');
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -401,7 +404,7 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<string[]>(DEFAULT_PAYMENT_METHODS);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
-  const [viewTab, setViewTab] = useState<ViewTab>('general');
+  const [viewTab, setViewTab] = useState<ViewTab>('movements');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('custom');
   
   // Inicializar fechas por defecto: inicio del mes actual y hoy
@@ -422,6 +425,23 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [modalType, setModalType] = useState<'Ingreso' | 'Egreso' | 'Recurrente'>('Egreso');
   const [editingTransaction, setEditingTransaction] = useState<BalanzaProTransaction | null>(null);
+
+  // Cargar perfil del usuario para obtener la moneda
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (userId) {
+        try {
+          const profile = await supabaseService.getProfile(userId);
+          if (profile?.currency) {
+            setCurrency(profile.currency);
+          }
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+        }
+      }
+    };
+    loadUserProfile();
+  }, [userId]);
 
   // Cargar transacciones y verificar recurrentes al montar
   useEffect(() => {
@@ -902,57 +922,49 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
           {/* Layout Horizontal: Ingresos, Egresos y Balance Total */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
             {/* Total Ingresos */}
-            <div className={`p-4 md:p-5 rounded-xl border-2 backdrop-blur-sm transition-colors duration-500 ${
+            <div className={`p-4 md:p-5 rounded-xl border-2 backdrop-blur-sm transition-colors duration-500 flex flex-col ${
               isNightMode 
                 ? 'bg-[rgba(166,138,86,0.2)] border-[#A68A56]/50' 
                 : 'bg-[#D4AF37]/10 border-[#D4AF37]/40'
             }`}>
-              <div className="flex items-center gap-4 mb-4">
-                <div className={`p-3 rounded-xl transition-colors duration-500 ${
-                  isNightMode ? 'bg-[rgba(166,138,86,0.3)]' : 'bg-[#D4AF37]/20'
-                }`}>
-                  <svg className={`w-8 h-8 ${isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className={`text-xs md:text-sm uppercase font-black tracking-widest opacity-70 transition-colors duration-500 mb-2 ${
-                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                  }`}>Ingresos</p>
-                  <p className={`font-marcellus text-3xl md:text-4xl lg:text-5xl font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
-                  }`}>${stats.ingresos.toFixed(2)}</p>
-                </div>
+              <div className="flex items-center gap-2 mb-4 md:mb-5">
+                <svg className={`w-4 h-4 md:w-5 md:h-5 flex-shrink-0 ${isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                <p className={`text-[10px] md:text-xs uppercase font-black tracking-widest opacity-70 transition-colors duration-500 truncate ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>Ingresos</p>
+              </div>
+              <div className="flex-1 flex items-center justify-center">
+                <p className={`font-marcellus text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black transition-colors duration-500 text-center leading-none ${
+                  isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+                }`}>{formatCurrency(stats.ingresos, currency)}</p>
               </div>
             </div>
             
             {/* Total Egresos */}
-            <div className={`p-4 md:p-5 rounded-xl border-2 backdrop-blur-sm transition-colors duration-500 ${
+            <div className={`p-4 md:p-5 rounded-xl border-2 backdrop-blur-sm transition-colors duration-500 flex flex-col ${
               isNightMode 
                 ? 'bg-[rgba(199,125,255,0.2)] border-[#C77DFF]/50' 
                 : 'bg-[#E35B8F]/10 border-[#E35B8F]/40'
             }`}>
-              <div className="flex items-center gap-4 mb-4">
-                <div className={`p-3 rounded-xl transition-colors duration-500 ${
-                  isNightMode ? 'bg-[rgba(199,125,255,0.3)]' : 'bg-[#E35B8F]/20'
-                }`}>
-                  <svg className={`w-8 h-8 ${isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className={`text-xs md:text-sm uppercase font-black tracking-widest opacity-70 transition-colors duration-500 mb-2 ${
-                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                  }`}>Egresos</p>
-                  <p className={`font-marcellus text-3xl md:text-4xl lg:text-5xl font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
-                  }`}>${stats.egresos.toFixed(2)}</p>
-                </div>
+              <div className="flex items-center gap-2 mb-4 md:mb-5">
+                <svg className={`w-4 h-4 md:w-5 md:h-5 flex-shrink-0 ${isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                <p className={`text-[10px] md:text-xs uppercase font-black tracking-widest opacity-70 transition-colors duration-500 truncate ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>Egresos</p>
+              </div>
+              <div className="flex-1 flex items-center justify-center">
+                <p className={`font-marcellus text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black transition-colors duration-500 text-center leading-none ${
+                  isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
+                }`}>{formatCurrency(stats.egresos, currency)}</p>
               </div>
             </div>
 
             {/* Balance Total */}
-            <div className={`p-4 md:p-5 rounded-xl border-2 backdrop-blur-sm transition-colors duration-500 ${
+            <div className={`p-4 md:p-5 rounded-xl border-2 backdrop-blur-sm transition-colors duration-500 flex flex-col ${
               stats.balance < 0
                 ? isNightMode
                   ? 'bg-red-900/20 border-red-400/50'
@@ -961,16 +973,20 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
                   ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/50'
                   : 'bg-white/60 border-[#F8C8DC]/60'
             }`}>
-              <p className={`text-xs md:text-sm uppercase font-black tracking-widest opacity-70 transition-colors duration-500 mb-2 ${
-                isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-              }`}>Balance Total</p>
-              <h2 className={`font-marcellus text-4xl md:text-5xl lg:text-6xl font-black tracking-tight transition-colors duration-500 ${
-                stats.balance < 0 
-                  ? 'text-red-500' 
-                  : isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-              }`}>
-                ${stats.balance.toFixed(2)}
-              </h2>
+              <div className="mb-4 md:mb-5">
+                <p className={`text-[10px] md:text-xs uppercase font-black tracking-widest opacity-70 transition-colors duration-500 truncate ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>Balance Total</p>
+              </div>
+              <div className="flex-1 flex items-center justify-center">
+                <h2 className={`font-marcellus text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight transition-colors duration-500 text-center leading-none ${
+                  stats.balance < 0 
+                    ? 'text-red-500' 
+                    : isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                }`}>
+                  {formatCurrency(stats.balance, currency)}
+                </h2>
+              </div>
             </div>
           </div>
         </section>
@@ -1048,256 +1064,262 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
           </div>
         </section>
 
-        {/* Historial Corto: Últimos movimientos en grid */}
+        {/* Módulo Unificado: Últimos Movimientos, Métodos de Pago y Clasificación */}
         <section className={`p-4 md:p-6 rounded-2xl border-2 backdrop-blur-[15px] transition-colors duration-500 ${
           isNightMode 
             ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/50 shadow-[0_0_50px_rgba(199,125,255,0.3),0_20px_60px_rgba(0,0,0,0.3)]' 
             : 'glass-card border-[#F8C8DC]/60 bg-white/75 shadow-[0_0_50px_rgba(248,200,220,0.3),0_20px_60px_rgba(0,0,0,0.1)]'
         }`}>
-          <h3 className={`font-marcellus text-base md:text-lg font-black uppercase tracking-wider mb-3 transition-colors duration-500 ${
-            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-          }`}>Últimos Movimientos</h3>
-          {filteredTransactions.length === 0 ? (
-            <p className={`text-sm md:text-base text-center py-8 transition-colors duration-500 ${
-              isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-            }`}>
-              No hay movimientos registrados
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
-              {filteredTransactions.map(transaction => (
-                <button
-                  key={transaction.id}
-                  onClick={() => handleEditTransaction(transaction)}
-                  className={`p-3 md:p-4 rounded-xl border-2 transition-all hover:scale-105 active:scale-95 text-left min-h-[120px] md:min-h-[140px] ${
-                    transaction.type === 'Ingreso'
-                      ? isNightMode
-                        ? 'bg-[rgba(166,138,86,0.2)] border-[#A68A56]/40 hover:border-[#A68A56]/60'
-                        : 'bg-[#D4AF37]/10 border-[#D4AF37]/40 hover:border-[#D4AF37]/60'
-                      : isNightMode
-                        ? 'bg-[rgba(199,125,255,0.2)] border-[#C77DFF]/40 hover:border-[#C77DFF]/60'
-                        : 'bg-[#E35B8F]/10 border-[#E35B8F]/40 hover:border-[#E35B8F]/60'
-                  }`}
-                >
-                  <p className={`text-xs md:text-sm font-black line-clamp-2 mb-2 transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-                  }`}>
-                    {transaction.description || 'Sin descripción'}
-                  </p>
-                  <div className="space-y-1 mb-3">
-                    <p className={`text-[10px] md:text-xs transition-colors duration-500 ${
-                      isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                    }`}>
-                      {transaction.date}
-                    </p>
-                    <p className={`text-[10px] md:text-xs transition-colors duration-500 ${
-                      isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                    }`}>
-                      {transaction.type} • {transaction.payment_method}
-                    </p>
-                  </div>
-                  <p className={`text-base md:text-lg font-black transition-colors duration-500 ${
-                    transaction.type === 'Ingreso'
-                      ? isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
-                      : isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
-                  }`}>
-                    {transaction.type === 'Ingreso' ? '+' : '-'}${transaction.amount.toFixed(2)}
-                  </p>
-                </button>
-              ))}
-            </div>
+          {/* Tabs - 3 columnas iguales */}
+          <div className="grid grid-cols-3 gap-2 mb-4 md:mb-6">
+            <button
+              onClick={() => setViewTab('movements')}
+              className={`p-3 md:p-4 rounded-xl border-2 transition-all active:scale-95 ${
+                viewTab === 'movements'
+                  ? isNightMode
+                    ? 'bg-[rgba(166,138,86,0.3)] border-[#A68A56]'
+                    : 'bg-[#D4AF37]/20 border-[#D4AF37]'
+                  : isNightMode
+                    ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 hover:border-[#A68A56]/60'
+                    : 'bg-white/80 border-[#F8C8DC] hover:border-[#D4AF37]/40'
+              }`}
+            >
+              <p className={`text-xs md:text-sm font-black uppercase tracking-wider transition-colors duration-500 ${
+                viewTab === 'movements'
+                  ? isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>Últimos Movimientos</p>
+              <p className={`text-[10px] md:text-xs mt-1 transition-colors duration-500 ${
+                viewTab === 'movements'
+                  ? isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+                  : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>
+                {filteredTransactions.length} movimientos
+              </p>
+            </button>
+
+            <button
+              onClick={() => setViewTab('payment_method')}
+              className={`p-3 md:p-4 rounded-xl border-2 transition-all active:scale-95 ${
+                viewTab === 'payment_method'
+                  ? isNightMode
+                    ? 'bg-[rgba(166,138,86,0.3)] border-[#A68A56]'
+                    : 'bg-[#D4AF37]/20 border-[#D4AF37]'
+                  : isNightMode
+                    ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 hover:border-[#A68A56]/60'
+                    : 'bg-white/80 border-[#F8C8DC] hover:border-[#D4AF37]/40'
+              }`}
+            >
+              <p className={`text-xs md:text-sm font-black uppercase tracking-wider transition-colors duration-500 ${
+                viewTab === 'payment_method'
+                  ? isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>Métodos de Pago</p>
+              <p className={`text-[10px] md:text-xs mt-1 transition-colors duration-500 ${
+                viewTab === 'payment_method'
+                  ? isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+                  : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>
+                {Object.keys(transactionsByPaymentMethod).length} métodos
+              </p>
+            </button>
+
+            <button
+              onClick={() => setViewTab('classification')}
+              className={`p-3 md:p-4 rounded-xl border-2 transition-all active:scale-95 ${
+                viewTab === 'classification'
+                  ? isNightMode
+                    ? 'bg-[rgba(199,125,255,0.3)] border-[#C77DFF]'
+                    : 'bg-[#E35B8F]/20 border-[#E35B8F]'
+                  : isNightMode
+                    ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 hover:border-[#A68A56]/60'
+                    : 'bg-white/80 border-[#F8C8DC] hover:border-[#E35B8F]/40'
+              }`}
+            >
+              <p className={`text-xs md:text-sm font-black uppercase tracking-wider transition-colors duration-500 ${
+                viewTab === 'classification'
+                  ? isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>Clasificación</p>
+              <p className={`text-[10px] md:text-xs mt-1 transition-colors duration-500 ${
+                viewTab === 'classification'
+                  ? isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
+                  : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+              }`}>
+                {Object.keys(transactionsByClassification.byTagIngresos).length + Object.keys(transactionsByClassification.byTagEgresos).length + (transactionsByClassification.fixed.length > 0 ? 1 : 0) + (transactionsByClassification.extra.length > 0 ? 1 : 0) + (transactionsByClassification.ingresos.length > 0 ? 1 : 0)} categorías
+              </p>
+            </button>
+          </div>
+
+          {/* Contenido según el tab activo */}
+          {viewTab === 'movements' && (
+            <>
+              {filteredTransactions.length === 0 ? (
+                <p className={`text-sm md:text-base text-center py-8 transition-colors duration-500 ${
+                  isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                }`}>
+                  No hay movimientos registrados
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
+                  {filteredTransactions.map(transaction => (
+                    <button
+                      key={transaction.id}
+                      onClick={() => handleEditTransaction(transaction)}
+                      className={`p-3 md:p-4 rounded-xl border-2 transition-all hover:scale-105 active:scale-95 text-left min-h-[120px] md:min-h-[140px] ${
+                        transaction.type === 'Ingreso'
+                          ? isNightMode
+                            ? 'bg-[rgba(166,138,86,0.2)] border-[#A68A56]/40 hover:border-[#A68A56]/60'
+                            : 'bg-[#D4AF37]/10 border-[#D4AF37]/40 hover:border-[#D4AF37]/60'
+                          : isNightMode
+                            ? 'bg-[rgba(199,125,255,0.2)] border-[#C77DFF]/40 hover:border-[#C77DFF]/60'
+                            : 'bg-[#E35B8F]/10 border-[#E35B8F]/40 hover:border-[#E35B8F]/60'
+                      }`}
+                    >
+                      <p className={`text-xs md:text-sm font-black line-clamp-2 mb-2 transition-colors duration-500 ${
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                      }`}>
+                        {transaction.description || 'Sin descripción'}
+                      </p>
+                      <div className="space-y-1 mb-3">
+                        <p className={`text-[10px] md:text-xs transition-colors duration-500 ${
+                          isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                        }`}>
+                          {transaction.date}
+                        </p>
+                        <p className={`text-[10px] md:text-xs transition-colors duration-500 ${
+                          isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                        }`}>
+                          {transaction.type} • {transaction.payment_method}
+                        </p>
+                      </div>
+                      <p className={`text-base md:text-lg font-black transition-colors duration-500 ${
+                        transaction.type === 'Ingreso'
+                          ? isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+                          : isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
+                      }`}>
+                        {transaction.type === 'Ingreso' ? '+' : '-'}{formatCurrency(transaction.amount, currency)}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
-        </section>
 
-        {/* Vistas Agrupadas Compactas - Botones en lugar de Modales */}
-        <section className={`p-4 md:p-6 rounded-2xl border-2 backdrop-blur-[15px] transition-colors duration-500 ${
-              isNightMode 
-            ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/50 shadow-[0_0_50px_rgba(199,125,255,0.3),0_20px_60px_rgba(0,0,0,0.3)]' 
-            : 'glass-card border-[#F8C8DC]/60 bg-white/75 shadow-[0_0_50px_rgba(248,200,220,0.3),0_20px_60px_rgba(0,0,0,0.1)]'
-      }`}>
-        <div className="grid grid-cols-2 gap-5">
-          <button
-            onClick={() => setViewTab('payment_method')}
-            className={`p-4 rounded-xl border-2 transition-all hover:scale-105 active:scale-95 ${
-              viewTab === 'payment_method'
-                ? isNightMode
-                  ? 'bg-[rgba(166,138,86,0.3)] border-[#A68A56]'
-                  : 'bg-[#D4AF37]/20 border-[#D4AF37]'
-                : isNightMode
-                  ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 hover:border-[#A68A56]/60'
-                  : 'bg-white/80 border-[#F8C8DC] hover:border-[#D4AF37]/40'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-xs font-black uppercase tracking-wider mb-1 transition-colors duration-500 ${
-                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-                }`}>Métodos de Pago</p>
-                <p className={`text-sm font-black transition-colors duration-500 ${
-                  isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
-                }`}>
-                  {Object.keys(transactionsByPaymentMethod).length} métodos
-                </p>
-              </div>
-              {getIcon('scale', 'w-6 h-6')}
-            </div>
-          </button>
-
-              <button
-            onClick={() => setViewTab('classification')}
-            className={`p-4 rounded-xl border-2 transition-all hover:scale-105 active:scale-95 ${
-              viewTab === 'classification'
-                ? isNightMode
-                  ? 'bg-[rgba(199,125,255,0.3)] border-[#C77DFF]'
-                  : 'bg-[#E35B8F]/20 border-[#E35B8F]'
-                : isNightMode
-                  ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 hover:border-[#A68A56]/60'
-                  : 'bg-white/80 border-[#F8C8DC] hover:border-[#E35B8F]/40'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-xs font-black uppercase tracking-wider mb-1 transition-colors duration-500 ${
-                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-                }`}>Clasificación</p>
-                <p className={`text-sm font-black transition-colors duration-500 ${
-                  isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
-                }`}>
-                  {Object.keys(transactionsByClassification.byTagIngresos).length + Object.keys(transactionsByClassification.byTagEgresos).length + (transactionsByClassification.fixed.length > 0 ? 1 : 0) + (transactionsByClassification.extra.length > 0 ? 1 : 0) + (transactionsByClassification.ingresos.length > 0 ? 1 : 0)} categorías
-                </p>
-              </div>
-              {getIcon('target', 'w-6 h-6')}
-            </div>
-              </button>
-            </div>
-
-        {/* Vista Expandida: Métodos de Pago */}
-        {viewTab === 'payment_method' && (
-          <div className="mt-4 space-y-3">
+          {viewTab === 'payment_method' && (
+            <div className="space-y-3">
               {Object.entries(transactionsByPaymentMethod).map(([method, data]) => (
                 <div 
                   key={method}
-                className={`p-3 rounded-lg border transition-colors duration-500 ${
+                  className={`p-3 rounded-lg border transition-colors duration-500 ${
                     isNightMode 
                       ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40' 
                       : 'bg-[#FDEEF4] border-[#F8C8DC]'
                   }`}
                 >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-                  }`}>{method}</h5>
-                    <p className={`text-xs transition-colors duration-500 ${
-                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                  }`}>
-                      {data.transactions.length} movimientos
-                    </p>
-                  </div>
-                  <p className={`text-base font-black transition-colors duration-500 ${
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                      }`}>{method}</h5>
+                      <p className={`text-xs transition-colors duration-500 ${
+                        isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                      }`}>
+                        {data.transactions.length} movimientos
+                      </p>
+                    </div>
+                    <p className={`text-base font-black transition-colors duration-500 ${
                       data.balance >= 0 
                         ? isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
                         : 'text-red-500'
-                  }`}>${data.balance.toFixed(2)}</p>
+                    }`}>{formatCurrency(data.balance, currency)}</p>
+                  </div>
                 </div>
+              ))}
             </div>
-            ))}
-              <button
-                onClick={() => setViewTab('general')}
-              className={`w-full p-2 rounded-lg border transition-colors duration-500 ${
-                  isNightMode 
-                  ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 hover:bg-[rgba(48,43,79,1)]' 
-                  : 'bg-white/80 border-[#F8C8DC] hover:bg-white'
-                }`}
-              >
-              <p className={`text-xs font-black transition-colors duration-500 ${
-                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-              }`}>Cerrar</p>
-              </button>
-            </div>
-        )}
+          )}
 
-        {/* Vista Expandida: Clasificación */}
-        {viewTab === 'classification' && (
-          <div className="mt-4 space-y-3">
+          {viewTab === 'classification' && (
+            <div className="space-y-3">
               {/* Ingresos */}
               {transactionsByClassification.ingresos.length > 0 && (
-              <div className={`p-3 rounded-lg border transition-colors duration-500 ${
+                <div className={`p-3 rounded-lg border transition-colors duration-500 ${
                   isNightMode 
                     ? 'bg-[rgba(166,138,86,0.2)] border-[#A68A56]/40' 
                     : 'bg-[#D4AF37]/10 border-[#D4AF37]/40'
                 }`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-                  }`}>Ingresos</h5>
-                    <p className={`text-xs transition-colors duration-500 ${
-                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                  }`}>
-                      {transactionsByClassification.ingresos.length} movimientos
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                      }`}>Ingresos</h5>
+                      <p className={`text-xs transition-colors duration-500 ${
+                        isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                      }`}>
+                        {transactionsByClassification.ingresos.length} movimientos
+                      </p>
+                    </div>
+                    <p className={`text-base font-black transition-colors duration-500 ${
+                      isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+                    }`}>
+                      {formatCurrency(transactionsByClassification.ingresos.reduce((acc, t) => acc + t.amount, 0), currency)}
+                    </p>
                   </div>
-                  <p className={`text-base font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
-                  }`}>
-                    ${transactionsByClassification.ingresos.reduce((acc, t) => acc + t.amount, 0).toFixed(2)}
-                  </p>
-                </div>
                 </div>
               )}
 
               {/* Gastos Fijos */}
               {transactionsByClassification.fixed.length > 0 && (
-              <div className={`p-3 rounded-lg border transition-colors duration-500 ${
+                <div className={`p-3 rounded-lg border transition-colors duration-500 ${
                   isNightMode 
                     ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40' 
                     : 'bg-[#FDEEF4] border-[#F8C8DC]'
                 }`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-                  }`}>Gastos Fijos</h5>
-                    <p className={`text-xs transition-colors duration-500 ${
-                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                  }`}>
-                      {transactionsByClassification.fixed.length} movimientos
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                      }`}>Gastos Fijos</h5>
+                      <p className={`text-xs transition-colors duration-500 ${
+                        isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                      }`}>
+                        {transactionsByClassification.fixed.length} movimientos
+                      </p>
+                    </div>
+                    <p className={`text-base font-black transition-colors duration-500 ${
+                      isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
+                    }`}>
+                      {formatCurrency(transactionsByClassification.fixed.reduce((acc, t) => acc + t.amount, 0), currency)}
+                    </p>
                   </div>
-                  <p className={`text-base font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
-                  }`}>
-                    ${transactionsByClassification.fixed.reduce((acc, t) => acc + t.amount, 0).toFixed(2)}
-                  </p>
-                </div>
                 </div>
               )}
 
               {/* Gastos Extra */}
               {transactionsByClassification.extra.length > 0 && (
-              <div className={`p-3 rounded-lg border transition-colors duration-500 ${
+                <div className={`p-3 rounded-lg border transition-colors duration-500 ${
                   isNightMode 
                     ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40' 
                     : 'bg-[#FDEEF4] border-[#F8C8DC]'
                 }`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-                  }`}>Gastos Extra</h5>
-                    <p className={`text-xs transition-colors duration-500 ${
-                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                  }`}>
-                      {transactionsByClassification.extra.length} movimientos
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                      }`}>Gastos Extra</h5>
+                      <p className={`text-xs transition-colors duration-500 ${
+                        isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                      }`}>
+                        {transactionsByClassification.extra.length} movimientos
+                      </p>
+                    </div>
+                    <p className={`text-base font-black transition-colors duration-500 ${
+                      isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
+                    }`}>
+                      {formatCurrency(transactionsByClassification.extra.reduce((acc, t) => acc + t.amount, 0), currency)}
+                    </p>
                   </div>
-                  <p className={`text-base font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
-                  }`}>
-                    ${transactionsByClassification.extra.reduce((acc, t) => acc + t.amount, 0).toFixed(2)}
-                  </p>
-                </div>
                 </div>
               )}
 
@@ -1305,29 +1327,29 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
               {Object.entries(transactionsByClassification.byTagIngresos).map(([tag, trans]) => (
                 <div 
                   key={`ingreso-${tag}`}
-                className={`p-3 rounded-lg border transition-colors duration-500 ${
+                  className={`p-3 rounded-lg border transition-colors duration-500 ${
                     isNightMode 
                       ? 'bg-[rgba(166,138,86,0.2)] border-[#A68A56]/40' 
                       : 'bg-[#D4AF37]/10 border-[#D4AF37]/40'
                   }`}
                 >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-                  }`}>Ingreso: {tag}</h5>
-                    <p className={`text-xs transition-colors duration-500 ${
-                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                  }`}>
-                      {trans.length} movimientos
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                      }`}>Ingreso: {tag}</h5>
+                      <p className={`text-xs transition-colors duration-500 ${
+                        isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                      }`}>
+                        {trans.length} movimientos
+                      </p>
+                    </div>
+                    <p className={`text-base font-black transition-colors duration-500 ${
+                      isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
+                    }`}>
+                      {formatCurrency(trans.reduce((acc, t) => acc + t.amount, 0), currency)}
+                    </p>
                   </div>
-                  <p className={`text-base font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
-                  }`}>
-                    ${trans.reduce((acc, t) => acc + t.amount, 0).toFixed(2)}
-                  </p>
-                </div>
                 </div>
               ))}
 
@@ -1335,45 +1357,33 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
               {Object.entries(transactionsByClassification.byTagEgresos).map(([tag, trans]) => (
                 <div 
                   key={`egreso-${tag}`}
-                className={`p-3 rounded-lg border transition-colors duration-500 ${
+                  className={`p-3 rounded-lg border transition-colors duration-500 ${
                     isNightMode 
                       ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40' 
                       : 'bg-[#FDEEF4] border-[#F8C8DC]'
                   }`}
                 >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-                  }`}>Egreso: {tag}</h5>
-                    <p className={`text-xs transition-colors duration-500 ${
-                    isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
-                  }`}>
-                      {trans.length} movimientos
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className={`font-marcellus text-sm font-black transition-colors duration-500 ${
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                      }`}>Egreso: {tag}</h5>
+                      <p className={`text-xs transition-colors duration-500 ${
+                        isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+                      }`}>
+                        {trans.length} movimientos
+                      </p>
+                    </div>
+                    <p className={`text-base font-black transition-colors duration-500 ${
+                      isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
+                    }`}>
+                      {formatCurrency(trans.reduce((acc, t) => acc + t.amount, 0), currency)}
+                    </p>
                   </div>
-                  <p className={`text-base font-black transition-colors duration-500 ${
-                    isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
-                  }`}>
-                    ${trans.reduce((acc, t) => acc + t.amount, 0).toFixed(2)}
-                  </p>
-                </div>
                 </div>
               ))}
-            <button
-              onClick={() => setViewTab('general')}
-              className={`w-full p-2 rounded-lg border transition-colors duration-500 ${
-                isNightMode 
-                  ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56]/40 hover:bg-[rgba(48,43,79,1)]' 
-                  : 'bg-white/80 border-[#F8C8DC] hover:bg-white'
-              }`}
-            >
-              <p className={`text-xs font-black transition-colors duration-500 ${
-                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
-              }`}>Cerrar</p>
-            </button>
-        </div>
-      )}
+            </div>
+          )}
         </section>
       </main>
 
@@ -1753,7 +1763,7 @@ const BalanzaModule: React.FC<BalanzaModuleProps> = ({ userId, isMobile, isNight
                             transaction.type === 'Ingreso' 
                               ? isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'
                               : isNightMode ? 'text-[#C77DFF]' : 'text-[#E35B8F]'
-                          }`}>${transaction.amount.toFixed(2)}</td>
+                          }`}>{formatCurrency(transaction.amount, currency)}</td>
                           <td className={`py-2 px-4 transition-colors duration-500 ${
                             isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                           }`}>{transaction.payment_method}</td>
