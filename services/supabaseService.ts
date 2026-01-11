@@ -1712,10 +1712,14 @@ export class SupabaseService {
     fetch('http://127.0.0.1:7242/ingest/be5fe312-731a-4030-9815-a589dbcd35eb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'supabaseService.ts:1711',message:'Before invoke call',data:{userId,hasSession:!!sessionData.session,hasAccessToken:!!accessToken,accessTokenLength:accessToken?.length||0,accessTokenPreview:accessToken?.substring(0,30)||'missing',supabaseUrl:supabaseUrl?.substring(0,40)||'missing',hasAnonKey:!!supabaseAnonKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
     
+    // Use supabase.functions.invoke with explicit Authorization header
+    // This ensures the gateway receives the token even if SDK doesn't attach it automatically
     const { data, error } = await supabase.functions.invoke('create-checkout-session', {
       body: { userId },
-      // Don't pass headers - let the SDK handle auth automatically
-      // The SDK will automatically attach Authorization header from the active session
+      // Attach headers explicitly to ensure gateway receives the token
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
     
     // #region agent log - Also try direct fetch for debugging
@@ -1861,6 +1865,38 @@ export class SupabaseService {
       status: profile.subscription_status,
       currentPeriodEnd: profile.subscription_current_period_end,
     };
+  }
+
+  async verifyCheckoutSession(sessionId: string): Promise<{
+    completed: boolean;
+    tier?: 'Premium';
+    subscription_status?: string;
+  }> {
+    // Get current session explicitly to ensure we have a valid access token
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !sessionData?.session) {
+      throw new Error('No active session. Please log in again.');
+    }
+
+    const accessToken = sessionData.session.access_token;
+    if (!accessToken) {
+      throw new Error('No access token available. Please log in again.');
+    }
+
+    const { data, error } = await supabase.functions.invoke('verify-checkout-session', {
+      body: { sessionId },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (error) {
+      console.error('verifyCheckoutSession error:', error);
+      throw new Error(`Error verifying checkout session: ${error.message || 'Unknown error'}`);
+    }
+
+    return data;
   }
 }
 

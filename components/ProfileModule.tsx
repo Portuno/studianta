@@ -109,6 +109,44 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
     }
   }, [user]);
 
+  // Handle Stripe checkout session_id redirect
+  useEffect(() => {
+    if (!user) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+
+    if (sessionId) {
+      const handleCheckoutSession = async () => {
+        try {
+          console.log('Verifying checkout session:', sessionId);
+          const result = await supabaseService.verifyCheckoutSession(sessionId);
+          
+          if (result.completed) {
+            console.log('Checkout session completed, reloading profile...');
+            // Reload profile to get updated tier
+            await loadProfile();
+            
+            // Show success message
+            alert('¡Pago exitoso! Tu suscripción Premium ha sido activada.');
+          } else {
+            console.log('Checkout session not completed yet:', result);
+          }
+        } catch (error: any) {
+          console.error('Error verifying checkout session:', error);
+          alert('Error al verificar el pago. Por favor, verifica tu estado de suscripción.');
+        } finally {
+          // Remove session_id from URL
+          urlParams.delete('session_id');
+          const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+          window.history.replaceState({}, '', newUrl);
+        }
+      };
+
+      handleCheckoutSession();
+    }
+  }, [user]);
+
   const loadProfile = async () => {
     if (!user) return;
     try {

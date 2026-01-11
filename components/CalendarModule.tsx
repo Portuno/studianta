@@ -249,10 +249,18 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
     setAnchorDate(next);
   };
 
+  // Helper function to format date as YYYY-MM-DD in local timezone (not UTC)
+  const formatDateLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const getEventsForDate = (date: Date): ConvergenceEvent[] => {
     const events: ConvergenceEvent[] = [];
     const dateStr = date.toDateString();
-    const isoDateStr = date.toISOString().split('T')[0];
+    const isoDateStr = formatDateLocal(date);
     const dayName = date.toLocaleDateString('es-ES', { weekday: 'long' });
     const normalizedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
 
@@ -353,7 +361,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
       id: Math.random().toString(36).substring(7),
       title: formData.get('title') as string,
       description: formData.get('description') as string || undefined,
-      date: selectedDate || anchorDate.toISOString().split('T')[0],
+      date: selectedDate || formatDateLocal(anchorDate),
       time: timeValue || undefined,
       endTime: endTimeValue || undefined,
       color: formData.get('color') as string,
@@ -1077,7 +1085,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 required
                 name="date" 
                 type="date" 
-                defaultValue={anchorDate.toISOString().split('T')[0]}
+                defaultValue={formatDateLocal(anchorDate)}
                 className={`w-full border-0 border-b-2 rounded-none px-4 py-3.5 text-sm outline-none transition-all ${
                   isNightMode 
                     ? 'bg-[rgba(48,43,79,0.3)] border-[#A68A56] text-[#E0E1DD] focus:shadow-[0_4px_10px_rgba(199,125,255,0.3)] focus:border-[#C77DFF]' 
