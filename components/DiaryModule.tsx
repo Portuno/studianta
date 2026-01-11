@@ -175,7 +175,7 @@ const SealButton: React.FC<SealButtonProps> = ({ onClick, label = "Sellar Cróni
   const sizeClasses = {
     sm: 'px-6 py-2.5 text-[9px]',
     md: 'px-8 py-3 text-[10px]',
-    lg: 'px-12 py-4 text-xs'
+    lg: 'px-12 py-4 text-sm'
   };
   
   const iconSizes = {
@@ -600,12 +600,12 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   {mood && <MoodIcon type={mood.type} className="w-6 h-6" />}
                 </div>
                 <div>
-                  <p className={`text-lg font-serif font-bold italic transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  <p className={`text-2xl font-serif font-bold italic transition-colors duration-500 ${
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                   }`} style={{ fontFamily: 'Georgia, serif' }}>
                     {new Date(entry.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
-                  <p className={`text-sm uppercase font-black tracking-widest opacity-60 transition-colors duration-500 ${
+                  <p className={`text-base uppercase font-black tracking-widest opacity-60 transition-colors duration-500 ${
                     isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                   }`}>{entry.mood}</p>
                 </div>
@@ -613,7 +613,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
               <button 
                 onClick={onClose}
                 className={`transition-colors p-2 ${
-                  isNightMode ? 'text-[#7A748E] hover:text-[#E0E1DD]' : 'text-[#8B5E75] hover:text-[#4A233E]'
+                  isNightMode ? 'text-[#7A748E] hover:text-[#E0E1DD]' : 'text-[#8B5E75] hover:text-[#2D1A26]'
                 }`}
               >
                 {getIcon('x', 'w-6 h-6')}
@@ -630,10 +630,10 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                 }`}>
                   {getIcon('lock', `w-12 h-12 ${isNightMode ? 'text-[#A68A56]' : 'text-[#D4AF37]'}`)}
                 </div>
-                <p className={`text-xl font-cinzel mb-2 transition-colors duration-500 ${
-                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                <p className={`text-2xl font-cinzel mb-2 transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                 }`}>Contenido Protegido</p>
-                <p className={`text-sm font-garamond italic transition-colors duration-500 ${
+                <p className={`text-base font-garamond italic transition-colors duration-500 ${
                   isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                 }`}>
                   Esta entrada está protegida. Debes ingresar el PIN para ver su contenido.
@@ -642,8 +642,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
             ) : (
               <>
                 <div className="prose max-w-none">
-                  <p className={`text-xl font-garamond leading-relaxed italic first-letter:text-4xl first-letter:font-marcellus first-letter:mr-2 transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                  <p className={`text-2xl font-garamond leading-relaxed italic first-letter:text-4xl first-letter:font-marcellus first-letter:mr-2 transition-colors duration-500 ${
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                   }`}>
                     {entry.content}
                   </p>
@@ -711,8 +711,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
             : 'bg-white/40 border-[#F8C8DC]'
         }`}>
           <div className="text-center mb-4">
-            <h1 className={`font-cinzel text-xl font-black tracking-[0.25em] uppercase transition-colors duration-500 ${
-              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            <h1 className={`font-cinzel text-2xl font-black tracking-[0.25em] uppercase transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
             }`}>Diario</h1>
           </div>
 
@@ -761,7 +761,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   value={entryDate}
                   onChange={(e) => setEntryDate(e.target.value)}
                   className={`w-full bg-transparent px-3 py-2 text-[10px] font-garamond font-bold outline-none transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                   }`}
                 />
               </div>
@@ -778,8 +778,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder={randomPrompt}
-                className={`w-full h-full bg-transparent text-xl font-garamond leading-relaxed placeholder:italic placeholder:opacity-20 focus:outline-none resize-none overflow-y-auto transition-colors duration-500 ${
-                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                className={`w-full h-full bg-transparent text-2xl font-garamond leading-relaxed placeholder:italic placeholder:opacity-20 focus:outline-none resize-none overflow-y-auto transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                 }`}
                 style={isNightMode ? {} : {
                   backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
@@ -844,10 +844,10 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar en el cuaderno..."
-                    className={`w-full bg-transparent px-4 py-2 pr-10 text-sm font-garamond focus:outline-none border rounded-xl transition-colors duration-500 ${
+                    className={`w-full bg-transparent px-4 py-2 pr-10 text-base font-garamond focus:outline-none border rounded-xl transition-colors duration-500 ${
                       isNightMode 
                         ? 'text-[#E0E1DD] placeholder:text-[#7A748E]/50 border-[#A68A56]/40' 
-                        : 'text-[#4A233E] placeholder:text-[#8B5E75]/50 border-[#F8C8DC]'
+                        : 'text-[#2D1A26] placeholder:text-[#8B5E75]/50 border-[#F8C8DC]'
                     }`}
                   />
                   <div className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors duration-500 ${
@@ -861,7 +861,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   </div>
                 </div>
                 {searchQuery && (
-                  <p className={`text-xs mt-2 px-1 transition-colors duration-500 ${
+                  <p className={`text-sm mt-2 px-1 transition-colors duration-500 ${
                     isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                   }`}>
                     {filteredEntries.length} {filteredEntries.length === 1 ? 'entrada encontrada' : 'entradas encontradas'}
@@ -906,7 +906,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                           </div>
                           <div>
                              <p className={`text-[12px] font-serif font-bold tracking-wide italic transition-colors duration-500 ${
-                               isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                               isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                              }`} style={{ fontFamily: 'Georgia, serif' }}>
                                {new Date(entry.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                              </p>
@@ -943,7 +943,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                     </div>
                     {entry.isLocked && securityModuleActive ? (
                       <div className="text-center py-4">
-                        <div className={`inline-flex items-center gap-2 font-garamond italic text-sm transition-colors duration-500 ${
+                        <div className={`inline-flex items-center gap-2 font-garamond italic text-base transition-colors duration-500 ${
                           isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                         }`}>
                           {getIcon('lock', 'w-5 h-5')}
@@ -952,7 +952,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                       </div>
                     ) : (
                       <p className={`text-[17px] font-garamond leading-relaxed italic opacity-90 first-letter:text-3xl first-letter:font-marcellus first-letter:mr-1 line-clamp-3 transition-colors duration-500 ${
-                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                       }`}>{entry.content}</p>
                     )}
                     {(() => {
@@ -1015,7 +1015,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                      ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56] text-[#A68A56]' 
                      : 'bg-white border-[#D4AF37] text-[#D4AF37]'
                  }`}>
-                   <span className="font-serif font-bold text-lg">"</span>
+                   <span className="font-serif font-bold text-2xl">"</span>
                  </button>
                  <button 
                    onClick={() => fileInputRef.current?.click()} 
@@ -1065,7 +1065,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                className={`px-4 py-2.5 border-2 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all font-cinzel text-[10px] font-black uppercase tracking-widest ${
                  isNightMode 
                    ? 'bg-[rgba(48,43,79,0.8)] border-[#A68A56] text-[#E0E1DD]' 
-                   : 'bg-white border-[#D4AF37] text-[#4A233E]'
+                   : 'bg-white border-[#D4AF37] text-[#2D1A26]'
                }`}
              >
                {showStories ? 'Escribir' : 'Ver Historias'}
@@ -1095,7 +1095,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
         <div className={`fixed inset-x-0 bottom-0 z-[150] bg-white rounded-t-[3.5rem] shadow-[0_-20px_50px_rgba(74,35,62,0.2)] border-t border-[#F8C8DC] transition-all duration-500 ease-in-out hidden`}>
           <div className="w-full h-full flex flex-col relative" style={{ minHeight: 0 }}>
             <div onClick={() => setIsGrimorioOpen(!isGrimorioOpen)} className="flex-none py-5 px-10 flex items-center justify-between cursor-pointer group shrink-0">
-              <h3 className="font-marcellus text-[11px] font-black text-[#4A233E] uppercase tracking-[0.4em]">Grimorio de Memorias</h3>
+              <h3 className="font-marcellus text-[11px] font-black text-[#2D1A26] uppercase tracking-[0.4em]">Grimorio de Memorias</h3>
               <div className={`transition-all duration-500 text-[#D4AF37] ${isGrimorioOpen ? 'rotate-180 scale-125' : 'animate-bounce'}`}>
                 {getIcon('chevron', 'w-4 h-4')}
               </div>
@@ -1123,7 +1123,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar en el cuaderno..."
-                    className="w-full bg-transparent px-4 py-2 pr-10 text-sm font-garamond text-[#4A233E] placeholder:text-[#8B5E75]/50 focus:outline-none border border-[#F8C8DC] rounded-xl"
+                    className="w-full bg-transparent px-4 py-2 pr-10 text-base font-garamond text-[#2D1A26] placeholder:text-[#8B5E75]/50 focus:outline-none border border-[#F8C8DC] rounded-xl"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8B5E75]/50">
                     {getIcon('search', 'w-4 h-4') || (
@@ -1134,7 +1134,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   </div>
                 </div>
                 {searchQuery && (
-                  <p className="text-xs text-[#8B5E75] mt-2 px-1">
+                  <p className="text-sm text-[#8B5E75] mt-2 px-1">
                     {filteredEntries.length} {filteredEntries.length === 1 ? 'entrada encontrada' : 'entradas encontradas'}
                   </p>
                 )}
@@ -1164,7 +1164,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                             {mood && <MoodIcon type={mood.type} className="w-4 h-4" />}
                           </div>
                           <div>
-                             <p className="text-[12px] font-serif font-bold text-[#4A233E] tracking-wide italic" style={{ fontFamily: 'Georgia, serif' }}>
+                             <p className="text-[12px] font-serif font-bold text-[#2D1A26] tracking-wide italic" style={{ fontFamily: 'Georgia, serif' }}>
                                {new Date(entry.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                              </p>
                              <p className="text-[9px] text-[#8B5E75] uppercase font-black tracking-[0.2em] opacity-60">{entry.mood}</p>
@@ -1179,13 +1179,13 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                     </div>
                     {entry.isLocked && securityModuleActive ? (
                       <div className="text-center py-4">
-                        <div className="inline-flex items-center gap-2 text-[#8B5E75] font-garamond italic text-sm">
+                        <div className="inline-flex items-center gap-2 text-[#8B5E75] font-garamond italic text-base">
                           {getIcon('lock', 'w-5 h-5')}
                           <span>Contenido protegido - Toca para desbloquear</span>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-[17px] text-[#4A233E] font-garamond leading-relaxed italic opacity-90 first-letter:text-3xl first-letter:font-marcellus first-letter:mr-1 line-clamp-3">{entry.content}</p>
+                      <p className="text-[17px] text-[#2D1A26] font-garamond leading-relaxed italic opacity-90 first-letter:text-3xl first-letter:font-marcellus first-letter:mr-1 line-clamp-3">{entry.content}</p>
                     )}
                     {((entry.photos && entry.photos.length > 0) || entry.photo) && (
                       <div className="mt-4 flex flex-wrap gap-2 justify-center">
@@ -1233,10 +1233,10 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                 ? 'bg-[rgba(48,43,79,0.95)] border-2 border-[#A68A56]/40 shadow-[0_0_40px_rgba(199,125,255,0.3)]' 
                 : 'glass-card'
             }`} onClick={(e) => e.stopPropagation()}>
-              <h3 className={`font-cinzel text-xl mb-4 transition-colors duration-500 ${
-                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              <h3 className={`font-cinzel text-2xl mb-4 transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
               }`}>Confirmar Eliminación</h3>
-              <p className={`font-garamond mb-6 text-sm transition-colors duration-500 ${
+              <p className={`font-garamond mb-6 text-base transition-colors duration-500 ${
                 isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
               }`}>
                 ¿Estás seguro de que deseas eliminar esta entrada? Esta acción no se puede deshacer.
@@ -1244,7 +1244,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
               <div className="flex gap-4 justify-end">
                 <button
                   onClick={() => setShowDeleteConfirm(null)}
-                  className={`px-6 py-3 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest border-2 transition-all ${
+                  className={`px-6 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest border-2 transition-all ${
                     isNightMode 
                       ? 'border-[#A68A56]/40 text-[#7A748E] hover:bg-[rgba(48,43,79,1)] hover:text-[#E0E1DD]' 
                       : 'border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5]'
@@ -1254,7 +1254,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                 </button>
                 <button
                   onClick={() => handleConfirmDelete(showDeleteConfirm)}
-                  className="px-6 py-3 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg"
+                  className="px-6 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg"
                 >
                   Eliminar
                 </button>
@@ -1292,7 +1292,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
         isNightMode ? 'border-[#A68A56]/20' : 'border-[#D4AF37]/20'
       }`}>
         <h1 className={`font-marcellus text-2xl lg:text-3xl font-bold tracking-tight transition-colors duration-500 ${
-          isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+          isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
         }`}>Diario</h1>
       </header>
 
@@ -1347,8 +1347,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                       type="date" 
                       value={entryDate}
                       onChange={(e) => setEntryDate(e.target.value)}
-                      className={`w-full bg-transparent px-4 py-3.5 text-sm font-garamond font-bold outline-none transition-colors duration-500 ${
-                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                      className={`w-full bg-transparent px-4 py-3.5 text-base font-garamond font-bold outline-none transition-colors duration-500 ${
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                       }`}
                     />
                   </div>
@@ -1360,10 +1360,10 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder={randomPrompt}
-                className={`w-full bg-transparent border-2 border-dashed rounded-[2rem] lg:rounded-[2.5rem] p-4 lg:p-6 text-lg lg:text-xl font-garamond leading-relaxed min-h-[200px] lg:min-h-[250px] focus:outline-none transition-all placeholder:italic resize-none ${
+                className={`w-full bg-transparent border-2 border-dashed rounded-[2rem] lg:rounded-[2.5rem] p-4 lg:p-6 text-2xl lg:text-2xl font-garamond leading-relaxed min-h-[200px] lg:min-h-[250px] focus:outline-none transition-all placeholder:italic resize-none ${
                   isNightMode 
                     ? 'border-[#A68A56]/40 text-[#E0E1DD] placeholder:text-[#7A748E]/50 focus:border-[#C77DFF]/50' 
-                    : 'border-[#F8C8DC] text-[#4A233E] placeholder:opacity-20 focus:border-[#D4AF37]/40'
+                    : 'border-[#F8C8DC] text-[#2D1A26] placeholder:opacity-20 focus:border-[#D4AF37]/40'
                 }`}
                 style={isNightMode ? {} : {
                   backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")',
@@ -1431,10 +1431,10 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
               ? 'bg-[rgba(48,43,79,0.6)] border-2 border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
               : 'glass-card border-[#D4AF37]/20 bg-white/40'
           }`} style={isNightMode ? {} : { backgroundImage: 'url("https://www.transparenttextures.com/patterns/cream-paper.png")' }}>
-            <h3 className={`font-marcellus text-lg lg:text-xl mb-4 lg:mb-5 uppercase tracking-widest font-bold border-b pb-3 flex-shrink-0 transition-colors duration-500 ${
+            <h3 className={`font-marcellus text-2xl lg:text-2xl mb-4 lg:mb-5 uppercase tracking-widest font-bold border-b pb-3 flex-shrink-0 transition-colors duration-500 ${
               isNightMode 
                 ? 'text-[#E0E1DD] border-[#A68A56]/40' 
-                : 'text-[#4A233E] border-[#D4AF37]/30'
+                : 'text-[#2D1A26] border-[#D4AF37]/30'
             }`}>Historias Pasadas</h3>
             
             {/* Buscador Desktop */}
@@ -1449,10 +1449,10 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar en el cuaderno..."
-                  className={`w-full bg-transparent px-3 py-2 pr-8 text-xs font-garamond focus:outline-none border rounded-lg transition-colors duration-500 ${
+                  className={`w-full bg-transparent px-3 py-2 pr-8 text-sm font-garamond focus:outline-none border rounded-lg transition-colors duration-500 ${
                     isNightMode 
                       ? 'text-[#E0E1DD] placeholder:text-[#7A748E]/50 border-[#A68A56]/40' 
-                      : 'text-[#4A233E] placeholder:text-[#8B5E75]/50 border-[#F8C8DC]'
+                      : 'text-[#2D1A26] placeholder:text-[#8B5E75]/50 border-[#F8C8DC]'
                   }`}
                 />
                 <div className={`absolute right-2 top-1/2 -translate-y-1/2 transition-colors duration-500 ${
@@ -1477,7 +1477,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
             <div className="flex-1 overflow-y-auto space-y-4 pr-2 min-h-0 custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
               {filteredEntries.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className={`text-sm font-garamond italic transition-colors duration-500 ${
+                  <p className={`text-base font-garamond italic transition-colors duration-500 ${
                     isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                   }`}>No se encontraron entradas que coincidan con tu búsqueda.</p>
                 </div>
@@ -1518,7 +1518,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                          </div>
                          <div>
                             <p className={`text-[10px] font-serif font-bold italic transition-colors duration-500 ${
-                              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                              isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                             }`} style={{ fontFamily: 'Georgia, serif' }}>
                               {new Date(entry.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                             </p>
@@ -1558,7 +1558,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                     </div>
                     {entry.isLocked && securityModuleActive ? (
                       <div className="text-center py-2">
-                        <div className={`inline-flex items-center gap-2 font-garamond italic text-xs transition-colors duration-500 ${
+                        <div className={`inline-flex items-center gap-2 font-garamond italic text-sm transition-colors duration-500 ${
                           isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                         }`}>
                           {getIcon('lock', 'w-4 h-4')}
@@ -1566,8 +1566,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                         </div>
                       </div>
                     ) : (
-                      <p className={`text-sm lg:text-base font-garamond italic line-clamp-3 leading-relaxed opacity-80 transition-colors duration-500 ${
-                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                      <p className={`text-base lg:text-base font-garamond italic line-clamp-3 leading-relaxed opacity-80 transition-colors duration-500 ${
+                        isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                       }`}>{entry.content}</p>
                     )}
                     {(() => {
@@ -1631,20 +1631,20 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(null)}>
           <div className="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-cinzel text-xl lg:text-2xl text-[#4A233E] mb-4">Confirmar Eliminación</h3>
+            <h3 className="font-cinzel text-2xl lg:text-2xl text-[#2D1A26] mb-4">Confirmar Eliminación</h3>
             <p className="font-garamond text-[#8B5E75] mb-6">
               ¿Estás seguro de que deseas eliminar esta entrada? Esta acción no se puede deshacer.
             </p>
             <div className="flex gap-4 justify-end">
               <button
                 onClick={() => setShowDeleteConfirm(null)}
-                className="px-6 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest border-2 border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5] transition-all"
+                className="px-6 py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest border-2 border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5] transition-all"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => handleConfirmDelete(showDeleteConfirm)}
-                className="px-6 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg"
+                className="px-6 py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg"
               >
                 Eliminar
               </button>
@@ -1741,8 +1741,8 @@ const PinInputModal: React.FC<{
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#4A233E]/10 flex items-center justify-center">
             {getIcon('lock', 'w-8 h-8 text-[#D4AF37]')}
           </div>
-          <h3 className="font-cinzel text-xl lg:text-2xl text-[#4A233E] mb-2">Entrada Protegida</h3>
-          <p className="font-garamond text-[#8B5E75] text-sm">
+          <h3 className="font-cinzel text-2xl lg:text-2xl text-[#2D1A26] mb-2">Entrada Protegida</h3>
+          <p className="font-garamond text-[#8B5E75] text-base">
             Ingresa tu PIN de 4 dígitos para acceder
           </p>
         </div>
@@ -1761,14 +1761,14 @@ const PinInputModal: React.FC<{
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 className={`w-14 h-14 lg:w-16 lg:h-16 rounded-xl border-2 text-center text-2xl font-cinzel font-black transition-all focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 ${
                   pinInput.length > index
-                    ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#4A233E]'
+                    ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#2D1A26]'
                     : 'border-[#F8C8DC] bg-white/40 text-[#8B5E75]/30'
                 }`}
               />
             ))}
           </div>
           {pinError && (
-            <p className="text-red-500 text-sm text-center mt-4 font-garamond">{pinError}</p>
+            <p className="text-red-500 text-base text-center mt-4 font-garamond">{pinError}</p>
           )}
         </div>
 
@@ -1778,20 +1778,20 @@ const PinInputModal: React.FC<{
             <button
               key={num}
               onClick={() => handleNumberClick(num.toString())}
-              className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel text-xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
+              className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#2D1A26] font-cinzel text-2xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
             >
               {num}
             </button>
           ))}
           <button
             onClick={onCancel}
-            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-sm font-black hover:bg-[#FFF0F5] transition-all"
+            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-base font-black hover:bg-[#FFF0F5] transition-all"
           >
             Cancelar
           </button>
           <button
             onClick={() => handleNumberClick('0')}
-            className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel text-xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
+            className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#2D1A26] font-cinzel text-2xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
           >
             0
           </button>
@@ -1802,7 +1802,7 @@ const PinInputModal: React.FC<{
               const lastIndex = Math.max(0, pinInput.length - 1);
               pinRefs[lastIndex].current?.focus();
             }}
-            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-sm font-black hover:bg-[#FFF0F5] transition-all"
+            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-base font-black hover:bg-[#FFF0F5] transition-all"
           >
             ←
           </button>

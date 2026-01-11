@@ -262,21 +262,8 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
       });
     });
 
-    transactions.forEach(t => {
-      const tDate = new Date(t.date);
-      if (tDate.toDateString() === dateStr) {
-        events.push({
-          id: t.id,
-          title: `${t.description}`,
-          subtitle: `Finanzas • ${t.category}`,
-          amount: t.amount,
-          date: tDate,
-          type: 'finance',
-          priority: 'low',
-          color: t.type === 'Gasto' ? COLORS.primary : COLORS.gold
-        });
-      }
-    });
+    // Las transacciones de la BALANZA no se muestran en el calendario
+    // transactions.forEach(t => { ... });
 
     journalEntries.forEach(entry => {
       if (entry.date === isoDateStr) {

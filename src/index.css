@@ -253,9 +253,7 @@ body {
   font-weight: bold;
   margin: 0.75rem 0 0.5rem 0;
   color: #4A233E;
-}
-
-[contenteditable] h3 {
+}[contenteditable] h3 {
   font-size: 1.25rem;
   font-weight: bold;
   margin: 0.5rem 0 0.25rem 0;

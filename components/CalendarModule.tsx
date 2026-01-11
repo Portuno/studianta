@@ -267,21 +267,8 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
       });
     });
 
-    transactions.forEach(t => {
-      const tDate = new Date(t.date);
-      if (tDate.toDateString() === dateStr) {
-        events.push({
-          id: t.id,
-          title: `${t.description}`,
-          subtitle: `Finanzas • ${t.category}`,
-          amount: t.amount,
-          date: tDate,
-          type: 'finance',
-          priority: 'low',
-          color: t.type === 'Gasto' ? COLORS.primary : COLORS.gold
-        });
-      }
-    });
+    // Las transacciones de la BALANZA no se muestran en el calendario
+    // transactions.forEach(t => { ... });
 
     journalEntries.forEach(entry => {
       if (entry.date === isoDateStr) {
@@ -375,7 +362,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
         <div className={`p-6 text-center border-b transition-colors duration-500 ${
           isNightMode 
             ? `border-[#A68A56]/20 ${isToday ? 'text-[#E0E1DD]' : 'text-[#7A748E]'}` 
-            : `border-[#D4AF37]/20 ${isToday ? 'text-[#4A233E]' : 'text-[#8B5E75]'}`
+            : `border-[#D4AF37]/20 ${isToday ? 'text-[#2D1A26]' : 'text-[#8B5E75]'}`
         }`}>
           <p className={`text-[10px] uppercase font-cinzel font-black tracking-[0.2em] opacity-60 transition-colors duration-500 ${
             isNightMode ? 'text-[#7A748E]' : ''
@@ -383,7 +370,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
             {date.toLocaleDateString('es-ES', { weekday: 'short' })}
           </p>
           <div className="flex items-center justify-center gap-2 mt-2">
-            <p className={`font-cinzel text-2xl transition-colors duration-500 ${
+            <p className={`font-cinzel text-3xl transition-colors duration-500 ${
               isToday 
                 ? isNightMode
                   ? 'font-black scale-110 text-[#A68A56] drop-shadow-[0_0_8px_rgba(166,138,86,0.5)]'
@@ -436,7 +423,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
               >
                 <div className="flex justify-between items-start mb-1.5">
                    <span className={`font-bold truncate pr-1 transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                   }`}>{event.title}</span>
                    {event.priority === 'high' && (
                      <div className={`w-1.5 h-1.5 rounded-full animate-ping shrink-0 transition-colors duration-500 ${
@@ -523,7 +510,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                   isToday 
                     ? isNightMode
                       ? 'border-2 border-[#A68A56] ring-2 ring-[#C77DFF]/20 text-[#E0E1DD] w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(199,125,255,0.3)] font-black bg-[rgba(166,138,86,0.2)]'
-                      : 'border-2 border-[#D4AF37] ring-2 ring-[#D4AF37]/20 text-[#4A233E] w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,175,55,0.3)] font-black'
+                      : 'border-2 border-[#D4AF37] ring-2 ring-[#D4AF37]/20 text-[#2D1A26] w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,175,55,0.3)] font-black'
                     : isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                 }`}>
                   {date.getDate()}
@@ -582,7 +569,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                     <div className={`text-[9px] font-cinzel font-bold mb-2 uppercase border-b pb-1 transition-colors duration-500 ${
                       isNightMode 
                         ? 'text-[#E0E1DD] border-[#A68A56]/40' 
-                        : 'text-[#4A233E] border-[#F8C8DC]'
+                        : 'text-[#2D1A26] border-[#F8C8DC]'
                     }`}>
                       {date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </div>
@@ -595,7 +582,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                               style={{ backgroundColor: e.color }}
                             />
                             <span className={`font-bold transition-colors duration-500 ${
-                              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                              isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                             }`}>{e.title}</span>
                           </div>
                           <div className={`text-[9px] ml-4 transition-colors duration-500 ${
@@ -633,8 +620,8 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
         <div className={`mb-8 border-b pb-4 transition-colors duration-500 ${
           isNightMode ? 'border-[#A68A56]/30' : 'border-[#D4AF37]/30'
         }`}>
-          <h2 className={`font-cinzel text-3xl md:text-5xl font-bold tracking-tight text-center md:text-left transition-colors duration-500 ${
-            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+          <h2 className={`font-cinzel text-4xl md:text-6xl font-bold tracking-tight text-center md:text-left transition-colors duration-500 ${
+            isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
           }`}>{anchorDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric' })}</h2>
           <p className={`text-[9px] text-center md:text-left uppercase tracking-[0.3em] font-black mt-1.5 opacity-60 transition-colors duration-500 ${
             isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
@@ -650,7 +637,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
             }`}>
               {getIcon('compass', 'w-8 h-8')}
             </div>
-            <p className={`font-garamond italic text-xl md:text-2xl transition-colors duration-500 ${
+            <p className={`font-garamond italic text-2xl md:text-3xl transition-colors duration-500 ${
               isNightMode ? 'text-[#7A748E]' : ''
             }`}>"El flujo de este día fluye sin registros marcados."</p>
           </div>
@@ -676,7 +663,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                    <div className="flex-1 min-w-0">
                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                        <h4 className={`font-cinzel text-base sm:text-lg md:text-xl font-bold tracking-tight break-words transition-colors duration-500 ${
-                         isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                         isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                        }`}>{event.title}</h4>
                        {event.time && <span className={`text-[9px] sm:text-[8px] px-3 py-1 rounded-full font-bold uppercase whitespace-nowrap self-start sm:self-auto transition-colors duration-500 ${
                          isNightMode 
@@ -684,7 +671,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                            : 'bg-[#4A233E]/10 text-[#4A233E]'
                        }`}>{event.time}{event.endTime ? ` - ${event.endTime}` : ''}</span>}
                      </div>
-                     <p className={`text-[10px] sm:text-[9px] md:text-xs font-bold uppercase tracking-wider opacity-60 mt-1 sm:mt-0.5 break-words transition-colors duration-500 ${
+                     <p className={`text-[11px] sm:text-[10px] md:text-sm font-bold uppercase tracking-wider opacity-60 mt-1 sm:mt-0.5 break-words transition-colors duration-500 ${
                        isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                      }`}>{event.subtitle}</p>
                    </div>
@@ -757,8 +744,8 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
             </button>
           </div>
           <div className="text-center md:text-left flex-1 md:flex-none">
-            <h1 className={`font-cinzel text-xl sm:text-2xl md:text-3xl font-bold capitalize tracking-tight transition-colors duration-500 ${
-              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            <h1 className={`font-cinzel text-2xl sm:text-3xl md:text-4xl font-bold capitalize tracking-tight transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
             }`}>
               {anchorDate.toLocaleString('es-ES', { month: 'long' })}
             </h1>
@@ -769,7 +756,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
           {!isMobile && (
             <button 
               onClick={() => setShowAddEventModal(true)}
-              className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-cinzel text-xs font-bold uppercase tracking-widest shadow-lg active:scale-95 transition-all min-h-[44px] touch-manipulation ${
+              className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-cinzel text-sm font-bold uppercase tracking-widest shadow-lg active:scale-95 transition-all min-h-[44px] touch-manipulation ${
                 isNightMode 
                   ? 'bg-[#C77DFF] text-white shadow-[#C77DFF]/30 hover:bg-[#B56DE6]' 
                   : 'btn-primary'
@@ -827,15 +814,15 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
             : 'glass-card border-[#D4AF37]/30'
         }`}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className={`font-cinzel text-lg font-bold uppercase tracking-wider transition-colors duration-500 ${
-              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            <h3 className={`font-cinzel text-xl font-bold uppercase tracking-wider transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
             }`}>
               Conectividad
             </h3>
             <button
               onClick={() => setShowConnectivitySection(false)}
               className={`transition-colors duration-500 ${
-                isNightMode ? 'text-[#7A748E] hover:text-[#E0E1DD]' : 'text-[#8B5E75] hover:text-[#4A233E]'
+                isNightMode ? 'text-[#7A748E] hover:text-[#E0E1DD]' : 'text-[#8B5E75] hover:text-[#2D1A26]'
               }`}
             >
               {getIcon('x', 'w-5 h-5')}
@@ -853,7 +840,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 {getIcon('download', `w-5 h-5 ${isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'}`)}
                 <div>
                   <p className={`font-cinzel text-sm font-bold transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                   }`}>Exportar Crónicas</p>
                   <p className={`text-[9px] uppercase tracking-wider transition-colors duration-500 ${
                     isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
@@ -865,7 +852,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 className={`px-4 py-2 border-2 rounded-xl font-cinzel text-[10px] font-black uppercase tracking-widest transition-colors shadow-md ${
                   isNightMode 
                     ? 'bg-[#A68A56]/80 border-[#A68A56] text-[#E0E1DD] hover:bg-[#A68A56]' 
-                    : 'bg-[#D4AF37]/80 border-[#D4AF37] text-[#4A233E] hover:bg-[#D4AF37]'
+                    : 'bg-[#D4AF37]/80 border-[#D4AF37] text-[#2D1A26] hover:bg-[#D4AF37]'
                 }`}
               >
                 Exportar
@@ -888,7 +875,7 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
                 )}
                 <div>
                   <p className={`font-cinzel text-sm font-bold transition-colors duration-500 ${
-                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                    isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                   }`}>
                     Puente con Google
                     {isGoogleConnected && (

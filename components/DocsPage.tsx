@@ -56,7 +56,7 @@ const DocsPage: React.FC<DocsPageProps> = ({ onBack, isMobile = false }) => {
       content: DiarySection 
     },
     { 
-      id: 'finance', 
+      id: 'balanza', 
       title: 'Balanza (Finanzas)', 
       icon: 'scale',
       keywords: ['finanzas', 'balanza', 'gastos', 'ingresos', 'presupuesto', 'transacciones', 'dinero'],

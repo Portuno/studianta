@@ -10,7 +10,6 @@ import MobileTopBar from './components/MobileTopBar';
 import Dashboard from './components/Dashboard';
 import SubjectsModule from './components/SubjectsModule';
 import CalendarModule from './components/CalendarModule';
-import FinanceModule from './components/FinanceModule';
 import FocusModule from './components/FocusModule';
 import DiaryModule from './components/DiaryModule';
 import AuthModule from './components/AuthModule';
@@ -20,6 +19,10 @@ import OraculoPage from './components/OraculoPage';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import DocsPage from './components/DocsPage';
+import BazarModule from './components/BazarModule';
+import BalanzaModule from './components/BalanzaModule';
+import CalculatorModule from './components/CalculatorModule';
+import CalculatorFloatingWidget from './components/CalculatorFloatingWidget';
 import Footer from './components/Footer';
 import OnboardingModal from './components/OnboardingModal';
 
@@ -459,8 +462,41 @@ const App: React.FC = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPinSetupModal, setShowPinSetupModal] = useState(false);
   const [pendingModuleId, setPendingModuleId] = useState<string | null>(null);
+  const [showCalculatorFloating, setShowCalculatorFloating] = useState(false);
 
   const toggleModule = async (moduleId: string) => {
+    // Si es la calculadora, navegar directamente (es gratuita y siempre disponible)
+    if (moduleId === 'scientific-calculator') {
+      setActiveView(NavView.CALCULATOR);
+      // Si hay usuario, intentar activar el módulo en segundo plano
+      if (user) {
+        let mod = modules.find(m => m.id === moduleId);
+        if (!mod) {
+          // Crear el módulo localmente
+          const newModule = {
+            id: 'scientific-calculator',
+            name: 'Calculadora Científica',
+            description: 'Herramienta avanzada con funciones matemáticas completas, historial de operaciones y conversor de unidades',
+            cost: 0,
+            active: true,
+            icon: 'calculator',
+          };
+          setModules([...modules, newModule]);
+          mod = newModule;
+        }
+        if (!mod.active) {
+          const updatedModules = modules.map(m => m.id === moduleId ? { ...m, active: true } : m);
+          setModules(updatedModules);
+          try {
+            await supabaseService.updateModule(user.id, moduleId, { active: true });
+          } catch (error) {
+            console.error('Error updating module:', error);
+          }
+        }
+      }
+      return;
+    }
+    
     // Si no hay usuario, mostrar modal de login
     if (!user) {
       setShowLoginModal(true);
@@ -837,7 +873,7 @@ const App: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#FFF0F5] to-[#FFE4E9]">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[#E35B8F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="font-cinzel text-[#4A233E] text-lg">Cargando...</p>
+          <p className="font-cinzel text-[#2D1A26] text-xl">Cargando...</p>
         </div>
       </div>
     );
@@ -883,14 +919,13 @@ const App: React.FC = () => {
           userId={user?.id}
           isNightMode={isNightMode}
         />;
-      case NavView.FINANCE:
-        return <FinanceModule 
-          transactions={transactions} 
-          budget={monthlyBudget}
-          onUpdateBudget={setMonthlyBudget}
-          onAdd={handleAddTransaction} 
-          onDelete={handleDeleteTransaction}
-          onUpdate={handleUpdateTransaction}
+      case NavView.BALANZA:
+        if (!user) {
+          setShowLoginModal(true);
+          return null;
+        }
+        return <BalanzaModule 
+          userId={user.id}
           isMobile={isMobile}
           isNightMode={isNightMode}
         />;
@@ -962,6 +997,20 @@ const App: React.FC = () => {
           onBack={() => handleViewChange(NavView.DASHBOARD)}
           isMobile={isMobile}
           isNightMode={isNightMode}
+        />;
+      case NavView.BAZAR:
+        return <BazarModule 
+          isMobile={isMobile}
+          isNightMode={isNightMode}
+          onPurchaseModule={toggleModule}
+          userModules={modules}
+          onNavigateToCalculator={() => setActiveView(NavView.CALCULATOR)}
+        />;
+      case NavView.CALCULATOR:
+        return <CalculatorModule 
+          isMobile={isMobile}
+          isNightMode={isNightMode}
+          onFloatingMode={() => setShowCalculatorFloating(true)}
         />;
       default:
         return <Dashboard modules={modules} onActivate={toggleModule} isMobile={isMobile} setActiveView={setActiveView} isNightMode={isNightMode} />;
@@ -1064,6 +1113,15 @@ const App: React.FC = () => {
           onOpen={() => setActiveView(NavView.FOCUS)}
           isMobile={isMobile}
           isNightMode={isNightMode}
+        />
+      )}
+
+      {/* Widget Flotante de Calculadora */}
+      {showCalculatorFloating && (
+        <CalculatorFloatingWidget
+          isMobile={isMobile}
+          isNightMode={isNightMode}
+          onClose={() => setShowCalculatorFloating(false)}
         />
       )}
 
@@ -1211,8 +1269,8 @@ const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => 
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#4A233E]/10 flex items-center justify-center">
             {getIcon('lock', 'w-8 h-8 text-[#D4AF37]')}
           </div>
-          <h3 className="font-cinzel text-xl lg:text-2xl text-[#4A233E] mb-2">Configurar PIN de Seguridad</h3>
-          <p className="font-garamond text-[#8B5E75] text-sm">
+          <h3 className="font-cinzel text-3xl lg:text-3xl text-[#2D1A26] mb-2">Configurar PIN de Seguridad</h3>
+          <p className="font-garamond text-[#8B5E75] text-base">
             {isConfirming ? 'Confirma tu PIN' : 'Establece un PIN de 4 dígitos para proteger tus entradas bloqueadas'}
           </p>
         </div>
@@ -1220,7 +1278,7 @@ const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => 
         <div className="space-y-4 mb-6">
           {!isConfirming ? (
             <div>
-              <label className="block text-sm font-cinzel text-[#4A233E] mb-2">PIN</label>
+              <label className="block text-base font-cinzel text-[#2D1A26] mb-2">PIN</label>
               <div className="flex gap-3 justify-center">
                 {[0, 1, 2, 3].map((index) => (
                   <input
@@ -1232,9 +1290,9 @@ const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => 
                     value={pin[index] || ''}
                     onChange={(e) => handlePinChange(index, e.target.value, false)}
                     onKeyDown={(e) => handleKeyDown(index, e, false)}
-                    className={`w-14 h-14 lg:w-16 lg:h-16 rounded-xl border-2 text-center text-2xl font-cinzel font-black transition-all focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 ${
+                    className={`w-14 h-14 lg:w-16 lg:h-16 rounded-xl border-2 text-center text-3xl font-cinzel font-black transition-all focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 ${
                       pin.length > index
-                        ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#4A233E]'
+                        ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#2D1A26]'
                         : 'border-[#F8C8DC] bg-white/40 text-[#8B5E75]/30'
                     }`}
                   />
@@ -1243,7 +1301,7 @@ const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => 
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-cinzel text-[#4A233E] mb-2">Confirmar PIN</label>
+              <label className="block text-base font-cinzel text-[#2D1A26] mb-2">Confirmar PIN</label>
               <div className="flex gap-3 justify-center">
                 {[0, 1, 2, 3].map((index) => (
                   <input
@@ -1255,9 +1313,9 @@ const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => 
                     value={confirmPin[index] || ''}
                     onChange={(e) => handlePinChange(index, e.target.value, true)}
                     onKeyDown={(e) => handleKeyDown(index, e, true)}
-                    className={`w-14 h-14 lg:w-16 lg:h-16 rounded-xl border-2 text-center text-2xl font-cinzel font-black transition-all focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 ${
+                    className={`w-14 h-14 lg:w-16 lg:h-16 rounded-xl border-2 text-center text-3xl font-cinzel font-black transition-all focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 ${
                       confirmPin.length > index
-                        ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#4A233E]'
+                        ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#2D1A26]'
                         : 'border-[#F8C8DC] bg-white/40 text-[#8B5E75]/30'
                     }`}
                   />
@@ -1267,7 +1325,7 @@ const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => 
           )}
 
           {error && (
-            <p className="text-red-500 text-sm text-center font-garamond">{error}</p>
+            <p className="text-red-500 text-base text-center font-garamond">{error}</p>
           )}
         </div>
 
@@ -1277,20 +1335,20 @@ const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => 
             <button
               key={num}
               onClick={() => handleNumberClick(num.toString())}
-              className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel text-xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
+              className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#2D1A26] font-cinzel text-xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
             >
               {num}
             </button>
           ))}
           <button
             onClick={onCancel}
-            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-sm font-black hover:bg-[#FFF0F5] transition-all"
+            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-base font-black hover:bg-[#FFF0F5] transition-all"
           >
             Cancelar
           </button>
           <button
             onClick={() => handleNumberClick('0')}
-            className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#4A233E] font-cinzel text-xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
+            className="py-4 rounded-xl bg-white border-2 border-[#F8C8DC] text-[#2D1A26] font-cinzel text-xl font-black hover:bg-[#FFF0F5] hover:border-[#D4AF37] transition-all active:scale-95"
           >
             0
           </button>
@@ -1307,7 +1365,7 @@ const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => 
               }
               setError('');
             }}
-            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-sm font-black hover:bg-[#FFF0F5] transition-all"
+            className="py-4 rounded-xl bg-white/40 border-2 border-[#F8C8DC] text-[#8B5E75] font-cinzel text-base font-black hover:bg-[#FFF0F5] transition-all"
           >
             ←
           </button>
@@ -1321,14 +1379,14 @@ const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => 
                 setConfirmPin('');
                 pinRefs[0].current?.focus();
               }}
-              className="flex-1 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest border-2 border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5] transition-all"
+              className="flex-1 py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest border-2 border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5] transition-all"
             >
               Atrás
             </button>
           )}
           <button
             onClick={onCancel}
-            className="flex-1 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest border-2 border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5] transition-all"
+            className="flex-1 py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest border-2 border-[#F8C8DC] text-[#8B5E75] hover:bg-[#FFF0F5] transition-all"
           >
             Cancelar
           </button>
@@ -1343,7 +1401,7 @@ const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => 
                 }
               }}
               disabled={pin.length !== 4}
-              className="flex-1 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest bg-[#D4AF37] text-[#4A233E] hover:bg-[#C9A030] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest bg-[#D4AF37] text-[#2D1A26] hover:bg-[#C9A030] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Continuar
             </button>

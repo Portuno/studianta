@@ -59,7 +59,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
         <div className="relative -mt-12 mx-2 flex-shrink-0">
           <button 
             onClick={() => setActiveView(NavView.DASHBOARD)}
-            className={`min-w-[72px] min-h-[72px] w-18 h-18 rounded-full border-4 border-white shadow-2xl flex flex-col items-center justify-center transition-all duration-300 active:scale-95 ${activeView === NavView.DASHBOARD ? 'bg-[#E35B8F] text-white scale-105' : 'bg-[#4A233E] text-[#D4AF37]'}`}
+            className={`min-w-[72px] min-h-[72px] w-18 h-18 rounded-full border-4 border-white shadow-2xl flex flex-col items-center justify-center transition-all duration-300 active:scale-95 ${activeView === NavView.DASHBOARD ? 'bg-[#E35B8F] text-white scale-105' : 'bg-[#2D1A26] text-[#D4AF37]'}`}
             aria-label="Atanor - Dashboard"
           >
             <div className="p-1">
@@ -79,12 +79,12 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
             onClick={() => setActiveView(NavView.FOCUS)} 
           />
           <NavButton 
-            id={NavView.FINANCE} 
+            id={NavView.BALANZA} 
             icon="scale" 
             label="Balanza" 
-            locked={isLocked('finance')} 
-            active={activeView === NavView.FINANCE} 
-            onClick={() => setActiveView(NavView.FINANCE)} 
+            locked={isLocked('balanza')} 
+            active={activeView === NavView.BALANZA} 
+            onClick={() => setActiveView(NavView.BALANZA)} 
           />
         </div>
       </nav>
@@ -97,7 +97,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
     { id: NavView.CALENDAR, icon: 'calendar', moduleId: 'calendar', label: 'Calendario' },
     { id: NavView.FOCUS, icon: 'hourglass', moduleId: 'focus', label: 'Enfoque' },
     { id: NavView.DIARY, icon: 'pen', moduleId: 'diary', label: 'Diario' },
-    { id: NavView.FINANCE, icon: 'scale', moduleId: 'finance', label: 'Balanza' },
+    { id: NavView.BALANZA, icon: 'scale', moduleId: 'balanza', label: 'Balanza' },
     { id: NavView.DASHBOARD, icon: 'sparkles', moduleId: '', label: 'Atanor' },
   ];
 
@@ -112,8 +112,8 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
           className="flex flex-col items-center cursor-pointer mb-10"
           onClick={() => setActiveView(NavView.DASHBOARD)}
         >
-          <h1 className={`font-cinzel text-xl lg:text-2xl font-black tracking-[0.2em] transition-colors duration-500 ${
-            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+          <h1 className={`font-cinzel text-2xl lg:text-3xl font-black tracking-[0.2em] transition-colors duration-500 ${
+            isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
           }`}>
             ST<span className="hidden lg:inline">UDI<span className="text-[#E35B8F]">A</span>NTA</span>
             <span className="lg:hidden text-[#E35B8F]">A</span>
@@ -145,7 +145,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
                 title={item.label}
               >
                 {getIcon(item.icon, "w-6 h-6 lg:w-5 lg:h-5")}
-                <span className="hidden lg:inline font-inter font-bold text-xs tracking-widest uppercase">{item.label}</span>
+                <span className="hidden lg:inline font-inter font-bold text-sm tracking-widest uppercase">{item.label}</span>
                 {locked && !isMobile && <div className="absolute top-1 right-1 lg:static lg:ml-auto text-[#D4AF37]">{getIcon('lock', 'w-2.5 h-2.5 lg:w-3 lg:h-3')}</div>}
               </button>
             );
@@ -190,7 +190,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
                 : 'bg-[#E35B8F] text-white'
               : isNightMode
                 ? 'bg-[rgba(48,43,79,0.6)] text-[#A68A56] border border-[#A68A56]/40 hover:bg-[rgba(48,43,79,0.8)]'
-                : 'bg-[#4A233E] text-[#D4AF37]'
+                : 'bg-[#2D1A26] text-[#D4AF37]'
           }`}
         >
           {getIcon('brain', 'w-6 h-6 lg:w-5 lg:h-5 transition-transform')}
@@ -238,7 +238,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
                  ? 'text-white' 
                  : isNightMode 
                    ? 'text-[#E0E1DD]' 
-                   : 'text-[#4A233E]'
+                   : 'text-[#2D1A26]'
              }`}>
                {user && userProfile?.full_name 
                  ? userProfile.full_name 

@@ -219,11 +219,12 @@ const Dashboard: React.FC<DashboardProps> = ({
     'calendar': NavView.CALENDAR,
     'focus': NavView.FOCUS,
     'diary': NavView.DIARY,
-    'finance': NavView.FINANCE,
+    'balanza': NavView.BALANZA,
     'ai': NavView.AI,
     'profile': NavView.PROFILE,
     'security': NavView.SECURITY,
     'social': NavView.SOCIAL,
+    'bazar': NavView.BAZAR,
   };
 
   // Ordenar módulos: pendientes primero, adquiridos al final
@@ -578,8 +579,8 @@ const Dashboard: React.FC<DashboardProps> = ({
       <>
         <div className="h-full flex flex-col gap-4 sm:gap-6 pb-32 animate-fade-in px-3 sm:px-4 overflow-y-auto no-scrollbar safe-area-inset-bottom">
           <section className="text-center pt-2 mb-4">
-            <h1 className={`font-cinzel text-4xl font-black tracking-[0.25em] uppercase transition-colors duration-500 ${
-              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            <h1 className={`font-cinzel text-5xl font-black tracking-[0.25em] uppercase transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
             }`}>El Atanor</h1>
             <div className="h-0.5 w-12 bg-[#D4AF37] mx-auto mt-2 opacity-50 rounded-full" />
           </section>
@@ -591,15 +592,15 @@ const Dashboard: React.FC<DashboardProps> = ({
                 : 'glass-card border-[#D4AF37]/30'
             }`}>
               <div className="text-center">
-                <h3 className={`font-cinzel text-base mb-2 transition-colors duration-500 ${
-                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                <h3 className={`font-cinzel text-lg mb-2 transition-colors duration-500 ${
+                  isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                 }`}>Explora el Atanor</h3>
-                <p className={`font-garamond italic text-xs mb-4 transition-colors duration-500 ${
+                <p className={`font-garamond italic text-sm mb-4 transition-colors duration-500 ${
                   isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                 }`}>Inicia sesión para transmutar módulos</p>
                 <button
                   onClick={() => setShowLoginModal(true)}
-                  className="btn-primary px-6 py-3 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest shadow-xl w-full"
+                  className="btn-primary px-6 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest shadow-xl w-full"
                 >
                   Iniciar Sesión
                 </button>
@@ -671,7 +672,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       {getIcon(mod.icon, "w-7 h-7 sm:w-6 sm:h-6")}
                     </div>
                     <h4 className={`font-cinzel text-[11px] sm:text-[10px] font-black text-center uppercase tracking-widest px-1 leading-tight transition-colors duration-500 ${
-                      isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                      isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                     }`}>
                       {mod.name}
                     </h4>
@@ -689,7 +690,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           {/* Enlaces Legales - Mobile - Al final de los módulos */}
           <div className="mt-8 pt-6 border-t border-[#F8C8DC]/30 px-2">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3 text-xs">
+              <div className="flex flex-wrap items-center gap-3 text-sm">
                 <a
                   href="/privacidad"
                   onClick={(e) => {
@@ -724,13 +725,13 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </a>
               </div>
               <div className="text-left sm:text-right">
-                <p className="font-garamond text-xs text-[#8B5E75]">
+                <p className="font-garamond text-sm text-[#8B5E75]">
                   Studianta es una creación de{' '}
                   <a
                     href="https://www.versaproducciones.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#4A233E] hover:text-[#E35B8F] font-semibold underline-offset-2 hover:underline transition-colors"
+                    className="text-[#2D1A26] hover:text-[#E35B8F] font-semibold underline-offset-2 hover:underline transition-colors"
                   >
                     Versa Producciones
                   </a>
@@ -795,8 +796,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     <div className="h-full flex flex-col gap-6 pb-10 max-w-7xl mx-auto px-4 lg:px-6 overflow-y-auto no-scrollbar relative z-0">
       {/* Header */}
       <div className="text-center pt-4 pb-2">
-        <h1 className={`font-cinzel text-4xl lg:text-5xl font-black tracking-[0.25em] uppercase transition-colors duration-500 ${
-          isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+        <h1 className={`font-cinzel text-5xl lg:text-6xl font-black tracking-[0.25em] uppercase transition-colors duration-500 ${
+          isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
         }`}>El Atanor</h1>
         <div className="h-1 w-16 lg:w-20 bg-[#D4AF37] mx-auto mt-3 rounded-full" />
       </div>
@@ -809,16 +810,16 @@ const Dashboard: React.FC<DashboardProps> = ({
         }`}>
               <div className="flex items-center justify-between gap-4">
                 <div>
-              <h3 className={`font-cinzel text-lg mb-2 transition-colors duration-500 ${
-                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              <h3 className={`font-cinzel text-xl mb-2 transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
               }`}>Explora el Atanor</h3>
-              <p className={`font-garamond italic text-sm transition-colors duration-500 ${
+              <p className={`font-garamond italic text-base transition-colors duration-500 ${
                 isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
               }`}>Inicia sesión para transmutar módulos</p>
                 </div>
                 <button
                   onClick={() => setShowLoginModal(true)}
-                  className="btn-primary px-6 py-3 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest shadow-xl whitespace-nowrap"
+                  className="btn-primary px-6 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest shadow-xl whitespace-nowrap"
                 >
                   Iniciar Sesión
                 </button>
@@ -901,17 +902,17 @@ const Dashboard: React.FC<DashboardProps> = ({
                     {getIcon(mod.icon, "w-10 h-10 lg:w-12 lg:h-12")}
                           </div>
                           <div className="flex flex-col items-center gap-2">
-                    <h4 className={`font-cinzel text-lg lg:text-xl font-black transition-colors duration-500 ${
-                      isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+                    <h4 className={`font-cinzel text-xl lg:text-2xl font-black transition-colors duration-500 ${
+                      isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
                     }`}>{mod.name.toUpperCase()}</h4>
                           </div>
-                  <p className={`text-xs lg:text-sm font-garamond italic leading-relaxed transition-colors duration-500 ${
+                  <p className={`text-sm lg:text-base font-garamond italic leading-relaxed transition-colors duration-500 ${
                     isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                   }`}>
                     {mod.description}
                   </p>
                   {!isActive && (
-                    <div className="mt-2 flex items-center gap-2 text-[#D4AF37] font-cinzel font-black text-lg lg:text-xl">
+                    <div className="mt-2 flex items-center gap-2 text-[#D4AF37] font-cinzel font-black text-xl lg:text-2xl">
                       <span>{mod.cost}</span>
                       {getIcon('sparkles', "w-5 h-5")}
                     </div>

@@ -43,7 +43,7 @@ const Footer: React.FC<FooterProps> = ({ setActiveView, isMobile = false }) => {
                 e.preventDefault();
                 handlePrivacyClick();
               }}
-              className="font-garamond text-sm text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+              className="font-garamond text-base text-[#8B5E75] hover:text-[#2D1A26] transition-colors underline-offset-2 hover:underline"
             >
               Política de Privacidad
             </a>
@@ -54,7 +54,7 @@ const Footer: React.FC<FooterProps> = ({ setActiveView, isMobile = false }) => {
                 e.preventDefault();
                 handleTermsClick();
               }}
-              className="font-garamond text-sm text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+              className="font-garamond text-base text-[#8B5E75] hover:text-[#2D1A26] transition-colors underline-offset-2 hover:underline"
             >
               Términos y Condiciones
             </a>
@@ -65,7 +65,7 @@ const Footer: React.FC<FooterProps> = ({ setActiveView, isMobile = false }) => {
                 e.preventDefault();
                 handleDocsClick();
               }}
-              className="font-garamond text-sm text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+              className="font-garamond text-base text-[#8B5E75] hover:text-[#2D1A26] transition-colors underline-offset-2 hover:underline"
             >
               Documentación
             </a>
@@ -73,13 +73,13 @@ const Footer: React.FC<FooterProps> = ({ setActiveView, isMobile = false }) => {
 
           {/* Créditos */}
           <div className="text-center md:text-right">
-            <p className="font-garamond text-sm text-[#8B5E75]">
+            <p className="font-garamond text-base text-[#8B5E75]">
               Studianta es una creación de{' '}
               <a
                 href="https://www.versaproducciones.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[#4A233E] hover:text-[#E35B8F] font-semibold underline-offset-2 hover:underline transition-colors"
+                className="text-[#2D1A26] hover:text-[#E35B8F] font-semibold underline-offset-2 hover:underline transition-colors"
               >
                 Versa Producciones
               </a>

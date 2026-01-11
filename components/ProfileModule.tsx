@@ -4,7 +4,7 @@ import { getIcon } from '../constants';
 import AuthModule from './AuthModule';
 import { supabase } from '../services/supabaseService';
 import { useInteractionAggregator } from '../hooks/useInteractionAggregator';
-import { Subject, Transaction, JournalEntry, CustomCalendarEvent, Module, NavView } from '../types';
+import { Subject, Transaction, JournalEntry, CustomCalendarEvent, Module, NavView, BalanzaProTransaction } from '../types';
 
 interface ProfileModuleProps {
   user: any;
@@ -45,6 +45,27 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [hoveringAvatar, setHoveringAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [balanzaProTransactions, setBalanzaProTransactions] = useState<BalanzaProTransaction[]>([]);
+
+  // Cargar transacciones de Balanza Pro si el módulo está activo
+  useEffect(() => {
+    const loadBalanzaProTransactions = async () => {
+      const balanzaModule = modules.find(m => m.id === 'balanza');
+      if (user && balanzaModule?.active) {
+        try {
+          const data = await supabaseService.getBalanzaProTransactions(user.id);
+          setBalanzaProTransactions(data);
+        } catch (error) {
+          console.error('Error loading balanza pro transactions:', error);
+          setBalanzaProTransactions([]);
+        }
+      } else {
+        setBalanzaProTransactions([]);
+      }
+    };
+
+    loadBalanzaProTransactions();
+  }, [user, modules]);
 
   // Generar el SPC completo
   const spc = useInteractionAggregator({
@@ -55,6 +76,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
     customEvents,
     modules,
     monthlyBudget,
+    balanzaProTransactions,
   });
 
   // Función para descargar el SPC
@@ -163,8 +185,8 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
               }`}>
                 {getIcon('profile', 'w-8 h-8 text-white')}
               </div>
-              <h1 className={`font-cinzel text-3xl md:text-4xl font-bold mb-2 uppercase tracking-widest transition-colors duration-500 ${
-                isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+              <h1 className={`font-cinzel text-4xl md:text-5xl font-bold mb-2 uppercase tracking-widest transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
               }`}>
                 Iniciar Sesión
               </h1>
@@ -181,7 +203,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[#E35B8F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="font-cinzel text-[#4A233E] text-lg">Cargando...</p>
+          <p className="font-cinzel text-[#2D1A26] text-xl">Cargando...</p>
         </div>
       </div>
     );
@@ -216,32 +238,32 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
               <div className="absolute -inset-2 rounded-full border-2 border-[#D4AF37] opacity-50"></div>
             </div>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-            <h2 className="font-marcellus text-2xl font-bold text-[#4A233E] mb-1">{displayName}</h2>
-            <p className="font-garamond text-[#8B5E75] text-sm italic mb-4">{displayEmail}</p>
+            <h2 className="font-marcellus text-3xl font-bold text-[#2D1A26] mb-1">{displayName}</h2>
+            <p className="font-garamond text-[#8B5E75] text-base italic mb-4">{displayEmail}</p>
           </div>
           <div className="space-y-4">
             <div>
               <p className="text-[8px] uppercase font-bold text-[#8B5E75] mb-1 font-inter tracking-[0.2em]">Carrera</p>
-              <p className="font-garamond text-[#4A233E]">{displayCareer}</p>
+              <p className="font-garamond text-[#2D1A26]">{displayCareer}</p>
             </div>
             <div>
               <p className="text-[8px] uppercase font-bold text-[#8B5E75] mb-1 font-inter tracking-[0.2em]">Institución</p>
-              <p className="font-garamond text-[#4A233E]">{displayInstitution}</p>
+              <p className="font-garamond text-[#2D1A26]">{displayInstitution}</p>
             </div>
           </div>
           <div className="mt-6 flex flex-col gap-2">
             <button
               onClick={() => setEditing(true)}
-              className="flex-1 btn-primary py-2 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest"
+              className="flex-1 btn-primary py-2 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest"
             >
               Editar
             </button>
             <button
               onClick={handleDownloadSPC}
-              className={`flex-1 border-2 py-2 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors duration-500 ${
+              className={`flex-1 border-2 py-2 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors duration-500 ${
                 isNightMode 
                   ? 'bg-[#A68A56]/80 border-[#A68A56] text-[#E0E1DD]' 
-                  : 'bg-[#D4AF37]/80 border-[#D4AF37] text-[#4A233E]'
+                  : 'bg-[#D4AF37]/80 border-[#D4AF37] text-[#2D1A26]'
               }`}
             >
               {getIcon('download', 'w-3 h-3')}
@@ -249,7 +271,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
             </button>
             <button
               onClick={onSignOut}
-              className="flex-1 bg-red-100/60 border-2 border-red-300 text-red-700 py-2 rounded-xl font-cinzel text-xs font-black uppercase tracking-widest"
+              className="flex-1 bg-red-100/60 border-2 border-red-300 text-red-700 py-2 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest"
             >
               Salir
             </button>
@@ -278,7 +300,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
 
         {/* Marca de agua STUDIANTA */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.02]">
-          <div className="font-cinzel text-[20rem] font-black text-[#4A233E] transform -rotate-12">
+          <div className="font-cinzel text-[20rem] font-black text-[#2D1A26] transform -rotate-12">
             STUDIANTA
           </div>
         </div>
@@ -325,19 +347,19 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
 
             {/* Identidad Primaria */}
             <div className="text-center w-full">
-              <h2 className="font-marcellus text-2xl md:text-3xl font-bold text-[#4A233E] mb-2">
+              <h2 className="font-marcellus text-3xl md:text-3xl font-bold text-[#2D1A26] mb-2">
                 {editing ? (
                   <input
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full bg-white/80 border border-[#F8C8DC] rounded-xl px-3 py-2 text-xl md:text-2xl font-marcellus font-bold text-[#4A233E] focus:outline-none focus:border-[#E35B8F] text-center"
+                    className="w-full bg-white/80 border border-[#F8C8DC] rounded-xl px-3 py-2 text-xl md:text-3xl font-marcellus font-bold text-[#2D1A26] focus:outline-none focus:border-[#E35B8F] text-center"
                   />
                 ) : (
                   displayName
                 )}
               </h2>
-              <p className="font-garamond text-[#8B5E75] text-sm md:text-base italic opacity-80 mb-4">
+              <p className="font-garamond text-[#8B5E75] text-base md:text-base italic opacity-80 mb-4">
                 {displayEmail}
               </p>
               
@@ -355,7 +377,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
                           window.location.href = '/privacidad';
                         }
                       }}
-                      className="font-garamond text-xs text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+                      className="font-garamond text-sm text-[#8B5E75] hover:text-[#2D1A26] transition-colors underline-offset-2 hover:underline"
                     >
                       Política de Privacidad
                     </a>
@@ -369,7 +391,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
                           window.location.href = '/terminosycondiciones';
                         }
                       }}
-                      className="font-garamond text-xs text-[#8B5E75] hover:text-[#4A233E] transition-colors underline-offset-2 hover:underline"
+                      className="font-garamond text-sm text-[#8B5E75] hover:text-[#2D1A26] transition-colors underline-offset-2 hover:underline"
                     >
                       Términos y Condiciones
                     </a>
@@ -398,11 +420,11 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
                     type="text"
                     value={career}
                     onChange={(e) => setCareer(e.target.value)}
-                    className="w-full bg-white/80 border border-[#F8C8DC] rounded-lg px-3 py-2 text-sm font-garamond text-[#4A233E] focus:outline-none focus:border-[#E35B8F]"
+                    className="w-full bg-white/80 border border-[#F8C8DC] rounded-lg px-3 py-2 text-base font-garamond text-[#2D1A26] focus:outline-none focus:border-[#E35B8F]"
                     placeholder="Tu carrera..."
                   />
                 ) : (
-                  <p className="font-garamond text-base md:text-lg text-[#4A233E]">{displayCareer}</p>
+                  <p className="font-garamond text-base md:text-xl text-[#2D1A26]">{displayCareer}</p>
                 )}
               </div>
 
@@ -419,11 +441,11 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
                     type="text"
                     value={institution}
                     onChange={(e) => setInstitution(e.target.value)}
-                    className="w-full bg-white/80 border border-[#F8C8DC] rounded-lg px-3 py-2 text-sm font-garamond text-[#4A233E] focus:outline-none focus:border-[#E35B8F]"
+                    className="w-full bg-white/80 border border-[#F8C8DC] rounded-lg px-3 py-2 text-base font-garamond text-[#2D1A26] focus:outline-none focus:border-[#E35B8F]"
                     placeholder="Tu universidad..."
                   />
                 ) : (
-                  <p className="font-garamond text-base md:text-lg text-[#4A233E]">{displayInstitution}</p>
+                  <p className="font-garamond text-base md:text-xl text-[#2D1A26]">{displayInstitution}</p>
                 )}
               </div>
             </div>
@@ -438,7 +460,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
                     INGRESO
                   </label>
                 </div>
-                <p className="font-garamond text-base md:text-lg text-[#4A233E] capitalize">{joinDate}</p>
+                <p className="font-garamond text-base md:text-xl text-[#2D1A26] capitalize">{joinDate}</p>
               </div>
 
               {/* Estado de Cursada */}
@@ -449,7 +471,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
                     ESTADO
                   </label>
                 </div>
-                <p className="font-garamond text-base md:text-lg text-[#4A233E]">Activa</p>
+                <p className="font-garamond text-base md:text-xl text-[#2D1A26]">Activa</p>
               </div>
             </div>
           </div>
@@ -462,7 +484,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
             <>
               <button
                 onClick={handleSave}
-                className="flex-1 btn-primary py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest shadow-lg"
+                className="flex-1 btn-primary py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest shadow-lg"
               >
               Guardar Cambios
             </button>
@@ -471,7 +493,7 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
                   setEditing(false);
                   loadProfile();
                 }}
-                className="flex-1 bg-white/60 border-2 border-[#F8C8DC] text-[#8B5E75] py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest hover:bg-white/80 transition-colors"
+                className="flex-1 bg-white/60 border-2 border-[#F8C8DC] text-[#8B5E75] py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest hover:bg-white/80 transition-colors"
               >
                 Cancelar
               </button>
@@ -480,20 +502,20 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
             <>
               <button
                 onClick={() => setEditing(true)}
-                className="flex-1 btn-primary py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest shadow-lg"
+                className="flex-1 btn-primary py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest shadow-lg"
               >
                 Editar Credencial
               </button>
               <button
                 onClick={handleDownloadSPC}
-                className="flex-1 bg-[#D4AF37]/80 border-2 border-[#D4AF37] text-[#4A233E] py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest hover:bg-[#D4AF37] transition-colors shadow-lg flex items-center justify-center gap-2"
+                className="flex-1 bg-[#D4AF37]/80 border-2 border-[#D4AF37] text-[#2D1A26] py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest hover:bg-[#D4AF37] transition-colors shadow-lg flex items-center justify-center gap-2"
               >
                 {getIcon('download', 'w-4 h-4')}
                 Descargar SPC
               </button>
               <button
                 onClick={onSignOut}
-                className="flex-1 bg-red-100/60 border-2 border-red-300 text-red-700 py-3 rounded-xl font-cinzel text-sm font-black uppercase tracking-widest hover:bg-red-200/60 transition-colors"
+                className="flex-1 bg-red-100/60 border-2 border-red-300 text-red-700 py-3 rounded-xl font-cinzel text-base font-black uppercase tracking-widest hover:bg-red-200/60 transition-colors"
               >
                 Cerrar Sesión
               </button>

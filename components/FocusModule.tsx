@@ -249,7 +249,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
 
       <div className="max-w-4xl w-full flex flex-col items-center gap-8 lg:gap-12 animate-fade-in transition-all duration-500 overflow-visible">
         <header className="text-center">
-          <h1 className={`font-cinzel text-xl md:text-2xl lg:text-3xl tracking-[0.4em] uppercase opacity-60 mb-2 transition-colors duration-500 ${
+          <h1 className={`font-cinzel text-2xl md:text-3xl lg:text-4xl tracking-[0.4em] uppercase opacity-60 mb-2 transition-colors duration-500 ${
             isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
           }`}>
             El Reloj de Arena
@@ -287,8 +287,8 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                 }}
               />
             ))}
-            <span className={`font-mono text-5xl md:text-7xl lg:text-8xl font-black tabular-nums tracking-tighter relative z-10 transition-colors duration-500 ${
-              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            <span className={`font-mono text-6xl md:text-8xl lg:text-9xl font-black tabular-nums tracking-tighter relative z-10 transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
             }`}>
               {formatTime(timeLeft)}
             </span>
@@ -405,8 +405,8 @@ const FocusModule: React.FC<FocusModuleProps> = ({
               ? 'bg-[rgba(48,43,79,0.95)] border-[#A68A56]/40 shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
               : 'glass-card border-[#D4AF37]/40'
           }`} onClick={(e) => e.stopPropagation()}>
-            <h2 className={`font-cinzel text-lg mb-6 text-center font-bold uppercase tracking-widest transition-colors duration-500 ${
-              isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
+            <h2 className={`font-cinzel text-xl mb-6 text-center font-bold uppercase tracking-widest transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
             }`}>Tiempo Personalizado</h2>
             <div className="space-y-4">
               <input
@@ -416,7 +416,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                 value={customMinutes}
                 onChange={(e) => setCustomMinutes(e.target.value)}
                 placeholder="Minutos (1-240)"
-                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-sm outline-none font-bold focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all"
+                className="w-full bg-white/30 border-0 border-b-2 border-[#D4AF37] rounded-none px-4 py-3.5 text-base outline-none font-bold focus:shadow-[0_4px_10px_rgba(212,175,55,0.2)] transition-all"
               />
             </div>
             <div className="flex gap-4 mt-8">
@@ -444,10 +444,10 @@ const FocusModule: React.FC<FocusModuleProps> = ({
               ? 'bg-[rgba(48,43,79,0.95)] border border-[#A68A56]/40 shadow-[0_30px_60px_rgba(199,125,255,0.3)]' 
               : 'glass-card'
           }`} onClick={(e) => e.stopPropagation()}>
-            <h2 className="font-cinzel text-2xl lg:text-3xl text-[#4A233E] mb-3 font-black text-center uppercase tracking-widest">
+            <h2 className="font-cinzel text-3xl lg:text-4xl text-[#2D1A26] mb-3 font-black text-center uppercase tracking-widest">
               {reflectionData.wasInterrupted ? "Sesión Interrumpida" : "Sesión Completada"}
             </h2>
-            <p className="text-sm lg:text-base text-[#8B5E75] text-center mb-10 font-garamond italic px-6">
+            <p className="text-base lg:text-base text-[#8B5E75] text-center mb-10 font-garamond italic px-6">
               {reflectionData.wasInterrupted ? "Tu sesión fue interrumpida. Reflexiona sobre lo aprendido para no perder el progreso." : "¡Excelente trabajo! Has completado tu sesión de estudio."}
             </p>
 
@@ -455,7 +455,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
               <div className="px-4">
                 <div className="flex justify-between items-center mb-4">
                   <label className="text-[10px] lg:text-[11px] uppercase font-black tracking-widest text-[#8B5E75]">Frecuencia Motivacional</label>
-                  <span className="text-lg font-cinzel text-[#E35B8F] font-black">{reflectionData.motivation}/10</span>
+                  <span className="text-xl font-cinzel text-[#E35B8F] font-black">{reflectionData.motivation}/10</span>
                 </div>
                 <input 
                   type="range" min="1" max="10" 
@@ -473,7 +473,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                   value={reflectionData.harvest}
                   onChange={(e) => setReflectionData({...reflectionData, harvest: e.target.value})}
                   placeholder={reflectionData.wasInterrupted ? "Anotaciones clave para recordar..." : "¿Qué hemos aprendido hoy?"}
-                  className="w-full bg-white/80 border-2 border-[#F8C8DC] rounded-[2rem] p-6 text-base lg:text-lg font-garamond h-40 focus:outline-none focus:border-[#D4AF37] transition-all resize-none shadow-inner"
+                  className="w-full bg-white/80 border-2 border-[#F8C8DC] rounded-[2rem] p-6 text-base lg:text-xl font-garamond h-40 focus:outline-none focus:border-[#D4AF37] transition-all resize-none shadow-inner"
                 />
               </div>
 
@@ -485,14 +485,14 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                     value={reflectionData.reason}
                     onChange={(e) => setReflectionData({...reflectionData, reason: e.target.value})}
                     placeholder="¿Qué te distrajo?"
-                    className="w-full bg-[#E35B8F]/5 border-2 border-[#E35B8F]/20 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-[#E35B8F]"
+                    className="w-full bg-[#E35B8F]/5 border-2 border-[#E35B8F]/20 rounded-2xl px-6 py-4 text-base focus:outline-none focus:border-[#E35B8F]"
                   />
                 </div>
               )}
 
               <button 
                 onClick={submitReflection}
-                className="btn-primary w-full py-5 rounded-[2rem] font-cinzel text-xs lg:text-sm tracking-[0.3em] font-black uppercase shadow-2xl hover:brightness-105"
+                className="btn-primary w-full py-5 rounded-[2rem] font-cinzel text-xs lg:text-base tracking-[0.3em] font-black uppercase shadow-2xl hover:brightness-105"
               >
                 Finalizar Sesión
               </button>

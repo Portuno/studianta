@@ -1089,6 +1089,290 @@ export class SupabaseService {
     }
   }
 
+  // ============ BALANZA PRO ============
+
+  async getBalanzaProTransactions(
+    userId: string,
+    filters?: {
+      startDate?: string;
+      endDate?: string;
+      type?: 'Ingreso' | 'Egreso';
+      paymentMethod?: string;
+      status?: 'Pendiente' | 'Completado';
+      isExtra?: boolean;
+      isRecurring?: boolean;
+    }
+  ) {
+    try {
+      let query = supabase
+        .from('balanza_pro_transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
+
+      if (filters) {
+        if (filters.startDate) {
+          query = query.gte('date', filters.startDate);
+        }
+        if (filters.endDate) {
+          query = query.lte('date', filters.endDate);
+        }
+        if (filters.type) {
+          query = query.eq('type', filters.type);
+        }
+        if (filters.paymentMethod) {
+          query = query.eq('payment_method', filters.paymentMethod);
+        }
+        if (filters.status) {
+          query = query.eq('status', filters.status);
+        }
+        if (filters.isExtra !== undefined) {
+          query = query.eq('is_extra', filters.isExtra);
+        }
+        if (filters.isRecurring !== undefined) {
+          query = query.eq('is_recurring', filters.isRecurring);
+        }
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          console.warn('Table balanza_pro_transactions not found');
+          return [];
+        }
+        throw error;
+      }
+
+      return (data || []).map((t: any) => ({
+        id: t.id,
+        type: t.type,
+        amount: parseFloat(t.amount),
+        payment_method: t.payment_method,
+        is_extra: t.is_extra,
+        is_recurring: t.is_recurring,
+        tags: t.tags || [],
+        status: t.status,
+        recurring_config: t.recurring_config,
+        due_date: t.due_date,
+        description: t.description,
+        date: t.date,
+      }));
+    } catch (error: any) {
+      if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        console.warn('Table balanza_pro_transactions not found');
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async addBalanzaProTransaction(userId: string, transaction: {
+    type: 'Ingreso' | 'Egreso';
+    amount: number;
+    payment_method: string;
+    is_extra: boolean;
+    is_recurring: boolean;
+    tags: string[];
+    status: 'Pendiente' | 'Completado';
+    recurring_config?: any;
+    due_date?: string;
+    description?: string;
+    date: string;
+  }) {
+    try {
+      const { data, error } = await supabase
+        .from('balanza_pro_transactions')
+        .insert({
+          user_id: userId,
+          type: transaction.type,
+          amount: transaction.amount,
+          payment_method: transaction.payment_method,
+          is_extra: transaction.is_extra,
+          is_recurring: transaction.is_recurring,
+          tags: transaction.tags,
+          status: transaction.status,
+          recurring_config: transaction.recurring_config || null,
+          due_date: transaction.due_date || null,
+          description: transaction.description || null,
+          date: transaction.date,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          throw new Error('La tabla balanza_pro_transactions no existe. Por favor, ejecuta el script SQL 23_balanza_pro_transactions.sql en Supabase.');
+        }
+        throw error;
+      }
+
+      return {
+        id: data.id,
+        type: data.type,
+        amount: parseFloat(data.amount),
+        payment_method: data.payment_method,
+        is_extra: data.is_extra,
+        is_recurring: data.is_recurring,
+        tags: data.tags || [],
+        status: data.status,
+        recurring_config: data.recurring_config,
+        due_date: data.due_date,
+        description: data.description,
+        date: data.date,
+      };
+    } catch (error: any) {
+      if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        throw new Error('La tabla balanza_pro_transactions no existe. Por favor, ejecuta el script SQL 23_balanza_pro_transactions.sql en Supabase.');
+      }
+      throw error;
+    }
+  }
+
+  async updateBalanzaProTransaction(
+    userId: string,
+    transactionId: string,
+    updates: Partial<{
+      type: 'Ingreso' | 'Egreso';
+      amount: number;
+      payment_method: string;
+      is_extra: boolean;
+      is_recurring: boolean;
+      tags: string[];
+      status: 'Pendiente' | 'Completado';
+      recurring_config: any;
+      due_date: string;
+      description: string;
+      date: string;
+    }>
+  ) {
+    try {
+      const dbUpdates: any = {};
+      if (updates.type !== undefined) dbUpdates.type = updates.type;
+      if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
+      if (updates.payment_method !== undefined) dbUpdates.payment_method = updates.payment_method;
+      if (updates.is_extra !== undefined) dbUpdates.is_extra = updates.is_extra;
+      if (updates.is_recurring !== undefined) dbUpdates.is_recurring = updates.is_recurring;
+      if (updates.tags !== undefined) dbUpdates.tags = updates.tags;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.recurring_config !== undefined) dbUpdates.recurring_config = updates.recurring_config;
+      if (updates.due_date !== undefined) dbUpdates.due_date = updates.due_date;
+      if (updates.description !== undefined) dbUpdates.description = updates.description;
+      if (updates.date !== undefined) dbUpdates.date = updates.date;
+
+      const { data, error } = await supabase
+        .from('balanza_pro_transactions')
+        .update(dbUpdates)
+        .eq('id', transactionId)
+        .eq('user_id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          throw new Error('La tabla balanza_pro_transactions no existe. Por favor, ejecuta el script SQL 23_balanza_pro_transactions.sql en Supabase.');
+        }
+        throw error;
+      }
+
+      return {
+        id: data.id,
+        type: data.type,
+        amount: parseFloat(data.amount),
+        payment_method: data.payment_method,
+        is_extra: data.is_extra,
+        is_recurring: data.is_recurring,
+        tags: data.tags || [],
+        status: data.status,
+        recurring_config: data.recurring_config,
+        due_date: data.due_date,
+        description: data.description,
+        date: data.date,
+      };
+    } catch (error: any) {
+      if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        throw new Error('La tabla balanza_pro_transactions no existe. Por favor, ejecuta el script SQL 23_balanza_pro_transactions.sql en Supabase.');
+      }
+      throw error;
+    }
+  }
+
+  async deleteBalanzaProTransaction(userId: string, transactionId: string) {
+    try {
+      const { error } = await supabase
+        .from('balanza_pro_transactions')
+        .delete()
+        .eq('id', transactionId)
+        .eq('user_id', userId);
+
+      if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          throw new Error('La tabla balanza_pro_transactions no existe. Por favor, ejecuta el script SQL 23_balanza_pro_transactions.sql en Supabase.');
+        }
+        throw error;
+      }
+    } catch (error: any) {
+      if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        throw new Error('La tabla balanza_pro_transactions no existe. Por favor, ejecuta el script SQL 23_balanza_pro_transactions.sql en Supabase.');
+      }
+      throw error;
+    }
+  }
+
+  async getBalanzaProPaymentMethods(userId: string): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
+        .from('balanza_pro_transactions')
+        .select('payment_method')
+        .eq('user_id', userId);
+
+      if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          return [];
+        }
+        throw error;
+      }
+
+      const uniqueMethods = Array.from(new Set((data || []).map((t: any) => t.payment_method).filter(Boolean)));
+      return uniqueMethods.sort();
+    } catch (error: any) {
+      if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async getBalanzaProTags(userId: string): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
+        .from('balanza_pro_transactions')
+        .select('tags')
+        .eq('user_id', userId);
+
+      if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          return [];
+        }
+        throw error;
+      }
+
+      const allTags = new Set<string>();
+      (data || []).forEach((t: any) => {
+        if (t.tags && Array.isArray(t.tags)) {
+          t.tags.forEach((tag: string) => allTags.add(tag));
+        }
+      });
+
+      return Array.from(allTags).sort();
+    } catch (error: any) {
+      if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
   // ============ STORAGE ============
 
   async uploadFile(userId: string, bucket: string, file: File, path: string, upsert: boolean = true) {

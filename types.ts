@@ -75,6 +75,27 @@ export interface Transaction {
   description: string;
 }
 
+export interface RecurringConfig {
+  frequency: 'diaria' | 'semanal' | 'mensual' | 'anual';
+  start_date: string; // ISO date string
+  end_date?: string; // ISO date string (opcional)
+}
+
+export interface BalanzaProTransaction {
+  id: string;
+  type: 'Ingreso' | 'Egreso';
+  amount: number;
+  payment_method: string;
+  is_extra: boolean;
+  is_recurring: boolean;
+  tags: string[];
+  status: 'Pendiente' | 'Completado';
+  recurring_config?: RecurringConfig;
+  due_date?: string; // ISO date string
+  description?: string;
+  date: string; // ISO date string
+}
+
 export type MoodType = 'Radiante' | 'Enfocada' | 'Equilibrada' | 'Agotada' | 'Estresada';
 
 export interface JournalEntry {
@@ -105,13 +126,15 @@ export enum NavView {
   CALENDAR = 'Calendario',
   FOCUS = 'Enfoque',
   DIARY = 'Diario',
-  FINANCE = 'Finanzas',
+  BALANZA = 'Balanza',
   SOCIAL = 'Social',
   PROFILE = 'Perfil',
   SECURITY = 'Seguridad',
   AI = 'IA',
   ORACLE = 'Oráculo',
   DOCS = 'Documentación',
+  BAZAR = 'Bazar',
+  CALCULATOR = 'Calculadora',
   PRIVACY_POLICY = 'Política de Privacidad',
   TERMS_OF_SERVICE = 'Términos y Condiciones'
 }
@@ -233,4 +256,57 @@ export interface StudentProfileContext {
     name: string;
     active: boolean;
   }>;
+  balanza_pro_state?: {
+    balance: number;
+    total_ingresos: number;
+    total_egresos: number;
+    gastos_fijos: number;
+    gastos_extra: number;
+    status: 'saludable' | 'precario' | 'crítico';
+    transactions: Array<{
+      id: string;
+      type: 'Ingreso' | 'Egreso';
+      amount: number;
+      payment_method: string;
+      is_extra: boolean;
+      is_recurring: boolean;
+      tags: string[];
+      status: 'Pendiente' | 'Completado';
+      date: string;
+      description?: string;
+    }>;
+    summary: {
+      most_used_payment_method?: string;
+      most_frequent_tags?: string[];
+      payment_methods_balance?: Record<string, number>;
+    };
+  };
+}
+
+// Calculator Interfaces
+export interface CalculatorHistoryItem {
+  id: string;
+  expression: string;
+  result: number;
+  timestamp: string;
+  note?: string;
+}
+
+export interface CalculatorMemory {
+  M1: number;
+  M2: number;
+  M3: number;
+  M4: number;
+}
+
+export interface CalculatorNote {
+  operationId: string;
+  note: string;
+}
+
+export interface CalculatorSettings {
+  soundEnabled: boolean;
+  soundVolume: number;
+  angleMode: 'deg' | 'rad';
+  floatingPosition?: { x: number; y: number };
 }

@@ -220,6 +220,32 @@ export const getIcon = (iconName: string, className: string = 'w-6 h-6'): React.
         <path d="m21 21-4.35-4.35" />
       </svg>
     ),
+    calculator: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="2" width="16" height="20" rx="2" />
+        <line x1="8" y1="6" x2="16" y2="6" />
+        <line x1="8" y1="10" x2="16" y2="10" />
+        <line x1="8" y1="14" x2="12" y2="14" />
+        <line x1="8" y1="18" x2="12" y2="18" />
+      </svg>
+    ),
+    copy: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+      </svg>
+    ),
+    history: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+    minimize: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+      </svg>
+    ),
   };
 
   return icons[iconName] || icons.book; // Default to book icon if not found
@@ -260,9 +286,9 @@ export const INITIAL_MODULES: Module[] = [
     icon: 'pen',
   },
   {
-    id: 'finance',
+    id: 'balanza',
     name: 'Balanza',
-    description: 'Controla tus ingresos y gastos académicos',
+    description: 'Sistema avanzado de gestión financiera con métodos de pago, categorías y reportes',
     cost: 0,
     active: true,
     icon: 'scale',
@@ -298,6 +324,22 @@ export const INITIAL_MODULES: Module[] = [
     cost: 100,
     active: false,
     icon: 'users',
+  },
+  {
+    id: 'bazar',
+    name: 'Bazar',
+    description: 'Mercado de artefactos y herramientas',
+    cost: 0,
+    active: true,
+    icon: 'bazar',
+  },
+  {
+    id: 'scientific-calculator',
+    name: 'Calculadora Científica',
+    description: 'Herramienta avanzada con funciones matemáticas completas, historial de operaciones y conversor de unidades',
+    cost: 0,
+    active: false,
+    icon: 'calculator',
   },
 ];
 

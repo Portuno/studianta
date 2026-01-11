@@ -6,7 +6,8 @@ import {
   JournalEntry, 
   CustomCalendarEvent, 
   Module,
-  UserProfile 
+  UserProfile,
+  BalanzaProTransaction
 } from '../types';
 import { getFocusSessions } from '../utils/focusTracker';
 
@@ -18,6 +19,7 @@ interface UseInteractionAggregatorParams {
   customEvents: CustomCalendarEvent[];
   modules: Module[];
   monthlyBudget: number;
+  balanzaProTransactions?: BalanzaProTransaction[];
 }
 
 export const useInteractionAggregator = ({
@@ -28,6 +30,7 @@ export const useInteractionAggregator = ({
   customEvents,
   modules,
   monthlyBudget,
+  balanzaProTransactions = [],
 }: UseInteractionAggregatorParams): StudentProfileContext => {
   return useMemo(() => {
     const now = new Date();
@@ -312,6 +315,99 @@ export const useInteractionAggregator = ({
       active: m.active,
     }));
 
+    // ========== BALANZA PRO STATE ==========
+    let balanza_pro_state = undefined;
+    if (balanzaProTransactions.length > 0) {
+      const totalIngresos = balanzaProTransactions
+        .filter(t => t.type === 'Ingreso')
+        .reduce((acc, t) => acc + t.amount, 0);
+      
+      const totalEgresos = balanzaProTransactions
+        .filter(t => t.type === 'Egreso')
+        .reduce((acc, t) => acc + t.amount, 0);
+      
+      const gastosFijos = balanzaProTransactions
+        .filter(t => t.type === 'Egreso' && t.is_recurring)
+        .reduce((acc, t) => acc + t.amount, 0);
+      
+      const gastosExtra = balanzaProTransactions
+        .filter(t => t.type === 'Egreso' && t.is_extra)
+        .reduce((acc, t) => acc + t.amount, 0);
+      
+      const balance = totalIngresos - totalEgresos;
+      
+      let status: 'saludable' | 'precario' | 'crítico' = 'saludable';
+      if (balance < 0) {
+        status = 'crítico';
+      } else if (balance < totalIngresos * 0.2) {
+        status = 'precario';
+      }
+
+      // Método de pago más usado
+      const paymentMethodCounts: Record<string, number> = {};
+      balanzaProTransactions.forEach(t => {
+        paymentMethodCounts[t.payment_method] = (paymentMethodCounts[t.payment_method] || 0) + 1;
+      });
+      const mostUsedPaymentMethod = Object.entries(paymentMethodCounts)
+        .sort(([, a], [, b]) => b - a)[0]?.[0];
+
+      // Tags más frecuentes
+      const tagCounts: Record<string, number> = {};
+      balanzaProTransactions.forEach(t => {
+        t.tags.forEach(tag => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
+      });
+      const mostFrequentTags = Object.entries(tagCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([tag]) => tag);
+
+      // Balance por método de pago
+      const paymentMethodsBalance: Record<string, number> = {};
+      balanzaProTransactions.forEach(t => {
+        if (!paymentMethodsBalance[t.payment_method]) {
+          paymentMethodsBalance[t.payment_method] = 0;
+        }
+        if (t.type === 'Ingreso') {
+          paymentMethodsBalance[t.payment_method] += t.amount;
+        } else {
+          paymentMethodsBalance[t.payment_method] -= t.amount;
+        }
+      });
+
+      // Ordenar transacciones por fecha
+      const sortedBalanzaProTransactions = [...balanzaProTransactions].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      balanza_pro_state = {
+        balance,
+        total_ingresos: totalIngresos,
+        total_egresos: totalEgresos,
+        gastos_fijos: gastosFijos,
+        gastos_extra: gastosExtra,
+        status,
+        transactions: sortedBalanzaProTransactions.map(t => ({
+          id: t.id,
+          type: t.type,
+          amount: t.amount,
+          payment_method: t.payment_method,
+          is_extra: t.is_extra,
+          is_recurring: t.is_recurring,
+          tags: t.tags,
+          status: t.status,
+          date: t.date,
+          description: t.description,
+        })),
+        summary: {
+          most_used_payment_method: mostUsedPaymentMethod,
+          most_frequent_tags: mostFrequentTags,
+          payment_methods_balance: paymentMethodsBalance,
+        },
+      };
+    }
+
     // ========== ASSEMBLE COMPLETE CONTEXT ==========
     return {
       last_sync: lastSync,
@@ -323,6 +419,7 @@ export const useInteractionAggregator = ({
       journal,
       focus,
       active_modules,
+      balanza_pro_state,
     };
   }, [
     userProfile,
@@ -332,6 +429,7 @@ export const useInteractionAggregator = ({
     customEvents,
     modules,
     monthlyBudget,
+    balanzaProTransactions,
   ]);
 };
 

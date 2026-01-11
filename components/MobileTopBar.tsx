@@ -29,7 +29,7 @@ const MobileTopBar: React.FC<MobileTopBarProps> = ({ user, userProfile, onProfil
           className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl transition-all duration-300 active:scale-95 touch-manipulation ${
             isNightMode
               ? 'bg-[rgba(48,43,79,0.6)] text-[#A68A56] border border-[#A68A56]/40'
-              : 'bg-white/80 text-[#4A233E] border border-[#F8C8DC]'
+              : 'bg-white/80 text-[#2D1A26] border border-[#F8C8DC]'
           }`}
           aria-label={isNightMode ? 'Cambiar a modo diario' : 'Cambiar a modo nocturno'}
         >
