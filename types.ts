@@ -137,7 +137,8 @@ export enum NavView {
   CALCULATOR = 'Calculadora',
   EXAM_GENERATOR = 'Generador de Exámenes',
   PRIVACY_POLICY = 'Política de Privacidad',
-  TERMS_OF_SERVICE = 'Términos y Condiciones'
+  TERMS_OF_SERVICE = 'Términos y Condiciones',
+  PAYMENT_SUCCESS = 'Pago Exitoso'
 }
 
 // Student Profile Context Interfaces

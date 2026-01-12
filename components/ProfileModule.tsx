@@ -127,8 +127,13 @@ const ProfileModule: React.FC<ProfileModuleProps> = ({
             // Reload profile to get updated tier
             await loadProfile();
             
-            // Show success message
-            alert('¡Pago exitoso! Tu suscripción Premium ha sido activada.');
+            // Redirect to payment success page
+            if (setActiveView) {
+              setActiveView(NavView.PAYMENT_SUCCESS);
+            } else {
+              // Fallback if setActiveView is not available
+              alert('¡Pago exitoso! Tu suscripción Premium ha sido activada.');
+            }
           } else {
             console.log('Checkout session not completed yet:', result);
           }

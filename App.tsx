@@ -24,6 +24,7 @@ import BalanzaModule from './components/BalanzaModule';
 import CalculatorModule from './components/CalculatorModule';
 import CalculatorFloatingWidget from './components/CalculatorFloatingWidget';
 import ExamGeneratorModule from './components/ExamGeneratorModule';
+import PaymentSuccessPage from './components/PaymentSuccessPage';
 import Footer from './components/Footer';
 import OnboardingModal from './components/OnboardingModal';
 import CookieConsentBanner from './components/CookieConsentBanner';
@@ -1080,13 +1081,19 @@ const App: React.FC = () => {
           isMobile={isMobile}
           isNightMode={isNightMode}
         />;
+      case NavView.PAYMENT_SUCCESS:
+        return <PaymentSuccessPage 
+          onEnter={() => handleViewChange(NavView.DASHBOARD)}
+          isMobile={isMobile}
+          isNightMode={isNightMode}
+        />;
       default:
         return <Dashboard modules={modules} onActivate={toggleModule} isMobile={isMobile} setActiveView={setActiveView} isNightMode={isNightMode} />;
     }
   };
 
-  // Ocultar navegación en páginas de políticas y docs
-  const isPolicyPage = activeView === NavView.PRIVACY_POLICY || activeView === NavView.TERMS_OF_SERVICE || activeView === NavView.DOCS;
+  // Ocultar navegación en páginas de políticas, docs y pago exitoso
+  const isPolicyPage = activeView === NavView.PRIVACY_POLICY || activeView === NavView.TERMS_OF_SERVICE || activeView === NavView.DOCS || activeView === NavView.PAYMENT_SUCCESS;
 
   const handleNavigationClick = (view: NavView) => {
     // Si no hay usuario y se intenta acceder a un módulo que no sea Dashboard o páginas públicas, mostrar login
