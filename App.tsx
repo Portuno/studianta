@@ -105,6 +105,12 @@ const App: React.FC = () => {
   const [securityPin, setSecurityPin] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isNightMode, setIsNightMode] = useState<boolean>(false);
+  const [balanzaProTransactions, setBalanzaProTransactions] = useState<BalanzaProTransaction[]>([]);
+  const [nutritionEntries, setNutritionEntries] = useState<NutritionEntry[]>([]);
+  const [nutritionGoals, setNutritionGoals] = useState<NutritionGoals | null>(null);
+  const [nutritionCorrelations, setNutritionCorrelations] = useState<NutritionCorrelation[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [examResults, setExamResults] = useState<ExamResult[]>([]);
 
   const toggleTheme = () => {
     setIsNightMode(prev => !prev);
@@ -293,6 +299,12 @@ const App: React.FC = () => {
           setMonthlyBudget(0);
           setJournalEntries([]);
           setCustomEvents([]);
+          setBalanzaProTransactions([]);
+          setNutritionEntries([]);
+          setNutritionGoals(null);
+          setNutritionCorrelations([]);
+          setExams([]);
+          setExamResults([]);
           // NO cambiar initialLoading aquí - solo limpiar datos
         }
       });
