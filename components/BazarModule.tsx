@@ -19,6 +19,7 @@ interface BazarModuleProps {
   userModules?: Array<{ id: string; active: boolean }>;
   onNavigateToCalculator?: () => void;
   onNavigateToExamGenerator?: () => void;
+  onNavigateToNutrition?: () => void;
 }
 
 const ARTIFACTS: Artifact[] = [
@@ -86,8 +87,8 @@ const ARTIFACTS: Artifact[] = [
     name: 'Nutrición & Macros',
     description: 'Registro de alimentación mediante fotos o texto. Calcula calorías y macronutrientes, y analiza cómo influye tu dieta en tu energía para estudiar.',
     category: 'Salud y Bienestar',
-    icon: 'sun',
-    status: 'coming_soon'
+    icon: 'apple',
+    status: 'available'
   },
   {
     id: 'menstrual-cycle',
@@ -147,7 +148,7 @@ const CATEGORIES = [
   'Personalización y Comunidad'
 ];
 
-const BazarModule: React.FC<BazarModuleProps> = ({ isMobile, isNightMode = false, onPurchaseModule, userModules = [], onNavigateToCalculator, onNavigateToExamGenerator }) => {
+const BazarModule: React.FC<BazarModuleProps> = ({ isMobile, isNightMode = false, onPurchaseModule, userModules = [], onNavigateToCalculator, onNavigateToExamGenerator, onNavigateToNutrition }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -298,7 +299,9 @@ const BazarModule: React.FC<BazarModuleProps> = ({ isMobile, isNightMode = false
                     }`}>
                       {artifact.status === 'available' ? (
                         (() => {
-                          const isActive = userModules.find(m => m.id === artifact.id)?.active || false;
+                          // Para nutrition-macros, también buscar por 'nutrition'
+                          const moduleId = artifact.id === 'nutrition-macros' ? 'nutrition' : artifact.id;
+                          const isActive = userModules.find(m => m.id === artifact.id || m.id === moduleId)?.active || false;
                           return isActive ? (
                             <div className="flex flex-col gap-2">
                               <div className="flex items-center gap-2">
@@ -333,10 +336,26 @@ const BazarModule: React.FC<BazarModuleProps> = ({ isMobile, isNightMode = false
                                   Abrir
                                 </button>
                               )}
+                              {artifact.id === 'nutrition-macros' && onNavigateToNutrition && (
+                                <button
+                                  onClick={onNavigateToNutrition}
+                                  className={`w-full py-2 rounded-xl font-marcellus text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95 ${
+                                    isNightMode 
+                                      ? 'bg-[#C77DFF] text-white hover:bg-[#B56DE8]' 
+                                      : 'bg-[#E35B8F] text-white hover:bg-[#D24A7E]'
+                                  }`}
+                                >
+                                  Abrir
+                                </button>
+                              )}
                             </div>
                           ) : (
                             <button
-                              onClick={() => onPurchaseModule?.(artifact.id)}
+                              onClick={() => {
+                                // Para nutrition-macros, usar 'nutrition' como ID del módulo
+                                const moduleId = artifact.id === 'nutrition-macros' ? 'nutrition' : artifact.id;
+                                onPurchaseModule?.(moduleId);
+                              }}
                               className={`w-full py-2 rounded-xl font-marcellus text-[10px] font-black uppercase tracking-[0.2em] transition-all active:scale-95 ${
                                 isNightMode 
                                   ? 'bg-[#C77DFF] text-white hover:bg-[#B56DE8]' 

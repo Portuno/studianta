@@ -21,6 +21,8 @@ export default async function handler(req, res) {
 
   const { type, ...params } = req.body;
 
+  console.log('[Gemini API] Request type:', type, 'Params keys:', Object.keys(params));
+
   if (!type) {
     return res.status(400).json({ error: 'Tipo de consulta requerido' });
   }
@@ -204,6 +206,201 @@ INSTRUCCIÓN FINAL: Tu objetivo es que la alumna sienta que tiene el control de 
       }
 
       return res.status(200).json({ text: response.text });
+    }
+
+    if (type === 'nutrition-text') {
+      console.log('[Gemini API] Procesando nutrition-text');
+      // Análisis nutricional desde texto
+      const { text } = params;
+      
+      if (!text) {
+        return res.status(400).json({ 
+          error: 'Texto requerido',
+          message: 'Se requiere el parámetro "text"'
+        });
+      }
+
+      const systemPrompt = `Eres un experto nutricionista y analista de alimentos. Tu tarea es analizar texto libre que describe comida y extraer información nutricional precisa.
+
+REGLAS:
+1. Identifica TODOS los alimentos mencionados en el texto
+2. Extrae cantidades y unidades (ej: "2 huevos", "una taza de café", "200g de pollo")
+3. Calcula macros nutricionales (calorías, proteínas, carbohidratos, grasas) para cada alimento
+4. Estima el impacto en glucosa: 'low' (bajo), 'medium' (medio), 'high' (alto), 'spike' (pico alto)
+5. Asigna un energy_score de 1-10 basado en el tipo de comida
+6. Identifica tags de "brain food": 'omega3', 'antioxidants', 'hydration', 'complex_carbs', 'protein'
+
+FORMATO DE RESPUESTA (JSON estricto):
+{
+  "foods": [
+    {
+      "name": "nombre del alimento",
+      "quantity": número,
+      "unit": "unidad (unidades, gramos, tazas, etc.)",
+      "calories": número,
+      "protein": número (gramos),
+      "carbs": número (gramos),
+      "fats": número (gramos)
+    }
+  ],
+  "total_calories": número,
+  "total_protein": número,
+  "total_carbs": número,
+  "total_fats": número,
+  "estimated_glucose_impact": "low|medium|high|spike",
+  "energy_score": número (1-10),
+  "brain_food_tags": ["tag1", "tag2"],
+  "confidence": número (0-1)
+}
+
+IMPORTANTE: Responde SOLO con JSON válido, sin texto adicional.`;
+
+      const prompt = `Analiza el siguiente texto y extrae la información nutricional:
+
+"${text}"
+
+Responde con el JSON en el formato especificado.`;
+
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-1.5-flash',
+          contents: prompt,
+          config: {
+            systemInstruction: systemPrompt,
+            temperature: 0.3,
+            responseMimeType: 'application/json',
+          }
+        });
+
+        if (!response.text) {
+          throw new Error('No se recibió respuesta del análisis nutricional');
+        }
+
+        let analysisData;
+        try {
+          analysisData = JSON.parse(response.text);
+        } catch (parseError) {
+          const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            analysisData = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('La respuesta no contiene JSON válido');
+          }
+        }
+
+        return res.status(200).json({ analysis: analysisData });
+      } catch (apiError: any) {
+        console.error('[Gemini API] Error en nutrition-text:', apiError);
+        throw apiError;
+      }
+    }
+
+    if (type === 'nutrition-photo') {
+      // Análisis nutricional desde foto
+      const { imageBase64 } = params;
+      
+      if (!imageBase64) {
+        return res.status(400).json({ 
+          error: 'Imagen requerida',
+          message: 'Se requiere el parámetro "imageBase64"'
+        });
+      }
+
+      // Extraer el base64 sin el prefijo data:image/...
+      const base64Data = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+      const mimeType = imageBase64.includes('data:') 
+        ? imageBase64.match(/data:([^;]+)/)?.[1] || 'image/jpeg'
+        : 'image/jpeg';
+
+      const systemPrompt = `Eres un experto nutricionista y analista de alimentos con visión artificial. Tu tarea es analizar una foto de comida y extraer información nutricional precisa.
+
+REGLAS:
+1. Identifica TODOS los alimentos visibles en la foto
+2. Estima porciones basándote en el tamaño relativo y objetos de referencia (platos, cubiertos, etc.)
+3. Calcula macros nutricionales (calorías, proteínas, carbohidratos, grasas) para cada alimento
+4. Estima el impacto en glucosa: 'low' (bajo), 'medium' (medio), 'high' (alto), 'spike' (pico alto)
+5. Asigna un energy_score de 1-10 basado en el tipo de comida
+6. Identifica tags de "brain food": 'omega3', 'antioxidants', 'hydration', 'complex_carbs', 'protein'
+
+FORMATO DE RESPUESTA (JSON estricto):
+{
+  "foods": [
+    {
+      "name": "nombre del alimento",
+      "quantity": número,
+      "unit": "unidad (unidades, gramos, porciones, etc.)",
+      "calories": número,
+      "protein": número (gramos),
+      "carbs": número (gramos),
+      "fats": número (gramos)
+    }
+  ],
+  "total_calories": número,
+  "total_protein": número,
+  "total_carbs": número,
+  "total_fats": número,
+  "estimated_glucose_impact": "low|medium|high|spike",
+  "energy_score": número (1-10),
+  "brain_food_tags": ["tag1", "tag2"],
+  "confidence": número (0-1)
+}
+
+IMPORTANTE: Responde SOLO con JSON válido, sin texto adicional.`;
+
+      const prompt = `Analiza esta foto de comida y extrae la información nutricional. Estima las porciones basándote en el tamaño relativo de los objetos en la imagen.
+
+Responde con el JSON en el formato especificado.`;
+
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-1.5-flash',
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: prompt },
+                {
+                  inlineData: {
+                    mimeType: mimeType,
+                    data: base64Data
+                  }
+                }
+              ]
+            }
+          ],
+          config: {
+            systemInstruction: systemPrompt,
+            temperature: 0.3,
+            responseMimeType: 'application/json',
+          }
+        });
+
+        if (!response.text) {
+          throw new Error('No se recibió respuesta del análisis nutricional');
+        }
+
+        let analysisData;
+        try {
+          analysisData = JSON.parse(response.text);
+        } catch (parseError) {
+          const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            analysisData = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('La respuesta no contiene JSON válido');
+          }
+        }
+
+        return res.status(200).json({ analysis: analysisData });
+      } catch (apiError: any) {
+        console.error('[Gemini API] Error en nutrition-photo:', apiError);
+        console.error('[Gemini API] Error details:', {
+          message: apiError?.message,
+          status: apiError?.status,
+          code: apiError?.code,
+        });
+        throw apiError;
+      }
     }
 
     if (type === 'exam-generation') {

@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Subject, Transaction, JournalEntry, CustomCalendarEvent, Module } from '../types';
+import { Subject, Transaction, JournalEntry, CustomCalendarEvent, Module, NutritionEntry, NutritionGoals, NutritionCorrelation } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -1897,6 +1897,444 @@ export class SupabaseService {
     }
 
     return data;
+  }
+
+  // ============ NUTRITION ============
+
+  async getNutritionEntries(userId: string, date?: string): Promise<NutritionEntry[]> {
+    try {
+      let query = supabase
+        .from('nutrition_entries')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
+        .order('time', { ascending: false });
+
+      if (date) {
+        query = query.eq('date', date);
+      }
+
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await query;
+        if (result.error && isNetworkError(result.error)) {
+          throw result.error;
+        }
+        return result;
+      });
+
+      if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          console.warn('Table nutrition_entries not found');
+          return [];
+        }
+        if (isNetworkError(error)) {
+          console.warn('Network error loading nutrition entries, returning empty array');
+          return [];
+        }
+        throw error;
+      }
+
+      if (!data) return [];
+
+      return data.map((row: any) => ({
+        id: row.id,
+        user_id: row.user_id,
+        date: row.date,
+        time: row.time,
+        input_type: row.input_type,
+        input_text: row.input_text,
+        photo_url: row.photo_url,
+        foods: row.foods || [],
+        total_calories: parseFloat(row.total_calories) || 0,
+        total_protein: parseFloat(row.total_protein) || 0,
+        total_carbs: parseFloat(row.total_carbs) || 0,
+        total_fats: parseFloat(row.total_fats) || 0,
+        estimated_glucose_impact: row.estimated_glucose_impact,
+        energy_score: row.energy_score,
+        brain_food_tags: row.brain_food_tags || [],
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      }));
+    } catch (error: any) {
+      if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async createNutritionEntry(userId: string, entry: Omit<NutritionEntry, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<NutritionEntry> {
+    const { data, error } = await retryWithBackoff(async () => {
+      const result = await supabase
+        .from('nutrition_entries')
+        .insert({
+          user_id: userId,
+          date: entry.date,
+          time: entry.time,
+          input_type: entry.input_type,
+          input_text: entry.input_text,
+          photo_url: entry.photo_url,
+          foods: entry.foods,
+          total_calories: entry.total_calories,
+          total_protein: entry.total_protein,
+          total_carbs: entry.total_carbs,
+          total_fats: entry.total_fats,
+          estimated_glucose_impact: entry.estimated_glucose_impact,
+          energy_score: entry.energy_score,
+          brain_food_tags: entry.brain_food_tags,
+        })
+        .select()
+        .single();
+
+      if (result.error && isNetworkError(result.error)) {
+        throw result.error;
+      }
+      return result;
+    });
+
+    if (error) {
+      if (isNetworkError(error)) {
+        throw new Error('Error de conexión. Por favor, verifica tu internet e intenta nuevamente.');
+      }
+      throw error;
+    }
+
+    if (!data) throw new Error('No se creó la entrada de nutrición');
+
+    return {
+      id: data.id,
+      user_id: data.user_id,
+      date: data.date,
+      time: data.time,
+      input_type: data.input_type,
+      input_text: data.input_text,
+      photo_url: data.photo_url,
+      foods: data.foods || [],
+      total_calories: parseFloat(data.total_calories) || 0,
+      total_protein: parseFloat(data.total_protein) || 0,
+      total_carbs: parseFloat(data.total_carbs) || 0,
+      total_fats: parseFloat(data.total_fats) || 0,
+      estimated_glucose_impact: data.estimated_glucose_impact,
+      energy_score: data.energy_score,
+      brain_food_tags: data.brain_food_tags || [],
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+  }
+
+  async updateNutritionEntry(entryId: string, updates: Partial<NutritionEntry>): Promise<NutritionEntry> {
+    const { data, error } = await retryWithBackoff(async () => {
+      const updateData: any = {};
+      if (updates.foods !== undefined) updateData.foods = updates.foods;
+      if (updates.total_calories !== undefined) updateData.total_calories = updates.total_calories;
+      if (updates.total_protein !== undefined) updateData.total_protein = updates.total_protein;
+      if (updates.total_carbs !== undefined) updateData.total_carbs = updates.total_carbs;
+      if (updates.total_fats !== undefined) updateData.total_fats = updates.total_fats;
+      if (updates.estimated_glucose_impact !== undefined) updateData.estimated_glucose_impact = updates.estimated_glucose_impact;
+      if (updates.energy_score !== undefined) updateData.energy_score = updates.energy_score;
+      if (updates.brain_food_tags !== undefined) updateData.brain_food_tags = updates.brain_food_tags;
+
+      const result = await supabase
+        .from('nutrition_entries')
+        .update(updateData)
+        .eq('id', entryId)
+        .select()
+        .single();
+
+      if (result.error && isNetworkError(result.error)) {
+        throw result.error;
+      }
+      return result;
+    });
+
+    if (error) {
+      if (isNetworkError(error)) {
+        throw new Error('Error de conexión. Por favor, verifica tu internet e intenta nuevamente.');
+      }
+      throw error;
+    }
+
+    if (!data) throw new Error('No se actualizó la entrada de nutrición');
+
+    return {
+      id: data.id,
+      user_id: data.user_id,
+      date: data.date,
+      time: data.time,
+      input_type: data.input_type,
+      input_text: data.input_text,
+      photo_url: data.photo_url,
+      foods: data.foods || [],
+      total_calories: parseFloat(data.total_calories) || 0,
+      total_protein: parseFloat(data.total_protein) || 0,
+      total_carbs: parseFloat(data.total_carbs) || 0,
+      total_fats: parseFloat(data.total_fats) || 0,
+      estimated_glucose_impact: data.estimated_glucose_impact,
+      energy_score: data.energy_score,
+      brain_food_tags: data.brain_food_tags || [],
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    };
+  }
+
+  async deleteNutritionEntry(entryId: string): Promise<void> {
+    const { error } = await retryWithBackoff(async () => {
+      const result = await supabase
+        .from('nutrition_entries')
+        .delete()
+        .eq('id', entryId);
+
+      if (result.error && isNetworkError(result.error)) {
+        throw result.error;
+      }
+      return result;
+    });
+
+    if (error) {
+      if (isNetworkError(error)) {
+        throw new Error('Error de conexión. Por favor, verifica tu internet e intenta nuevamente.');
+      }
+      throw error;
+    }
+  }
+
+  async getNutritionGoals(userId: string): Promise<NutritionGoals | null> {
+    try {
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from('nutrition_goals')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (result.error && isNetworkError(result.error)) {
+          throw result.error;
+        }
+        return result;
+      });
+
+      if (error) {
+        // Error 406 puede ocurrir si la tabla no existe o RLS no está configurado
+        if (error.code === 'PGRST116' || error.code === 'PGRST205' || error.status === 406 || error.message?.includes('Could not find the table')) {
+          console.warn('Table nutrition_goals not found or not accessible');
+          return null;
+        }
+        if (isNetworkError(error)) {
+          console.warn('Network error loading nutrition goals, returning null');
+          return null;
+        }
+        throw error;
+      }
+
+      if (!data) return null;
+
+      return {
+        id: data.id,
+        user_id: data.user_id,
+        daily_calories: data.daily_calories,
+        protein_grams: data.protein_grams,
+        carbs_grams: data.carbs_grams,
+        fats_grams: data.fats_grams,
+        activity_level: data.activity_level,
+        updated_at: data.updated_at,
+      };
+    } catch (error: any) {
+      if (error.code === 'PGRST116' || error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async updateNutritionGoals(userId: string, goals: Partial<Omit<NutritionGoals, 'id' | 'user_id' | 'updated_at'>>): Promise<NutritionGoals> {
+    // Check if goals exist
+    const existing = await this.getNutritionGoals(userId);
+
+    let data, error;
+    if (existing) {
+      // Update existing
+      const result = await retryWithBackoff(async () => {
+        const updateResult = await supabase
+          .from('nutrition_goals')
+          .update({
+            daily_calories: goals.daily_calories,
+            protein_grams: goals.protein_grams,
+            carbs_grams: goals.carbs_grams,
+            fats_grams: goals.fats_grams,
+            activity_level: goals.activity_level,
+          })
+          .eq('user_id', userId)
+          .select()
+          .single();
+
+        if (updateResult.error && isNetworkError(updateResult.error)) {
+          throw updateResult.error;
+        }
+        return updateResult;
+      });
+      data = result.data;
+      error = result.error;
+    } else {
+      // Insert new
+      const result = await retryWithBackoff(async () => {
+        const insertResult = await supabase
+          .from('nutrition_goals')
+          .insert({
+            user_id: userId,
+            daily_calories: goals.daily_calories || 2000,
+            protein_grams: goals.protein_grams || 150,
+            carbs_grams: goals.carbs_grams || 250,
+            fats_grams: goals.fats_grams || 65,
+            activity_level: goals.activity_level || 'moderate',
+          })
+          .select()
+          .single();
+
+        if (insertResult.error && isNetworkError(insertResult.error)) {
+          throw insertResult.error;
+        }
+        return insertResult;
+      });
+      data = result.data;
+      error = result.error;
+    }
+
+    if (error) {
+      if (isNetworkError(error)) {
+        throw new Error('Error de conexión. Por favor, verifica tu internet e intenta nuevamente.');
+      }
+      throw error;
+    }
+
+    if (!data) throw new Error('No se guardaron los objetivos nutricionales');
+
+    return {
+      id: data.id,
+      user_id: data.user_id,
+      daily_calories: data.daily_calories,
+      protein_grams: data.protein_grams,
+      carbs_grams: data.carbs_grams,
+      fats_grams: data.fats_grams,
+      activity_level: data.activity_level,
+      updated_at: data.updated_at,
+    };
+  }
+
+  async createNutritionCorrelation(userId: string, correlation: Omit<NutritionCorrelation, 'id' | 'user_id' | 'created_at'>): Promise<NutritionCorrelation> {
+    const { data, error } = await retryWithBackoff(async () => {
+      const result = await supabase
+        .from('nutrition_correlations')
+        .insert({
+          user_id: userId,
+          nutrition_entry_id: correlation.nutrition_entry_id,
+          focus_session_id: correlation.focus_session_id,
+          focus_session_date: correlation.focus_session_date,
+          time_between: correlation.time_between,
+          session_quality_score: correlation.session_quality_score,
+          correlation_type: correlation.correlation_type,
+          insights: correlation.insights,
+        })
+        .select()
+        .single();
+
+      if (result.error && isNetworkError(result.error)) {
+        throw result.error;
+      }
+      return result;
+    });
+
+    if (error) {
+      if (isNetworkError(error)) {
+        throw new Error('Error de conexión. Por favor, verifica tu internet e intenta nuevamente.');
+      }
+      throw error;
+    }
+
+    if (!data) throw new Error('No se creó la correlación');
+
+    return {
+      id: data.id,
+      user_id: data.user_id,
+      nutrition_entry_id: data.nutrition_entry_id,
+      focus_session_id: data.focus_session_id,
+      focus_session_date: data.focus_session_date,
+      time_between: data.time_between,
+      session_quality_score: data.session_quality_score,
+      correlation_type: data.correlation_type,
+      insights: data.insights,
+      created_at: data.created_at,
+    };
+  }
+
+  async getNutritionCorrelations(userId: string, limit: number = 10): Promise<NutritionCorrelation[]> {
+    try {
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from('nutrition_correlations')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(limit);
+
+        if (result.error && isNetworkError(result.error)) {
+          throw result.error;
+        }
+        return result;
+      });
+
+      if (error) {
+        if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          console.warn('Table nutrition_correlations not found');
+          return [];
+        }
+        if (isNetworkError(error)) {
+          console.warn('Network error loading nutrition correlations, returning empty array');
+          return [];
+        }
+        throw error;
+      }
+
+      if (!data) return [];
+
+      return data.map((row: any) => ({
+        id: row.id,
+        user_id: row.user_id,
+        nutrition_entry_id: row.nutrition_entry_id,
+        focus_session_id: row.focus_session_id,
+        focus_session_date: row.focus_session_date,
+        time_between: row.time_between,
+        session_quality_score: row.session_quality_score,
+        correlation_type: row.correlation_type,
+        insights: row.insights,
+        created_at: row.created_at,
+      }));
+    } catch (error: any) {
+      if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async uploadNutritionPhoto(userId: string, entryId: string, file: File): Promise<string> {
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const fileName = `${entryId}.${fileExt}`;
+    const path = `${userId}/${fileName}`;
+    
+    const { data, error } = await supabase.storage
+      .from('nutrition-photos')
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: true
+      });
+
+    if (error) throw error;
+    
+    const { data: urlData } = supabase.storage
+      .from('nutrition-photos')
+      .getPublicUrl(path);
+    
+    return urlData.publicUrl;
   }
 }
 

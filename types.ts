@@ -136,6 +136,7 @@ export enum NavView {
   BAZAR = 'Bazar',
   CALCULATOR = 'Calculadora',
   EXAM_GENERATOR = 'Generador de Exámenes',
+  NUTRITION = 'Nutrición',
   PRIVACY_POLICY = 'Política de Privacidad',
   TERMS_OF_SERVICE = 'Términos y Condiciones',
   PAYMENT_SUCCESS = 'Pago Exitoso'
@@ -398,4 +399,96 @@ export interface ExamConfig {
   questionCount: number;
   difficulty: ExamDifficulty;
   mode: ExamMode;
+}
+
+// Nutrition Interfaces
+export interface FoodItem {
+  name: string;
+  quantity: number;
+  unit: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+}
+
+export interface NutritionEntry {
+  id: string;
+  user_id: string;
+  date: string;
+  time: string;
+  input_type: 'text' | 'photo';
+  input_text?: string;
+  photo_url?: string;
+  foods: FoodItem[];
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fats: number;
+  estimated_glucose_impact: 'low' | 'medium' | 'high' | 'spike';
+  energy_score: number;
+  brain_food_tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NutritionGoals {
+  id: string;
+  user_id: string;
+  daily_calories: number;
+  protein_grams: number;
+  carbs_grams: number;
+  fats_grams: number;
+  activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+  updated_at: string;
+}
+
+export interface NutritionCorrelation {
+  id: string;
+  user_id: string;
+  nutrition_entry_id: string;
+  focus_session_id: string;
+  focus_session_date: string;
+  time_between: number;
+  session_quality_score: number;
+  correlation_type: 'positive' | 'negative' | 'neutral';
+  insights: string;
+  created_at: string;
+}
+
+export interface DailyNutritionSummary {
+  date: string;
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fats: number;
+  entries: NutritionEntry[];
+  goal_calories: number;
+  goal_protein: number;
+  goal_carbs: number;
+  goal_fats: number;
+  progress_percentage: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+  };
+}
+
+export interface EnergyCurve {
+  time: string; // HH:mm
+  estimated_energy: number; // 1-10
+  glucose_level: number; // 0-100 (estimado)
+}
+
+export interface NutritionAnalysis {
+  foods: FoodItem[];
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fats: number;
+  estimated_glucose_impact: 'low' | 'medium' | 'high' | 'spike';
+  energy_score: number;
+  brain_food_tags: string[];
+  confidence: number; // 0-1
 }

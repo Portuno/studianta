@@ -21,7 +21,7 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
         const paragraphText = currentParagraph.join(' ').trim();
         if (paragraphText) {
           elements.push(
-            <p key={`p-${keyCounter++}`} className="font-garamond text-[#374151] text-lg md:text-xl leading-[1.75] mb-6 text-justify">
+            <p key={`p-${keyCounter++}`} className="font-garamond text-[#374151] text-base md:text-lg leading-[1.85] mb-5 text-justify tracking-wide">
               {renderInlineFormatting(paragraphText)}
             </p>
           );
@@ -34,22 +34,22 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
       if (currentList.length > 0) {
         if (listType === 'ordered') {
           elements.push(
-            <ol key={`list-${keyCounter++}`} className="space-y-4 mb-8 ml-4">
+            <ol key={`list-${keyCounter++}`} className="space-y-5 mb-7 ml-0">
               {currentList.map((item, idx) => {
                 const title = extractTitle(item);
                 const body = extractBody(item);
                 return (
-                  <li key={idx} className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#D4AF37] flex items-center justify-center text-white font-marcellus font-bold text-sm">
+                  <li key={idx} className="flex gap-4 items-start">
+                    <div className="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B8941F] flex items-center justify-center text-white font-marcellus font-bold text-sm shadow-md">
                       {idx + 1}
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 pt-0.5">
                       {title && (
-                        <div className="font-marcellus text-[#D4AF37] text-lg font-bold mb-2 uppercase tracking-wide">
+                        <div className="font-marcellus text-[#D4AF37] text-base md:text-lg font-bold mb-2.5 uppercase tracking-wider">
                           {title}
                         </div>
                       )}
-                      <div className="font-garamond text-[#374151] text-base leading-relaxed">
+                      <div className="font-garamond text-[#374151] text-base md:text-lg leading-[1.8] tracking-wide">
                         {renderInlineFormatting(body || item)}
                       </div>
                     </div>
@@ -60,11 +60,11 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
           );
         } else {
           elements.push(
-            <ul key={`list-${keyCounter++}`} className="space-y-3 mb-8 ml-4">
+            <ul key={`list-${keyCounter++}`} className="space-y-4 mb-7 ml-0">
               {currentList.map((item, idx) => (
-                <li key={idx} className="flex gap-3 items-start">
-                  <div className="flex-shrink-0 w-2 h-2 rounded-full bg-[#D4AF37] mt-2" />
-                  <div className="flex-1 font-garamond text-[#374151] text-base leading-relaxed">
+                <li key={idx} className="flex gap-4 items-start">
+                  <div className="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-[#D4AF37] mt-2.5 shadow-sm" />
+                  <div className="flex-1 font-garamond text-[#374151] text-base md:text-lg leading-[1.8] tracking-wide">
                     {renderInlineFormatting(item.trim())}
                   </div>
                 </li>
@@ -114,16 +114,16 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
         };
         
         elements.push(
-          <div key={`header-${keyCounter++}`} className="mb-6 mt-8 first:mt-0">
+          <div key={`header-${keyCounter++}`} className="mb-7 mt-9 first:mt-0">
             <div className="flex items-center gap-3 mb-4">
-              <div className="text-[#D4AF37]">
-                {getIcon(iconMap[emoji] || 'sparkles', 'w-6 h-6')}
+              <div className="text-[#D4AF37] drop-shadow-sm">
+                {getIcon(iconMap[emoji] || 'sparkles', 'w-7 h-7')}
               </div>
-              <h3 className="font-marcellus text-[#4A233E] text-xl md:text-2xl font-bold uppercase tracking-wider">
+              <h3 className="font-marcellus text-[#4A233E] text-xl md:text-2xl font-bold uppercase tracking-wider leading-tight">
                 {title}
               </h3>
             </div>
-            <div className="h-px bg-gradient-to-r from-[#D4AF37]/30 via-[#F8C8DC]/50 to-transparent" />
+            <div className="h-[2px] bg-gradient-to-r from-[#D4AF37]/40 via-[#F8C8DC]/60 to-transparent rounded-full" />
           </div>
         );
         return;
@@ -134,11 +134,11 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
         flushList();
         const title = headerMatchSimple[1];
         elements.push(
-          <div key={`header-${keyCounter++}`} className="mb-6 mt-8 first:mt-0">
-            <h3 className="font-marcellus text-[#4A233E] text-xl md:text-2xl font-bold uppercase tracking-wider mb-4">
+          <div key={`header-${keyCounter++}`} className="mb-7 mt-9 first:mt-0">
+            <h3 className="font-marcellus text-[#4A233E] text-xl md:text-2xl font-bold uppercase tracking-wider mb-4 leading-tight">
               {title}
             </h3>
-            <div className="h-px bg-gradient-to-r from-[#D4AF37]/30 via-[#F8C8DC]/50 to-transparent" />
+            <div className="h-[2px] bg-gradient-to-r from-[#D4AF37]/40 via-[#F8C8DC]/60 to-transparent rounded-full" />
           </div>
         );
         return;
@@ -149,11 +149,11 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
         flushList();
         const title = headerMatchH2[1];
         elements.push(
-          <div key={`header-${keyCounter++}`} className="mb-6 mt-8 first:mt-0">
-            <h2 className="font-marcellus text-[#4A233E] text-2xl md:text-3xl font-bold uppercase tracking-wider mb-4">
+          <div key={`header-${keyCounter++}`} className="mb-7 mt-9 first:mt-0">
+            <h2 className="font-marcellus text-[#4A233E] text-2xl md:text-3xl font-bold uppercase tracking-wider mb-4 leading-tight">
               {title}
             </h2>
-            <div className="h-px bg-gradient-to-r from-[#D4AF37]/30 via-[#F8C8DC]/50 to-transparent" />
+            <div className="h-[2px] bg-gradient-to-r from-[#D4AF37]/40 via-[#F8C8DC]/60 to-transparent rounded-full" />
           </div>
         );
         return;
@@ -164,11 +164,11 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
         flushList();
         const title = headerMatchH1[1];
         elements.push(
-          <div key={`header-${keyCounter++}`} className="mb-6 mt-8 first:mt-0">
-            <h1 className="font-marcellus text-[#4A233E] text-3xl md:text-4xl font-bold uppercase tracking-wider mb-4">
+          <div key={`header-${keyCounter++}`} className="mb-7 mt-9 first:mt-0">
+            <h1 className="font-marcellus text-[#4A233E] text-3xl md:text-4xl font-bold uppercase tracking-wider mb-4 leading-tight">
               {title}
             </h1>
-            <div className="h-px bg-gradient-to-r from-[#D4AF37]/30 via-[#F8C8DC]/50 to-transparent" />
+            <div className="h-[2px] bg-gradient-to-r from-[#D4AF37]/40 via-[#F8C8DC]/60 to-transparent rounded-full" />
           </div>
         );
         return;
@@ -178,7 +178,11 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
       if (trimmed.match(/^---+$/)) {
         flushParagraph();
         flushList();
-        elements.push(<div key={`spacer-${keyCounter++}`} className="h-6" />);
+        elements.push(
+          <div key={`spacer-${keyCounter++}`} className="h-8 flex items-center justify-center my-6">
+            <div className="h-px w-24 bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent rounded-full" />
+          </div>
+        );
         return;
       }
 
@@ -246,9 +250,9 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
       if (match.index > lastIndex) {
         parts.push(text.substring(lastIndex, match.index));
       }
-      // Agregar la negrita con color especial
+      // Agregar la negrita con color especial y mejor estilo
       parts.push(
-        <span key={`bold-${keyCounter++}`} className="font-bold text-[#D4AF37]">
+        <span key={`bold-${keyCounter++}`} className="font-bold text-[#D4AF37] tracking-wide">
           {match[1]}
         </span>
       );
@@ -274,13 +278,13 @@ const OracleTextRenderer: React.FC<OracleTextRendererProps> = ({ text }) => {
   return (
     <div className="oracle-manuscript">
       {isGreeting && parsedContent.length > 0 && (
-        <div className="mb-8 p-6 bg-gradient-to-r from-[#FFF9FB] to-[#FDEEF4] rounded-[2rem] border-l-4 border-l-[#D4AF37]">
-          <p className="font-garamond text-[#4A233E] text-xl md:text-2xl leading-[1.8] italic text-justify">
+        <div className="mb-8 p-6 md:p-7 bg-gradient-to-r from-[#FFF9FB] to-[#FDEEF4] rounded-[2rem] border-l-4 border-l-[#D4AF37] shadow-sm">
+          <p className="font-garamond text-[#4A233E] text-xl md:text-2xl leading-[1.85] italic text-justify tracking-wide">
             {renderInlineFormatting(firstLine)}
           </p>
         </div>
       )}
-      <div className="space-y-2">
+      <div className="space-y-1">
         {isGreeting ? parsedContent.slice(1) : parsedContent}
       </div>
     </div>

@@ -217,6 +217,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const MODULE_TO_VIEW: Record<string, NavView> = {
+    'nutrition': NavView.NUTRITION,
     'subjects': NavView.SUBJECTS,
     'calendar': NavView.CALENDAR,
     'focus': NavView.FOCUS,

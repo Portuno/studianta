@@ -4,14 +4,14 @@
 // Siempre usa el endpoint del servidor (tanto en desarrollo como en producción)
 // Permite usar GEMINI_API_KEY sin prefijo VITE_ en el servidor
 
-import { StudentProfileContext } from '../types';
+import { StudentProfileContext, NutritionAnalysis } from '../types';
 
 const API_ENDPOINT = '/api/gemini';
 
 export class GeminiService {
   constructor() {}
 
-  private async callServerEndpoint(type: 'academic' | 'finance' | 'personal', params: any): Promise<string> {
+  private async callServerEndpoint(type: 'academic' | 'finance' | 'personal' | 'nutrition-text' | 'nutrition-photo', params: any): Promise<string | NutritionAnalysis> {
     // Siempre usar el endpoint del servidor (tanto en desarrollo como en producción)
     // Esto permite usar GEMINI_API_KEY sin prefijo VITE_ en el servidor
     try {
@@ -51,6 +51,12 @@ export class GeminiService {
       }
 
       const data = await response.json();
+      
+      // For nutrition endpoints, return the analysis object directly
+      if (type === 'nutrition-text' || type === 'nutrition-photo') {
+        return data.analysis || data;
+      }
+      
       console.log(`[GeminiService] Datos recibidos:`, { hasText: !!data.text, textLength: data.text?.length });
       return data.text || 'No se recibió respuesta del Oráculo.';
     } catch (error: any) {
@@ -143,6 +149,58 @@ export class GeminiService {
     } catch (error: any) {
       console.error('Error generating exam:', error);
       throw new Error(`Error al generar el examen: ${error.message || 'Error desconocido'}`);
+    }
+  }
+
+  async analyzeNutritionText(text: string): Promise<NutritionAnalysis> {
+    try {
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'nutrition-text',
+          text,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.analysis || data;
+    } catch (error: any) {
+      console.error('Error analyzing nutrition text:', error);
+      throw new Error(`Error al analizar el texto: ${error.message || 'Error desconocido'}`);
+    }
+  }
+
+  async analyzeNutritionPhoto(imageBase64: string): Promise<NutritionAnalysis> {
+    try {
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'nutrition-photo',
+          imageBase64,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.analysis || data;
+    } catch (error: any) {
+      console.error('Error analyzing nutrition photo:', error);
+      throw new Error(`Error al analizar la foto: ${error.message || 'Error desconocido'}`);
     }
   }
 }

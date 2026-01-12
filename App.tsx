@@ -25,6 +25,7 @@ import CalculatorModule from './components/CalculatorModule';
 import CalculatorFloatingWidget from './components/CalculatorFloatingWidget';
 import ExamGeneratorModule from './components/ExamGeneratorModule';
 import PaymentSuccessPage from './components/PaymentSuccessPage';
+import NutritionModule from './components/NutritionModule';
 import Footer from './components/Footer';
 import OnboardingModal from './components/OnboardingModal';
 import CookieConsentBanner from './components/CookieConsentBanner';
@@ -553,6 +554,47 @@ const App: React.FC = () => {
       }
       return;
     }
+
+    // Si es nutrición, navegar directamente (es gratuito y siempre disponible)
+    if (moduleId === 'nutrition' || moduleId === 'nutrition-macros') {
+      setActiveView(NavView.NUTRITION);
+      // Si hay usuario, intentar activar el módulo en segundo plano
+      if (user) {
+        let mod = modules.find(m => m.id === 'nutrition' || m.id === 'nutrition-macros');
+        if (!mod) {
+          // Crear el módulo localmente
+          const newModule = {
+            id: 'nutrition',
+            name: 'Nutrición',
+            description: 'Registro de alimentación y análisis de impacto en tu energía',
+            cost: 0,
+            active: true,
+            icon: 'apple',
+          };
+          setModules([...modules, newModule]);
+          mod = newModule;
+        }
+        
+        // Intentar activar/crear el módulo en la base de datos (en segundo plano, no bloquear)
+        if (!mod.active) {
+          const updatedModules = modules.map(m => (m.id === 'nutrition' || m.id === 'nutrition-macros') ? { ...m, active: true } : m);
+          setModules(updatedModules);
+        }
+        
+        // Intentar guardar en la base de datos (silenciosamente, no bloquear la UI)
+        const moduleIdToSave = mod.id === 'nutrition-macros' ? 'nutrition' : mod.id;
+        supabaseService.updateModule(user.id, moduleIdToSave, { active: true })
+          .then(() => {
+            console.log('[App] Módulo nutrition activado correctamente');
+          })
+          .catch((error: any) => {
+            // Error no crítico, solo loguear
+            console.warn('[App] No se pudo guardar el estado del módulo en la BD (no crítico):', error?.message || error);
+            // El módulo seguirá funcionando localmente
+          });
+      }
+      return;
+    }
     
     // Si no hay usuario, mostrar modal de login
     if (!user) {
@@ -1064,6 +1106,7 @@ const App: React.FC = () => {
           userModules={modules}
           onNavigateToCalculator={() => setActiveView(NavView.CALCULATOR)}
           onNavigateToExamGenerator={() => setActiveView(NavView.EXAM_GENERATOR)}
+          onNavigateToNutrition={() => setActiveView(NavView.NUTRITION)}
         />;
       case NavView.CALCULATOR:
         return <CalculatorModule 
@@ -1080,6 +1123,17 @@ const App: React.FC = () => {
           subjects={subjects}
           isMobile={isMobile}
           isNightMode={isNightMode}
+        />;
+      case NavView.NUTRITION:
+        if (!user) {
+          setShowLoginModal(true);
+          return null;
+        }
+        return <NutritionModule 
+          userId={user.id}
+          isMobile={isMobile}
+          isNightMode={isNightMode}
+          onNavigateToBazar={() => setActiveView(NavView.BAZAR)}
         />;
       case NavView.PAYMENT_SUCCESS:
         return <PaymentSuccessPage 

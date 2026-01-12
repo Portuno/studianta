@@ -212,6 +212,11 @@ export const getIcon = (iconName: string, className: string = 'w-6 h-6'): React.
         <polyline points="9 18 15 12 9 6" />
       </svg>
     ),
+    apple: (
+      <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+        <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C1.79 15.25 4.96 6.39 12.05 6.39c.45 0 .9.05 1.35.2.28-.65.73-1.2 1.33-1.63 1.23-1.01 2.8-1.24 4.24-.85 1.59.43 2.75 1.84 3.52 3.32-1.65.96-2.93 2.54-3.64 4.53-.32.87-.23 1.8.25 2.59.72 1.2 2.04 1.94 3.46 1.65-.45 1.38-.7 2.85-.75 4.37-.05 1.67.24 3.33.85 4.86-.36.05-.73.08-1.1.08-1.08 0-2.14-.28-3.01-.81zm.02-17.71c-.15 2.23 1.66 4.07 3.68 4.19-.33 2.58-1.36 5.03-3.43 6.91-.97.9-2.12 1.78-3.64 1.65-1.75-.16-2.48-1.26-4.28-1.26-1.8 0-2.58 1.1-4.31 1.26-1.49.13-2.69-.76-3.66-1.65-2.5-2.31-4.3-5.75-3.76-9.2.91-5.37 5.33-9.11 10.05-8.76 2.31.19 4.22 1.56 5.63 1.56 1.41 0 4.01-1.74 6.76-1.5 1.14.05 4.38.43 6.46 3.34-5.87 3.5-4.9 10.54-3.76 12.8z"/>
+      </svg>
+    ),
     users: (
       <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -360,6 +365,14 @@ export const INITIAL_MODULES: Module[] = [
     cost: 0,
     active: false,
     icon: 'target',
+  },
+  {
+    id: 'nutrition',
+    name: 'Nutrición',
+    description: 'Registro de alimentación y análisis de impacto en tu energía',
+    cost: 0,
+    active: true,
+    icon: 'apple',
   },
 ];
 
