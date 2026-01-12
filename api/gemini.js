@@ -4,6 +4,8 @@
 import { GoogleGenAI } from '@google/genai';
 
 export default async function handler(req, res) {
+  console.log('[Gemini API] 🚀 Handler ejecutado - Method:', req.method);
+  
   // Solo permitir POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -21,11 +23,21 @@ export default async function handler(req, res) {
 
   const { type, ...params } = req.body;
 
-  console.log('[Gemini API] Request type:', type, 'Params keys:', Object.keys(params));
+  console.log('[Gemini API] Request recibida:', { 
+    type, 
+    typeLength: type?.length,
+    typeTrimmed: type?.trim(),
+    paramsKeys: Object.keys(params),
+    bodyKeys: Object.keys(req.body || {})
+  });
 
   if (!type) {
+    console.error('[Gemini API] Error: tipo de consulta requerido');
     return res.status(400).json({ error: 'Tipo de consulta requerido' });
   }
+
+  const normalizedType = type?.trim()?.toLowerCase();
+  console.log('[Gemini API] Tipo normalizado:', normalizedType);
 
   try {
     const ai = new GoogleGenAI({ apiKey });
@@ -208,8 +220,9 @@ INSTRUCCIÓN FINAL: Tu objetivo es que la alumna sienta que tiene el control de 
       return res.status(200).json({ text: response.text });
     }
 
-    if (type === 'nutrition-text') {
-      console.log('[Gemini API] Procesando nutrition-text');
+    if (type === 'nutrition-text' || normalizedType === 'nutrition-text') {
+      console.log('[Gemini API] ✅ Procesando nutrition-text - Tipo reconocido correctamente');
+      console.log('[Gemini API] Debug - type:', type, 'normalizedType:', normalizedType);
       // Análisis nutricional desde texto
       const { text } = params;
       
@@ -295,7 +308,9 @@ Responde con el JSON en el formato especificado.`;
       }
     }
 
-    if (type === 'nutrition-photo') {
+    if (type === 'nutrition-photo' || normalizedType === 'nutrition-photo') {
+      console.log('[Gemini API] ✅ Procesando nutrition-photo - Tipo reconocido correctamente');
+      console.log('[Gemini API] Debug - type:', type, 'normalizedType:', normalizedType);
       // Análisis nutricional desde foto
       const { imageBase64 } = params;
       
@@ -559,7 +574,8 @@ IMPORTANTE:
       }
     }
 
-    return res.status(400).json({ error: 'Tipo de consulta no válido' });
+    console.error('[Gemini API] Tipo de consulta no válido:', type, 'Normalized:', normalizedType);
+    return res.status(400).json({ error: 'Tipo de consulta no válido', receivedType: type });
   } catch (error) {
     console.error('Gemini API Error:', error);
     console.error('Error details:', {

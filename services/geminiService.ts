@@ -141,7 +141,15 @@ export class GeminiService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error ${response.status}`);
+        console.error('[GeminiService] Error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          fullError: JSON.stringify(errorData, null, 2),
+        });
+        const errorMessage = errorData.message || errorData.error || `Error ${response.status}`;
+        console.error('[GeminiService] Error message:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -167,7 +175,15 @@ export class GeminiService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error ${response.status}`);
+        console.error('[GeminiService] Error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          fullError: JSON.stringify(errorData, null, 2),
+        });
+        const errorMessage = errorData.message || errorData.error || `Error ${response.status}`;
+        console.error('[GeminiService] Error message:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -193,7 +209,15 @@ export class GeminiService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Error ${response.status}`);
+        console.error('[GeminiService] Error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          fullError: JSON.stringify(errorData, null, 2),
+        });
+        const errorMessage = errorData.message || errorData.error || `Error ${response.status}`;
+        console.error('[GeminiService] Error message:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

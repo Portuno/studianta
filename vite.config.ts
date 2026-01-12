@@ -103,9 +103,22 @@ export default defineConfig(({ mode }) => {
                     }
                     
                     // Crear objetos req y res compatibles con Vercel
+                    let parsedBody = {};
+                    try {
+                      parsedBody = body ? JSON.parse(body) : {};
+                      console.log('[Vite API Plugin] 📋 Body parseado:', {
+                        type: parsedBody?.type,
+                        hasType: !!parsedBody?.type,
+                        keys: Object.keys(parsedBody),
+                      });
+                    } catch (parseError) {
+                      console.error('[Vite API Plugin] ❌ Error parseando body:', parseError);
+                      throw parseError;
+                    }
+                    
                     const vercelReq = {
                       method: req.method || 'POST',
-                      body: body ? JSON.parse(body) : {},
+                      body: parsedBody,
                       headers: req.headers || {},
                     };
                     
