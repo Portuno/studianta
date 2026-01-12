@@ -98,6 +98,33 @@ export default async function handler(req, res) {
           spcText += `Últimas 3 entradas: ${recentEntries.map(e => `${e.date} (${e.mood}): ${(e.content || '').substring(0, 50)}...`).join(' | ')}\n\n`;
         }
         
+        if (spc.nutrition_state && spc.nutrition_state.entries && spc.nutrition_state.entries.length > 0) {
+          spcText += `Nutrición: ${spc.nutrition_state.summary?.total_entries || 0} entradas registradas, ${spc.nutrition_state.summary?.entries_this_week || 0} esta semana\n`;
+          spcText += `Promedio diario: ${spc.nutrition_state.summary?.average_daily_calories || 0} calorías\n`;
+          if (spc.nutrition_state.summary?.most_common_foods && spc.nutrition_state.summary.most_common_foods.length > 0) {
+            spcText += `Alimentos más frecuentes: ${spc.nutrition_state.summary.most_common_foods.slice(0, 5).join(', ')}\n`;
+          }
+          if (spc.nutrition_state.goals) {
+            spcText += `Metas: ${spc.nutrition_state.goals.daily_calories} cal/día, ${spc.nutrition_state.goals.protein_grams}g proteína, ${spc.nutrition_state.goals.carbs_grams}g carbohidratos\n\n`;
+          } else {
+            spcText += '\n';
+          }
+        }
+        
+        if (spc.exam_state && spc.exam_state.exams && spc.exam_state.exams.length > 0) {
+          spcText += `Exámenes: ${spc.exam_state.summary?.total_exams || 0} generados, ${spc.exam_state.summary?.completed_exams || 0} completados\n`;
+          if (spc.exam_state.summary?.average_score !== undefined) {
+            spcText += `Promedio de puntajes: ${spc.exam_state.summary.average_score.toFixed(1)}%\n`;
+          }
+          if (spc.exam_state.summary?.best_subject) {
+            spcText += `Mejor rendimiento en: ${spc.exam_state.summary.best_subject}\n`;
+          }
+          if (spc.exam_state.summary?.improvement_trend) {
+            spcText += `Tendencia: ${spc.exam_state.summary.improvement_trend}\n`;
+          }
+          spcText += '\n';
+        }
+        
         spcText += `--- FIN CONTEXTO DEL ESTUDIANTE ---\n`;
       }
       

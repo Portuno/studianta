@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { NavView, Subject, Module, Transaction, JournalEntry, CustomCalendarEvent } from './types';
+import { NavView, Subject, Module, Transaction, JournalEntry, CustomCalendarEvent, NutritionEntry, NutritionGoals, NutritionCorrelation, BalanzaProTransaction, Exam, ExamResult } from './types';
 import { INITIAL_MODULES, getIcon } from './constants';
 import { supabaseService, supabase, UserProfile } from './services/supabaseService';
 import { googleCalendarService } from './services/googleCalendarService';
+import { examService } from './services/examService';
 import { Analytics } from '@vercel/analytics/react';
 import { useInteractionAggregator } from './hooks/useInteractionAggregator';
 import Navigation from './components/Navigation';
@@ -354,10 +355,15 @@ const App: React.FC = () => {
         supabaseService.getTransactions(userId),
         supabaseService.getJournalEntries(userId),
         supabaseService.getCalendarEvents(userId),
+        supabaseService.getBalanzaProTransactions(userId),
+        supabaseService.getNutritionEntries(userId),
+        supabaseService.getNutritionGoals(userId),
+        supabaseService.getNutritionCorrelations(userId, 50), // Obtener últimas 50 correlaciones
+        examService.getExamHistory(userId),
       ]);
 
       // Procesar resultados
-      const [userModulesResult, subjectsResult, transactionsResult, entriesResult, eventsResult] = results;
+      const [userModulesResult, subjectsResult, transactionsResult, entriesResult, eventsResult, balanzaProResult, nutritionEntriesResult, nutritionGoalsResult, nutritionCorrelationsResult, examsResult] = results;
 
       // Procesar módulos
       if (userModulesResult.status === 'fulfilled') {
@@ -406,6 +412,64 @@ const App: React.FC = () => {
       } else {
         console.warn('Table calendar_events not found, using empty array');
         setCustomEvents([]);
+      }
+
+      // Procesar Balanza Pro
+      if (balanzaProResult.status === 'fulfilled') {
+        setBalanzaProTransactions(balanzaProResult.value);
+      } else {
+        console.warn('Table balanza_pro_transactions not found, using empty array');
+        setBalanzaProTransactions([]);
+      }
+
+      // Procesar Nutrición
+      if (nutritionEntriesResult.status === 'fulfilled') {
+        setNutritionEntries(nutritionEntriesResult.value);
+      } else {
+        console.warn('Table nutrition_entries not found, using empty array');
+        setNutritionEntries([]);
+      }
+
+      if (nutritionGoalsResult.status === 'fulfilled') {
+        setNutritionGoals(nutritionGoalsResult.value);
+      } else {
+        console.warn('Table nutrition_goals not found, using null');
+        setNutritionGoals(null);
+      }
+
+      if (nutritionCorrelationsResult.status === 'fulfilled') {
+        setNutritionCorrelations(nutritionCorrelationsResult.value);
+      } else {
+        console.warn('Table nutrition_correlations not found, using empty array');
+        setNutritionCorrelations([]);
+      }
+
+      // Procesar Exámenes
+      if (examsResult.status === 'fulfilled') {
+        const examsData = examsResult.value;
+        setExams(examsData);
+        
+        // Cargar resultados de exámenes completados
+        const completedExams = examsData.filter(e => e.completed_at);
+        if (completedExams.length > 0) {
+          try {
+            const resultsPromises = completedExams.map(exam => 
+              examService.getExamResults(exam.id).catch(() => null)
+            );
+            const resultsData = await Promise.all(resultsPromises);
+            const validResults = resultsData.filter((r): r is ExamResult => r !== null);
+            setExamResults(validResults);
+          } catch (error) {
+            console.warn('Error loading exam results:', error);
+            setExamResults([]);
+          }
+        } else {
+          setExamResults([]);
+        }
+      } else {
+        console.warn('Error loading exams, using empty array');
+        setExams([]);
+        setExamResults([]);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -964,6 +1028,12 @@ const App: React.FC = () => {
     customEvents,
     modules,
     monthlyBudget,
+    balanzaProTransactions,
+    nutritionEntries,
+    nutritionGoals,
+    nutritionCorrelations,
+    exams,
+    examResults,
   });
 
   // Solo mostrar loading en la carga inicial - nunca después para no interrumpir la UX

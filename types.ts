@@ -284,6 +284,92 @@ export interface StudentProfileContext {
       payment_methods_balance?: Record<string, number>;
     };
   };
+  nutrition_state?: {
+    entries: Array<{
+      id: string;
+      date: string;
+      time: string;
+      input_type: 'text' | 'photo';
+      foods: Array<{
+        name: string;
+        quantity: number;
+        unit: string;
+        calories: number;
+        protein: number;
+        carbs: number;
+        fats: number;
+      }>;
+      total_calories: number;
+      total_protein: number;
+      total_carbs: number;
+      total_fats: number;
+      estimated_glucose_impact: 'low' | 'medium' | 'high' | 'spike';
+      energy_score: number;
+      brain_food_tags: string[];
+    }>;
+    goals?: {
+      daily_calories: number;
+      protein_grams: number;
+      carbs_grams: number;
+      fats_grams: number;
+      activity_level: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+    };
+    correlations: Array<{
+      id: string;
+      focus_session_date: string;
+      time_between: number;
+      session_quality_score: number;
+      correlation_type: 'positive' | 'negative' | 'neutral';
+      insights: string;
+    }>;
+    summary: {
+      total_entries: number;
+      entries_this_week: number;
+      average_daily_calories: number;
+      most_common_foods: string[];
+      energy_patterns: {
+        average_energy_score: number;
+        high_energy_days: number;
+        low_energy_days: number;
+      };
+    };
+  };
+  exam_state?: {
+    exams: Array<{
+      id: string;
+      subject_id: string;
+      title: string;
+      exam_type: string;
+      difficulty: string;
+      question_count: number;
+      mode: string;
+      created_at: string;
+      completed_at?: string;
+    }>;
+    results: Array<{
+      id: string;
+      exam_id: string;
+      total_questions: number;
+      correct_answers: number;
+      score_percentage: number;
+      time_spent_total: number;
+      mastery_level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+      created_at: string;
+    }>;
+    summary: {
+      total_exams: number;
+      completed_exams: number;
+      average_score: number;
+      best_subject?: string;
+      improvement_trend: 'ascendente' | 'descendente' | 'estable';
+      mastery_distribution: {
+        beginner: number;
+        intermediate: number;
+        advanced: number;
+        expert: number;
+      };
+    };
+  };
 }
 
 // Calculator Interfaces

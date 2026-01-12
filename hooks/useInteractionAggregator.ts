@@ -7,7 +7,12 @@ import {
   CustomCalendarEvent, 
   Module,
   UserProfile,
-  BalanzaProTransaction
+  BalanzaProTransaction,
+  NutritionEntry,
+  NutritionGoals,
+  NutritionCorrelation,
+  Exam,
+  ExamResult
 } from '../types';
 import { getFocusSessions } from '../utils/focusTracker';
 
@@ -20,6 +25,11 @@ interface UseInteractionAggregatorParams {
   modules: Module[];
   monthlyBudget: number;
   balanzaProTransactions?: BalanzaProTransaction[];
+  nutritionEntries?: NutritionEntry[];
+  nutritionGoals?: NutritionGoals | null;
+  nutritionCorrelations?: NutritionCorrelation[];
+  exams?: Exam[];
+  examResults?: ExamResult[];
 }
 
 export const useInteractionAggregator = ({
@@ -31,6 +41,11 @@ export const useInteractionAggregator = ({
   modules,
   monthlyBudget,
   balanzaProTransactions = [],
+  nutritionEntries = [],
+  nutritionGoals = null,
+  nutritionCorrelations = [],
+  exams = [],
+  examResults = [],
 }: UseInteractionAggregatorParams): StudentProfileContext => {
   return useMemo(() => {
     const now = new Date();
@@ -408,6 +423,198 @@ export const useInteractionAggregator = ({
       };
     }
 
+    // ========== NUTRITION STATE ==========
+    let nutrition_state = undefined;
+    if (nutritionEntries.length > 0 || nutritionGoals || nutritionCorrelations.length > 0) {
+      // Ordenar entradas por fecha (más recientes primero)
+      const sortedNutritionEntries = [...nutritionEntries].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      // Entradas esta semana
+      const weekAgo = new Date(now);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const entriesThisWeek = nutritionEntries.filter(e => {
+        const entryDate = new Date(e.date);
+        return entryDate >= weekAgo;
+      }).length;
+
+      // Calcular promedio de calorías diarias
+      const dailyCalories: Record<string, number> = {};
+      nutritionEntries.forEach(e => {
+        const dateKey = e.date.split('T')[0];
+        dailyCalories[dateKey] = (dailyCalories[dateKey] || 0) + e.total_calories;
+      });
+      const averageDailyCalories = Object.keys(dailyCalories).length > 0
+        ? Object.values(dailyCalories).reduce((acc, val) => acc + val, 0) / Object.keys(dailyCalories).length
+        : 0;
+
+      // Alimentos más comunes
+      const foodCounts: Record<string, number> = {};
+      nutritionEntries.forEach(e => {
+        e.foods.forEach(food => {
+          foodCounts[food.name] = (foodCounts[food.name] || 0) + 1;
+        });
+      });
+      const mostCommonFoods = Object.entries(foodCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+        .map(([name]) => name);
+
+      // Patrones de energía
+      const energyScores = nutritionEntries.map(e => e.energy_score);
+      const averageEnergyScore = energyScores.length > 0
+        ? energyScores.reduce((acc, val) => acc + val, 0) / energyScores.length
+        : 0;
+      const highEnergyDays = nutritionEntries.filter(e => e.energy_score >= 7).length;
+      const lowEnergyDays = nutritionEntries.filter(e => e.energy_score <= 4).length;
+
+      nutrition_state = {
+        entries: sortedNutritionEntries.map(e => ({
+          id: e.id,
+          date: e.date,
+          time: e.time,
+          input_type: e.input_type,
+          foods: e.foods.map(f => ({
+            name: f.name,
+            quantity: f.quantity,
+            unit: f.unit,
+            calories: f.calories,
+            protein: f.protein,
+            carbs: f.carbs,
+            fats: f.fats,
+          })),
+          total_calories: e.total_calories,
+          total_protein: e.total_protein,
+          total_carbs: e.total_carbs,
+          total_fats: e.total_fats,
+          estimated_glucose_impact: e.estimated_glucose_impact,
+          energy_score: e.energy_score,
+          brain_food_tags: e.brain_food_tags,
+        })),
+        goals: nutritionGoals ? {
+          daily_calories: nutritionGoals.daily_calories,
+          protein_grams: nutritionGoals.protein_grams,
+          carbs_grams: nutritionGoals.carbs_grams,
+          fats_grams: nutritionGoals.fats_grams,
+          activity_level: nutritionGoals.activity_level,
+        } : undefined,
+        correlations: nutritionCorrelations.map(c => ({
+          id: c.id,
+          focus_session_date: c.focus_session_date,
+          time_between: c.time_between,
+          session_quality_score: c.session_quality_score,
+          correlation_type: c.correlation_type,
+          insights: c.insights,
+        })),
+        summary: {
+          total_entries: nutritionEntries.length,
+          entries_this_week: entriesThisWeek,
+          average_daily_calories: Math.round(averageDailyCalories),
+          most_common_foods: mostCommonFoods,
+          energy_patterns: {
+            average_energy_score: Math.round(averageEnergyScore * 10) / 10,
+            high_energy_days: highEnergyDays,
+            low_energy_days: lowEnergyDays,
+          },
+        },
+      };
+    }
+
+    // ========== EXAM STATE ==========
+    let exam_state = undefined;
+    if (exams.length > 0 || examResults.length > 0) {
+      // Ordenar exámenes por fecha (más recientes primero)
+      const sortedExams = [...exams].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      // Exámenes completados
+      const completedExams = exams.filter(e => e.completed_at).length;
+
+      // Calcular promedio de puntajes
+      const averageScore = examResults.length > 0
+        ? examResults.reduce((acc, r) => acc + r.score_percentage, 0) / examResults.length
+        : 0;
+
+      // Mejor asignatura (por promedio de puntajes)
+      const subjectScores: Record<string, number[]> = {};
+      examResults.forEach(result => {
+        const exam = exams.find(e => e.id === result.exam_id);
+        if (exam) {
+          if (!subjectScores[exam.subject_id]) {
+            subjectScores[exam.subject_id] = [];
+          }
+          subjectScores[exam.subject_id].push(result.score_percentage);
+        }
+      });
+      const subjectAverages: Record<string, number> = {};
+      Object.entries(subjectScores).forEach(([subjectId, scores]) => {
+        subjectAverages[subjectId] = scores.reduce((acc, s) => acc + s, 0) / scores.length;
+      });
+      const bestSubjectId = Object.entries(subjectAverages)
+        .sort(([, a], [, b]) => b - a)[0]?.[0];
+      const bestSubject = bestSubjectId ? subjects.find(s => s.id === bestSubjectId)?.name : undefined;
+
+      // Tendencia de mejora (comparar últimos 3 vs anteriores 3)
+      let improvementTrend: 'ascendente' | 'descendente' | 'estable' = 'estable';
+      if (examResults.length >= 6) {
+        const sortedResults = [...examResults].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        const recent3 = sortedResults.slice(0, 3);
+        const previous3 = sortedResults.slice(3, 6);
+        const recentAvg = recent3.reduce((acc, r) => acc + r.score_percentage, 0) / 3;
+        const previousAvg = previous3.reduce((acc, r) => acc + r.score_percentage, 0) / 3;
+        
+        if (recentAvg > previousAvg * 1.05) {
+          improvementTrend = 'ascendente';
+        } else if (recentAvg < previousAvg * 0.95) {
+          improvementTrend = 'descendente';
+        }
+      }
+
+      // Distribución de niveles de dominio
+      const masteryDistribution = {
+        beginner: examResults.filter(r => r.mastery_level === 'beginner').length,
+        intermediate: examResults.filter(r => r.mastery_level === 'intermediate').length,
+        advanced: examResults.filter(r => r.mastery_level === 'advanced').length,
+        expert: examResults.filter(r => r.mastery_level === 'expert').length,
+      };
+
+      exam_state = {
+        exams: sortedExams.map(e => ({
+          id: e.id,
+          subject_id: e.subject_id,
+          title: e.title,
+          exam_type: e.exam_type,
+          difficulty: e.difficulty,
+          question_count: e.question_count,
+          mode: e.mode,
+          created_at: e.created_at,
+          completed_at: e.completed_at,
+        })),
+        results: examResults.map(r => ({
+          id: r.id,
+          exam_id: r.exam_id,
+          total_questions: r.total_questions,
+          correct_answers: r.correct_answers,
+          score_percentage: r.score_percentage,
+          time_spent_total: r.time_spent_total,
+          mastery_level: r.mastery_level,
+          created_at: r.created_at,
+        })),
+        summary: {
+          total_exams: exams.length,
+          completed_exams: completedExams,
+          average_score: Math.round(averageScore * 10) / 10,
+          best_subject: bestSubject,
+          improvement_trend: improvementTrend,
+          mastery_distribution: masteryDistribution,
+        },
+      };
+    }
+
     // ========== ASSEMBLE COMPLETE CONTEXT ==========
     return {
       last_sync: lastSync,
@@ -420,6 +627,8 @@ export const useInteractionAggregator = ({
       focus,
       active_modules,
       balanza_pro_state,
+      nutrition_state,
+      exam_state,
     };
   }, [
     userProfile,
@@ -430,6 +639,11 @@ export const useInteractionAggregator = ({
     modules,
     monthlyBudget,
     balanzaProTransactions,
+    nutritionEntries,
+    nutritionGoals,
+    nutritionCorrelations,
+    exams,
+    examResults,
   ]);
 };
 
