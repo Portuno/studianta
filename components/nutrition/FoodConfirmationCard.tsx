@@ -36,6 +36,36 @@ const FoodConfirmationCard: React.FC<FoodConfirmationCardProps> = ({
     setEditedFoods(updated);
   };
 
+  const handleMacroChange = (index: number, field: 'calories' | 'protein' | 'carbs' | 'fats', value: number) => {
+    if (value < 0) return;
+    
+    const updated = [...editedFoods];
+    updated[index] = {
+      ...updated[index],
+      [field]: field === 'calories' ? Math.round(value) : Math.round(value * 10) / 10,
+    };
+    
+    setEditedFoods(updated);
+  };
+
+  const handleNameChange = (index: number, newName: string) => {
+    const updated = [...editedFoods];
+    updated[index] = {
+      ...updated[index],
+      name: newName,
+    };
+    setEditedFoods(updated);
+  };
+
+  const handleUnitChange = (index: number, newUnit: string) => {
+    const updated = [...editedFoods];
+    updated[index] = {
+      ...updated[index],
+      unit: newUnit,
+    };
+    setEditedFoods(updated);
+  };
+
   const totalCalories = editedFoods.reduce((sum, f) => sum + f.calories, 0);
   const totalProtein = editedFoods.reduce((sum, f) => sum + f.protein, 0);
   const totalCarbs = editedFoods.reduce((sum, f) => sum + f.carbs, 0);
@@ -64,11 +94,15 @@ const FoodConfirmationCard: React.FC<FoodConfirmationCardProps> = ({
                 key={index}
                 className={`p-4 rounded-lg border ${isNightMode ? 'border-gray-700 bg-[#16213E]' : 'border-gray-200 bg-gray-50'}`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`font-semibold ${isNightMode ? 'text-white' : 'text-gray-900'}`}>
-                    {food.name}
-                  </span>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between mb-3">
+                  <input
+                    type="text"
+                    value={food.name}
+                    onChange={(e) => handleNameChange(index, e.target.value)}
+                    className={`flex-1 px-3 py-2 rounded border font-semibold text-sm ${isNightMode ? 'bg-[#0F1624] border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                    placeholder="Nombre del alimento"
+                  />
+                  <div className="flex items-center gap-2 ml-3">
                     <input
                       type="number"
                       min="0.1"
@@ -77,35 +111,67 @@ const FoodConfirmationCard: React.FC<FoodConfirmationCardProps> = ({
                       onChange={(e) => handleQuantityChange(index, parseFloat(e.target.value) || 0.1)}
                       className={`w-20 px-2 py-1 rounded border text-sm ${isNightMode ? 'bg-[#0F1624] border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
                     />
-                    <span className={`text-sm ${isNightMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {food.unit}
-                    </span>
+                    <input
+                      type="text"
+                      value={food.unit}
+                      onChange={(e) => handleUnitChange(index, e.target.value)}
+                      className={`w-16 px-2 py-1 rounded border text-sm ${isNightMode ? 'bg-[#0F1624] border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                      placeholder="unidad"
+                    />
                   </div>
                 </div>
-                <div className="grid grid-cols-4 gap-2 text-xs">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className={isNightMode ? 'text-gray-400' : 'text-gray-600'}>Cal:</span>
-                    <span className={`ml-1 font-semibold ${isNightMode ? 'text-white' : 'text-gray-900'}`}>
-                      {food.calories}
-                    </span>
+                    <label className={`block text-xs mb-1 ${isNightMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Calorías
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={food.calories}
+                      onChange={(e) => handleMacroChange(index, 'calories', parseFloat(e.target.value) || 0)}
+                      className={`w-full px-2 py-1 rounded border text-sm ${isNightMode ? 'bg-[#0F1624] border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                    />
                   </div>
                   <div>
-                    <span className={isNightMode ? 'text-gray-400' : 'text-gray-600'}>Pro:</span>
-                    <span className={`ml-1 font-semibold ${isNightMode ? 'text-white' : 'text-gray-900'}`}>
-                      {food.protein}g
-                    </span>
+                    <label className={`block text-xs mb-1 ${isNightMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Proteínas (g)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={food.protein}
+                      onChange={(e) => handleMacroChange(index, 'protein', parseFloat(e.target.value) || 0)}
+                      className={`w-full px-2 py-1 rounded border text-sm ${isNightMode ? 'bg-[#0F1624] border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                    />
                   </div>
                   <div>
-                    <span className={isNightMode ? 'text-gray-400' : 'text-gray-600'}>Carbs:</span>
-                    <span className={`ml-1 font-semibold ${isNightMode ? 'text-white' : 'text-gray-900'}`}>
-                      {food.carbs}g
-                    </span>
+                    <label className={`block text-xs mb-1 ${isNightMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Carbohidratos (g)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={food.carbs}
+                      onChange={(e) => handleMacroChange(index, 'carbs', parseFloat(e.target.value) || 0)}
+                      className={`w-full px-2 py-1 rounded border text-sm ${isNightMode ? 'bg-[#0F1624] border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                    />
                   </div>
                   <div>
-                    <span className={isNightMode ? 'text-gray-400' : 'text-gray-600'}>Grasas:</span>
-                    <span className={`ml-1 font-semibold ${isNightMode ? 'text-white' : 'text-gray-900'}`}>
-                      {food.fats}g
-                    </span>
+                    <label className={`block text-xs mb-1 ${isNightMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Grasas (g)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={food.fats}
+                      onChange={(e) => handleMacroChange(index, 'fats', parseFloat(e.target.value) || 0)}
+                      className={`w-full px-2 py-1 rounded border text-sm ${isNightMode ? 'bg-[#0F1624] border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                    />
                   </div>
                 </div>
               </div>

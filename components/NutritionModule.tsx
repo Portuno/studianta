@@ -39,6 +39,16 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({
   const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [correlations, setCorrelations] = useState<any[]>([]);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualFood, setManualFood] = useState<FoodItem>({
+    name: '',
+    quantity: 1,
+    unit: 'porción',
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fats: 0,
+  });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -300,8 +310,8 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({
       const entry = await supabaseService.createNutritionEntry(userId, {
         date: selectedDate,
         time: now.toTimeString().substring(0, 5),
-        input_type: pendingPhoto ? 'photo' : 'text',
-        input_text: pendingPhoto ? undefined : inputText,
+        input_type: pendingPhoto ? 'photo' : (inputText ? 'text' : 'text'), // Manual entries are also 'text' type
+        input_text: pendingPhoto ? undefined : (inputText || 'Entrada manual'),
         photo_url: photoUrl,
         foods,
         total_calories: totalCalories,
@@ -320,6 +330,16 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({
       setPendingPhotoFile(null);
       setShowConfirmation(false);
       setAlertMessage(null);
+      setManualMode(false);
+      setManualFood({
+        name: '',
+        quantity: 1,
+        unit: 'porción',
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fats: 0,
+      });
       if (fileInputRef.current) fileInputRef.current.value = '';
 
       // Reload data
@@ -340,6 +360,37 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({
       console.error('Error deleting entry:', error);
       alert('Error al eliminar la entrada.');
     }
+  };
+
+  const handleAddManualFood = () => {
+    if (!manualFood.name.trim()) {
+      alert('Por favor, ingresa el nombre del alimento');
+      return;
+    }
+
+    const newFoods = [...pendingFoods, { ...manualFood }];
+    setPendingFoods(newFoods);
+    
+    // Reset manual form
+    setManualFood({
+      name: '',
+      quantity: 1,
+      unit: 'porción',
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fats: 0,
+    });
+  };
+
+  const handleSaveManualEntry = async () => {
+    if (pendingFoods.length === 0) {
+      alert('Por favor, agrega al menos un alimento');
+      return;
+    }
+
+    // For manual entries, show confirmation to allow editing
+    setShowConfirmation(true);
   };
 
   if (loading) {
@@ -424,48 +475,201 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({
 
       {/* Input Section */}
       <div className={`mb-6 p-4 rounded-lg ${isNightMode ? 'bg-[#16213E]' : 'bg-white'}`}>
-        <h2 className={`text-lg font-semibold mb-3 ${isNightMode ? 'text-white' : 'text-gray-900'}`}>
-          Registro Rápido
-        </h2>
-        
-        <div className="flex gap-3 mb-3">
-          <textarea
-            ref={textareaRef}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Ej: Un café con leche, una tostada con palta y dos huevos"
-            className={`flex-1 px-4 py-3 rounded-lg border resize-none ${isNightMode ? 'bg-[#0F1624] border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'}`}
-            rows={3}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                handleTextSubmit();
-              }
-            }}
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handlePhotoUpload}
-            className="hidden"
-          />
+        <div className="flex items-center justify-between mb-3">
+          <h2 className={`text-lg font-semibold ${isNightMode ? 'text-white' : 'text-gray-900'}`}>
+            Registro Rápido
+          </h2>
           <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={analyzing}
-            className={`px-4 py-3 rounded-lg font-medium transition-colors ${isNightMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'} disabled:opacity-50`}
-            aria-label="Subir foto"
+            onClick={() => {
+              setManualMode(!manualMode);
+              setInputText('');
+              setPendingFoods([]);
+              setPendingPhoto(null);
+              setPendingPhotoFile(null);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              manualMode
+                ? 'bg-[#E35B8F] text-white'
+                : isNightMode
+                ? 'bg-gray-700 text-white hover:bg-gray-600'
+                : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+            }`}
           >
-            {getIcon('camera', 'w-5 h-5')}
+            {manualMode ? 'Modo IA' : 'Modo Manual'}
           </button>
         </div>
 
-        <button
-          onClick={handleTextSubmit}
-          disabled={!inputText.trim() || analyzing}
-          className="w-full px-4 py-3 rounded-lg font-medium bg-[#E35B8F] text-white hover:bg-[#D14A7A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {analyzing ? 'Analizando...' : 'Analizar con IA'}
-        </button>
+        {!manualMode ? (
+          <>
+            <div className="flex gap-3 mb-3">
+              <textarea
+                ref={textareaRef}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder="Ej: Un café con leche, una tostada con palta y dos huevos"
+                className={`flex-1 px-4 py-3 rounded-lg border resize-none ${isNightMode ? 'bg-[#0F1624] border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'}`}
+                rows={3}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    handleTextSubmit();
+                  }
+                }}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={analyzing}
+                className={`px-4 py-3 rounded-lg font-medium transition-colors ${isNightMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'} disabled:opacity-50`}
+                aria-label="Subir foto"
+              >
+                {getIcon('camera', 'w-5 h-5')}
+              </button>
+            </div>
+
+            <button
+              onClick={handleTextSubmit}
+              disabled={!inputText.trim() || analyzing}
+              className="w-full px-4 py-3 rounded-lg font-medium bg-[#E35B8F] text-white hover:bg-[#D14A7A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {analyzing ? 'Analizando...' : 'Analizar con IA'}
+            </button>
+          </>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={`block text-sm mb-1 ${isNightMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Nombre del alimento
+                </label>
+                <input
+                  type="text"
+                  value={manualFood.name}
+                  onChange={(e) => setManualFood({ ...manualFood, name: e.target.value })}
+                  placeholder="Ej: Pollo a la plancha"
+                  className={`w-full px-3 py-2 rounded-lg border ${isNightMode ? 'bg-[#0F1624] border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'}`}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={`block text-sm mb-1 ${isNightMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Cantidad
+                  </label>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    value={manualFood.quantity}
+                    onChange={(e) => setManualFood({ ...manualFood, quantity: parseFloat(e.target.value) || 0.1 })}
+                    className={`w-full px-3 py-2 rounded-lg border ${isNightMode ? 'bg-[#0F1624] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-sm mb-1 ${isNightMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Unidad
+                  </label>
+                  <input
+                    type="text"
+                    value={manualFood.unit}
+                    onChange={(e) => setManualFood({ ...manualFood, unit: e.target.value })}
+                    placeholder="porción"
+                    className={`w-full px-3 py-2 rounded-lg border ${isNightMode ? 'bg-[#0F1624] border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'}`}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className={`block text-sm mb-1 ${isNightMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Calorías
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={manualFood.calories}
+                  onChange={(e) => setManualFood({ ...manualFood, calories: parseFloat(e.target.value) || 0 })}
+                  className={`w-full px-3 py-2 rounded-lg border ${isNightMode ? 'bg-[#0F1624] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                />
+              </div>
+              <div>
+                <label className={`block text-sm mb-1 ${isNightMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Proteínas (g)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={manualFood.protein}
+                  onChange={(e) => setManualFood({ ...manualFood, protein: parseFloat(e.target.value) || 0 })}
+                  className={`w-full px-3 py-2 rounded-lg border ${isNightMode ? 'bg-[#0F1624] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                />
+              </div>
+              <div>
+                <label className={`block text-sm mb-1 ${isNightMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Carbs (g)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={manualFood.carbs}
+                  onChange={(e) => setManualFood({ ...manualFood, carbs: parseFloat(e.target.value) || 0 })}
+                  className={`w-full px-3 py-2 rounded-lg border ${isNightMode ? 'bg-[#0F1624] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                />
+              </div>
+              <div>
+                <label className={`block text-sm mb-1 ${isNightMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Grasas (g)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={manualFood.fats}
+                  onChange={(e) => setManualFood({ ...manualFood, fats: parseFloat(e.target.value) || 0 })}
+                  className={`w-full px-3 py-2 rounded-lg border ${isNightMode ? 'bg-[#0F1624] border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAddManualFood}
+                disabled={!manualFood.name.trim()}
+                className="flex-1 px-4 py-2 rounded-lg font-medium bg-[#E35B8F] text-white hover:bg-[#D14A7A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Agregar alimento
+              </button>
+              {pendingFoods.length > 0 && (
+                <button
+                  onClick={handleSaveManualEntry}
+                  className="px-4 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+                >
+                  Guardar ({pendingFoods.length})
+                </button>
+              )}
+            </div>
+            {pendingFoods.length > 0 && (
+              <div className={`p-3 rounded-lg ${isNightMode ? 'bg-[#0F1624]' : 'bg-gray-50'}`}>
+                <p className={`text-sm mb-2 ${isNightMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Alimentos agregados:
+                </p>
+                <div className="space-y-1">
+                  {pendingFoods.map((food, idx) => (
+                    <div key={idx} className={`text-xs ${isNightMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      • {food.name} ({food.quantity} {food.unit}) - {food.calories} cal
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Macros Dashboard */}
