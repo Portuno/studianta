@@ -106,12 +106,18 @@ export default defineConfig(({ mode }) => {
                     let parsedBody = {};
                     try {
                       parsedBody = body ? JSON.parse(body) : {};
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/f35b00b7-c835-44d7-bfa2-c2ff645a7f02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'vite.config.ts:108',message:'Body parsed in Vite plugin',data:{type:parsedBody?.type,typeType:typeof parsedBody?.type,hasType:!!parsedBody?.type,keys:Object.keys(parsedBody),bodyPreview:body.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                      // #endregion
                       console.log('[Vite API Plugin] 📋 Body parseado:', {
                         type: parsedBody?.type,
                         hasType: !!parsedBody?.type,
                         keys: Object.keys(parsedBody),
                       });
                     } catch (parseError) {
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/f35b00b7-c835-44d7-bfa2-c2ff645a7f02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'vite.config.ts:115',message:'Body parse error',data:{error:parseError?.message,bodyPreview:body?.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                      // #endregion
                       console.error('[Vite API Plugin] ❌ Error parseando body:', parseError);
                       throw parseError;
                     }

@@ -4,6 +4,9 @@
 import { GoogleGenAI } from '@google/genai';
 
 export default async function handler(req, res) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f35b00b7-c835-44d7-bfa2-c2ff645a7f02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/gemini.js:6',message:'Handler entry',data:{method:req.method,hasBody:!!req.body,bodyKeys:Object.keys(req.body||{})},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   console.log('[Gemini API] 🚀 Handler ejecutado - Method:', req.method);
   
   // Solo permitir POST
@@ -21,23 +24,43 @@ export default async function handler(req, res) {
     });
   }
 
+  console.log('[Gemini API] 📥 Body completo recibido:', JSON.stringify(req.body, null, 2));
+  
   const { type, ...params } = req.body;
+
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f35b00b7-c835-44d7-bfa2-c2ff645a7f02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/gemini.js:26',message:'Body parsed',data:{type,typeType:typeof type,typeLength:type?.length,typeCharCodes:type?.split('').map(c=>c.charCodeAt(0)),paramsKeys:Object.keys(params),bodyStr:JSON.stringify(req.body).substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
 
   console.log('[Gemini API] Request recibida:', { 
     type, 
+    typeType: typeof type,
     typeLength: type?.length,
     typeTrimmed: type?.trim(),
+    typeExact: `"${type}"`,
     paramsKeys: Object.keys(params),
-    bodyKeys: Object.keys(req.body || {})
+    bodyKeys: Object.keys(req.body || {}),
+    fullBody: req.body
   });
 
   if (!type) {
-    console.error('[Gemini API] Error: tipo de consulta requerido');
+    console.error('[Gemini API] ❌ Error: tipo de consulta requerido');
     return res.status(400).json({ error: 'Tipo de consulta requerido' });
   }
 
   const normalizedType = type?.trim()?.toLowerCase();
-  console.log('[Gemini API] Tipo normalizado:', normalizedType);
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/f35b00b7-c835-44d7-bfa2-c2ff645a7f02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/gemini.js:44',message:'Type normalized',data:{type,normalizedType,comparisons:{typeEqNutritionText:type==='nutrition-text',normalizedEqNutritionText:normalizedType==='nutrition-text',typeEqNutritionPhoto:type==='nutrition-photo',normalizedEqNutritionPhoto:normalizedType==='nutrition-photo'}},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
+  console.log('[Gemini API] Tipo normalizado:', normalizedType, 'Original:', type);
+  
+  // Debug: Verificar todas las comparaciones posibles
+  console.log('[Gemini API] 🔍 Comparaciones:', {
+    'type === "nutrition-text"': type === 'nutrition-text',
+    'normalizedType === "nutrition-text"': normalizedType === 'nutrition-text',
+    'type === "nutrition-photo"': type === 'nutrition-photo',
+    'normalizedType === "nutrition-photo"': normalizedType === 'nutrition-photo',
+  });
 
   try {
     const ai = new GoogleGenAI({ apiKey });
@@ -220,7 +243,15 @@ INSTRUCCIÓN FINAL: Tu objetivo es que la alumna sienta que tiene el control de 
       return res.status(200).json({ text: response.text });
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f35b00b7-c835-44d7-bfa2-c2ff645a7f02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/gemini.js:237',message:'Before nutrition blocks',data:{type,normalizedType,reachedNutritionBlocks:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    console.log('[Gemini API] 🔄 Llegando a bloques de nutrition. Tipo actual:', type, 'Normalized:', normalizedType);
+
     if (type === 'nutrition-text' || normalizedType === 'nutrition-text') {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f35b00b7-c835-44d7-bfa2-c2ff645a7f02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/gemini.js:240',message:'Nutrition-text block entered',data:{type,normalizedType,conditionMatched:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       console.log('[Gemini API] ✅ Procesando nutrition-text - Tipo reconocido correctamente');
       console.log('[Gemini API] Debug - type:', type, 'normalizedType:', normalizedType);
       // Análisis nutricional desde texto
@@ -276,7 +307,7 @@ Responde con el JSON en el formato especificado.`;
 
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-3-flash-preview',
           contents: prompt,
           config: {
             systemInstruction: systemPrompt,
@@ -302,13 +333,16 @@ Responde con el JSON en el formato especificado.`;
         }
 
         return res.status(200).json({ analysis: analysisData });
-      } catch (apiError: any) {
+      } catch (apiError) {
         console.error('[Gemini API] Error en nutrition-text:', apiError);
         throw apiError;
       }
     }
 
     if (type === 'nutrition-photo' || normalizedType === 'nutrition-photo') {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f35b00b7-c835-44d7-bfa2-c2ff645a7f02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/gemini.js:328',message:'Nutrition-photo block entered',data:{type,normalizedType,conditionMatched:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       console.log('[Gemini API] ✅ Procesando nutrition-photo - Tipo reconocido correctamente');
       console.log('[Gemini API] Debug - type:', type, 'normalizedType:', normalizedType);
       // Análisis nutricional desde foto
@@ -368,7 +402,7 @@ Responde con el JSON en el formato especificado.`;
 
       try {
         const response = await ai.models.generateContent({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-3-flash-preview',
           contents: [
             {
               role: 'user',
@@ -407,7 +441,7 @@ Responde con el JSON en el formato especificado.`;
         }
 
         return res.status(200).json({ analysis: analysisData });
-      } catch (apiError: any) {
+      } catch (apiError) {
         console.error('[Gemini API] Error en nutrition-photo:', apiError);
         console.error('[Gemini API] Error details:', {
           message: apiError?.message,
@@ -574,6 +608,9 @@ IMPORTANTE:
       }
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f35b00b7-c835-44d7-bfa2-c2ff645a7f02',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/gemini.js:592',message:'Invalid type - reached end',data:{type,normalizedType,allBlocksChecked:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     console.error('[Gemini API] Tipo de consulta no válido:', type, 'Normalized:', normalizedType);
     return res.status(400).json({ error: 'Tipo de consulta no válido', receivedType: type });
   } catch (error) {
