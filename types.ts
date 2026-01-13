@@ -122,6 +122,7 @@ export interface CustomCalendarEvent {
 
 export enum NavView {
   DASHBOARD = 'Dashboard',
+  DASHBOARD_STATS = 'Dashboard Estadísticas',
   SUBJECTS = 'Asignaturas',
   CALENDAR = 'Calendario',
   FOCUS = 'Enfoque',
@@ -139,7 +140,8 @@ export enum NavView {
   NUTRITION = 'Nutrición',
   PRIVACY_POLICY = 'Política de Privacidad',
   TERMS_OF_SERVICE = 'Términos y Condiciones',
-  PAYMENT_SUCCESS = 'Pago Exitoso'
+  PAYMENT_SUCCESS = 'Pago Exitoso',
+  PREMIUM = 'Premium'
 }
 
 // Student Profile Context Interfaces
@@ -577,4 +579,20 @@ export interface NutritionAnalysis {
   energy_score: number;
   brain_food_tags: string[];
   confidence: number; // 0-1
+}
+
+// Navigation Configuration Interfaces
+export interface NavigationModule {
+  moduleId: string;
+  order: number;
+  navView: NavView;
+}
+
+export interface NavigationConfig {
+  id?: string;
+  user_id: string;
+  desktop_modules: NavigationModule[];
+  mobile_modules: NavigationModule[];
+  created_at?: string;
+  updated_at?: string;
 }

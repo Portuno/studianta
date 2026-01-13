@@ -1,8 +1,8 @@
 
-import React from 'react';
-import { NavView, Module } from '../types';
-import { getIcon, COLORS } from '../constants';
-import { UserProfile } from '../services/supabaseService';
+import React, { useState, useEffect } from 'react';
+import { NavView, Module, NavigationConfig, NavigationModule } from '../types';
+import { getIcon, COLORS, INITIAL_MODULES } from '../constants';
+import { UserProfile, supabaseService } from '../services/supabaseService';
 
 interface NavigationProps {
   activeView: NavView;
@@ -16,50 +16,79 @@ interface NavigationProps {
 }
 
 const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMobile, modules, user, userProfile, isNightMode = false, toggleTheme }) => {
+  const [navigationConfig, setNavigationConfig] = useState<NavigationConfig | null>(null);
+  const [loadingConfig, setLoadingConfig] = useState(true);
+  const [showMobileModuleSelector, setShowMobileModuleSelector] = useState<{ index: number; moduleId: string } | null>(null);
+
+  const loadConfig = React.useCallback(async () => {
+    if (!user) {
+      setLoadingConfig(false);
+      return;
+    }
+    try {
+      const config = await supabaseService.getNavigationConfig(user.id);
+      if (config) {
+        setNavigationConfig(config);
+      }
+    } catch (error) {
+      console.error('Error loading navigation config:', error);
+    } finally {
+      setLoadingConfig(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadConfig();
+  }, [loadConfig]);
+
   const isLocked = (moduleId: string) => {
     if (!moduleId || moduleId === 'atanor') return false;
     const mod = modules.find(m => m.id === moduleId);
     return !mod?.active;
   };
 
+  const getModuleIcon = (moduleId: string): string => {
+    const module = INITIAL_MODULES.find(m => m.id === moduleId);
+    return module?.icon || 'book';
+  };
+
+  const getModuleLabel = (moduleId: string): string => {
+    const module = INITIAL_MODULES.find(m => m.id === moduleId);
+    if (!module) return moduleId;
+    const labels: Record<string, string> = {
+      'subjects': 'Asignaturas',
+      'calendar': 'Calendario',
+      'focus': 'Enfoque',
+      'diary': 'Diario',
+      'balanza': 'Balanza',
+      'nutrition': 'Nutrición',
+      'bazar': 'Bazar',
+      'scientific-calculator': 'Calculadora',
+      'exam-generator': 'Exámenes',
+      'dashboard-stats': 'Dashboard',
+    };
+    return labels[moduleId] || module.name;
+  };
+
   if (isMobile) {
+    // Obtener módulos móviles configurados o usar defaults
+    const mobileModules = loadingConfig 
+      ? supabaseService.getDefaultNavigationConfig().mobile_modules
+      : (navigationConfig?.mobile_modules.length 
+          ? navigationConfig.mobile_modules.sort((a, b) => a.order - b.order)
+          : supabaseService.getDefaultNavigationConfig().mobile_modules);
+
     return (
       <nav className={`fixed bottom-0 left-0 right-0 h-28 border-t-2 flex items-center justify-between px-3 pb-safe z-[150] rounded-t-[2.5rem] transition-colors duration-500 ${
         isNightMode 
           ? 'bg-[#151525] border-[#A68A56]/40 shadow-[0_-8px_25px_rgba(199,125,255,0.2)]' 
           : 'bg-[#FFF9FB] border-[#F8C8DC] shadow-[0_-8px_25px_rgba(74,35,62,0.15)]'
       } safe-area-inset-bottom`}>
-        <div className="flex flex-1 justify-around items-center max-w-full">
-          <NavButton 
-            id={NavView.SUBJECTS} 
-            icon="book" 
-            label="Asignaturas" 
-            locked={isLocked('subjects')} 
-            active={activeView === NavView.SUBJECTS} 
-            onClick={() => setActiveView(NavView.SUBJECTS)} 
-          />
-          <NavButton 
-            id={NavView.DIARY} 
-            icon="pen" 
-            label="Diario" 
-            locked={isLocked('diary')} 
-            active={activeView === NavView.DIARY} 
-            onClick={() => setActiveView(NavView.DIARY)} 
-          />
-          <NavButton 
-            id={NavView.CALENDAR} 
-            icon="calendar" 
-            label="Calendario" 
-            locked={isLocked('calendar')} 
-            active={activeView === NavView.CALENDAR} 
-            onClick={() => setActiveView(NavView.CALENDAR)} 
-          />
-        </div>
-
-        <div className="relative -mt-12 mx-2 flex-shrink-0">
+        {/* Atanor fijo a la izquierda */}
+        <div className="relative flex-shrink-0">
           <button 
             onClick={() => setActiveView(NavView.DASHBOARD)}
-            className={`min-w-[72px] min-h-[72px] w-18 h-18 rounded-full border-4 border-white shadow-2xl flex flex-col items-center justify-center transition-all duration-300 active:scale-95 ${activeView === NavView.DASHBOARD ? 'bg-[#E35B8F] text-white scale-105' : 'bg-[#2D1A26] text-[#D4AF37]'}`}
+            className={`min-w-[72px] min-h-[72px] w-18 h-18 rounded-full border-4 border-white shadow-2xl flex flex-col items-center justify-center transition-all duration-300 active:scale-95 ${activeView === NavView.DASHBOARD ? 'bg-[#E35B8F] text-white scale-105' : 'bg-[#E35B8F] text-white'}`}
             aria-label="Atanor - Dashboard"
           >
             <div className="p-1">
@@ -69,37 +98,148 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
           </button>
         </div>
 
-        <div className="flex flex-1 justify-around items-center max-w-full">
-          <NavButton 
-            id={NavView.FOCUS} 
-            icon="hourglass" 
-            label="Enfoque" 
-            locked={isLocked('focus')} 
-            active={activeView === NavView.FOCUS} 
-            onClick={() => setActiveView(NavView.FOCUS)} 
-          />
-          <NavButton 
-            id={NavView.BALANZA} 
-            icon="scale" 
-            label="Balanza" 
-            locked={isLocked('balanza')} 
-            active={activeView === NavView.BALANZA} 
-            onClick={() => setActiveView(NavView.BALANZA)} 
-          />
+        {/* Dashboard Stats - Botón adicional en mobile */}
+        <div className="relative flex-shrink-0">
+          <button 
+            onClick={() => setActiveView(NavView.DASHBOARD_STATS)}
+            className={`min-w-[56px] min-h-[56px] rounded-full border-2 border-white shadow-xl flex flex-col items-center justify-center transition-all duration-300 active:scale-95 ${
+              activeView === NavView.DASHBOARD_STATS 
+                ? isNightMode
+                  ? 'bg-[#C77DFF] text-white scale-105 border-[#C77DFF]'
+                  : 'bg-[#E35B8F] text-white scale-105 border-[#E35B8F]'
+                : isNightMode
+                  ? 'bg-[rgba(48,43,79,0.6)] text-[#A68A56] border-[#A68A56]/40'
+                  : 'bg-white/60 text-[#8B5E75] border-[#F8C8DC]'
+            }`}
+            aria-label="Dashboard Estadísticas"
+          >
+            <div className="p-1">
+              {getIcon('dashboard', "w-5 h-5")}
+            </div>
+            <span className={`text-[7px] font-black uppercase tracking-[0.1em] mt-0.5 leading-tight ${
+              activeView === NavView.DASHBOARD_STATS ? 'opacity-100' : 'opacity-70'
+            }`}>
+              STATS
+            </span>
+          </button>
         </div>
+
+        {/* Módulos configurables */}
+        <div className="flex flex-1 justify-around items-center max-w-full ml-2">
+          {mobileModules.map((navMod, index) => (
+            <NavButton 
+              key={navMod.moduleId}
+              id={navMod.navView} 
+              icon={getModuleIcon(navMod.moduleId)} 
+              label={getModuleLabel(navMod.moduleId)} 
+              locked={isLocked(navMod.moduleId)} 
+              active={activeView === navMod.navView} 
+              onClick={() => setActiveView(navMod.navView)}
+              onLongPress={() => {
+                if (user) {
+                  setShowMobileModuleSelector({ index, moduleId: navMod.moduleId });
+                }
+              }}
+              moduleId={navMod.moduleId}
+            />
+          ))}
+        </div>
+
+        {/* Modal para cambiar módulo en mobile */}
+        {showMobileModuleSelector !== null && user && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200]" onClick={() => setShowMobileModuleSelector(null)}>
+            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-cinzel text-lg font-bold text-[#2D1A26] mb-4 uppercase tracking-wider">
+                Cambiar Módulo
+              </h3>
+              <p className="font-garamond text-sm text-[#8B5E75] mb-4">
+                Selecciona un módulo para reemplazar "{getModuleLabel(showMobileModuleSelector.moduleId)}"
+              </p>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {INITIAL_MODULES.filter(mod => {
+                  // Excluir módulos fijos y el módulo actual
+                  if (mod.id === 'profile' || mod.id === 'ai' || mod.id === 'security' || mod.id === 'social') return false;
+                  if (mod.id === showMobileModuleSelector.moduleId) return false;
+                  // Solo mostrar módulos que no estén ya en la navegación
+                  const currentModuleIds = mobileModules.map(m => m.moduleId);
+                  if (currentModuleIds.includes(mod.id)) return false;
+                  return true;
+                }).map(mod => {
+                  const moduleToNavView: Record<string, NavView> = {
+                    'subjects': NavView.SUBJECTS,
+                    'calendar': NavView.CALENDAR,
+                    'focus': NavView.FOCUS,
+                    'diary': NavView.DIARY,
+                    'balanza': NavView.BALANZA,
+                    'nutrition': NavView.NUTRITION,
+                    'bazar': NavView.BAZAR,
+                    'scientific-calculator': NavView.CALCULATOR,
+                    'exam-generator': NavView.EXAM_GENERATOR,
+                  };
+                  const navView = moduleToNavView[mod.id];
+                  if (!navView) return null;
+                  
+                  return (
+                    <button
+                      key={mod.id}
+                      onClick={async () => {
+                        if (showMobileModuleSelector !== null) {
+                          const updatedModules = [...mobileModules];
+                          updatedModules[showMobileModuleSelector.index] = {
+                            moduleId: mod.id,
+                            order: showMobileModuleSelector.index,
+                            navView,
+                          };
+                          
+                          try {
+                            await supabaseService.updateNavigationConfig(user.id, {
+                              desktop_modules: navigationConfig?.desktop_modules || supabaseService.getDefaultNavigationConfig().desktop_modules,
+                              mobile_modules: updatedModules,
+                            });
+                            // Recargar configuración
+                            await loadConfig();
+                            setShowMobileModuleSelector(null);
+                          } catch (error) {
+                            console.error('Error updating navigation:', error);
+                            alert('Error al actualizar la navegación. Por favor, intenta desde el perfil.');
+                          }
+                        }
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg border border-[#F8C8DC] hover:bg-[#F8C8DC]/40 transition-colors"
+                    >
+                      {getIcon(mod.icon, 'w-5 h-5 text-[#8B5E75]')}
+                      <span className="font-garamond text-sm text-[#2D1A26]">{mod.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setShowMobileModuleSelector(null)}
+                className="mt-4 w-full px-4 py-2 bg-[#F8C8DC] text-[#2D1A26] rounded-lg font-cinzel text-sm font-black uppercase tracking-wider hover:bg-[#E8B8CC] transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
     );
   }
 
   // Tablet/Desktop Sidebar
-  const sidebarItems = [
-    { id: NavView.SUBJECTS, icon: 'book', moduleId: 'subjects', label: 'Asignaturas' },
-    { id: NavView.CALENDAR, icon: 'calendar', moduleId: 'calendar', label: 'Calendario' },
-    { id: NavView.FOCUS, icon: 'hourglass', moduleId: 'focus', label: 'Enfoque' },
-    { id: NavView.DIARY, icon: 'pen', moduleId: 'diary', label: 'Diario' },
-    { id: NavView.BALANZA, icon: 'scale', moduleId: 'balanza', label: 'Balanza' },
-    { id: NavView.DASHBOARD, icon: 'sparkles', moduleId: '', label: 'Atanor' },
-  ];
+  // Obtener módulos desktop configurados o usar defaults
+  const desktopModules = loadingConfig 
+    ? supabaseService.getDefaultNavigationConfig().desktop_modules
+    : (navigationConfig?.desktop_modules.length 
+        ? navigationConfig.desktop_modules.sort((a, b) => a.order - b.order)
+        : supabaseService.getDefaultNavigationConfig().desktop_modules);
+  
+  const sidebarItems = desktopModules.map(navMod => ({
+    id: navMod.navView,
+    icon: getModuleIcon(navMod.moduleId),
+    moduleId: navMod.moduleId,
+    label: getModuleLabel(navMod.moduleId),
+  }));
 
   return (
     <aside className={`w-20 md:w-24 lg:w-64 h-full flex flex-col z-50 shadow-2xl border-r transition-all duration-500 backdrop-blur-[15px] ${
@@ -107,9 +247,10 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
         ? 'border-[#A68A56]/40 bg-[rgba(26,26,46,0.95)] shadow-[0_0_30px_rgba(199,125,255,0.2)]' 
         : 'glass-card border-[#F8C8DC]'
     }`}>
-      <div className="p-4 lg:p-8 flex-1 flex flex-col items-center lg:items-stretch">
+      {/* Header fijo */}
+      <div className="p-4 lg:p-8 flex-shrink-0">
         <div 
-          className="flex flex-col items-center cursor-pointer mb-10"
+          className="flex flex-col items-center cursor-pointer"
           onClick={() => setActiveView(NavView.DASHBOARD)}
         >
           <h1 className={`font-cinzel text-2xl lg:text-3xl font-black tracking-[0.2em] transition-colors duration-500 ${
@@ -122,8 +263,11 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
             isNightMode ? 'bg-[#D4AF37]' : 'bg-[#D4AF37]'
           }`} />
         </div>
+      </div>
 
-        <nav className="space-y-4 lg:space-y-2">
+      {/* Sección de módulos scrolleable */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+        <nav className="p-4 lg:p-8 pt-0 lg:pt-0 space-y-4 lg:space-y-2">
           {sidebarItems.map((item) => {
             const locked = isLocked(item.moduleId);
             return (
@@ -153,7 +297,8 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
         </nav>
       </div>
 
-      <div className={`p-4 lg:p-6 border-t space-y-4 lg:space-y-4 transition-colors duration-500 ${
+      {/* Sección inferior siempre visible (Tema, Dashboard Stats, Oráculo, Perfil) */}
+      <div className={`p-4 lg:p-6 border-t space-y-4 lg:space-y-4 transition-colors duration-500 flex-shrink-0 ${
         isNightMode ? 'bg-[#151525] border-[#A68A56]/30' : 'bg-[#FFF9FA]/50 border-[#F8C8DC]/30'
       }`}>
         {/* Toggle Diario/Nocturno */}
@@ -180,6 +325,22 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
             )}
           </button>
         )}
+        
+        <button 
+          onClick={() => setActiveView(NavView.DASHBOARD_STATS)}
+          className={`w-full flex items-center justify-center gap-3 py-3.5 px-2 lg:px-4 rounded-2xl shadow-lg hover:scale-[1.05] transition-all group ${
+            activeView === NavView.DASHBOARD_STATS
+              ? isNightMode
+                ? 'bg-[#C77DFF] text-white shadow-[0_0_20px_rgba(199,125,255,0.3)]'
+                : 'bg-[#E35B8F] text-white'
+              : isNightMode
+                ? 'bg-[rgba(48,43,79,0.6)] text-[#A68A56] border border-[#A68A56]/40 hover:bg-[rgba(48,43,79,0.8)]'
+                : 'bg-[#2D1A26] text-[#D4AF37]'
+          }`}
+        >
+          {getIcon('dashboard', 'w-6 h-6 lg:w-5 lg:h-5 transition-transform')}
+          <span className="hidden lg:inline font-cinzel text-[10px] font-black uppercase tracking-[0.2em]">Dashboard</span>
+        </button>
         
         <button 
           onClick={() => setActiveView(NavView.ORACLE)}
@@ -269,25 +430,89 @@ interface NavButtonProps {
   locked: boolean;
   active: boolean;
   onClick: () => void;
+  onLongPress?: () => void;
+  moduleId?: string;
 }
 
-const NavButton: React.FC<NavButtonProps> = ({ id, icon, label, locked, active, onClick }) => (
-  <button
-    disabled={locked}
-    onClick={onClick}
-    className={`flex flex-col items-center justify-center gap-1.5 transition-all duration-300 relative min-w-[56px] min-h-[56px] touch-manipulation ${
-      active ? 'text-[#E35B8F] scale-105' : locked ? 'text-[#8B5E75]/30 grayscale' : 'text-[#8B5E75] active:scale-95'
-    }`}
-    aria-label={label}
-  >
-    <div className={`p-2 rounded-xl transition-all ${active ? 'bg-[#E35B8F]/15' : ''}`}>
-      {getIcon(icon, "w-7 h-7")}
-    </div>
-    <span className={`text-[9px] font-black uppercase tracking-wider whitespace-nowrap font-inter leading-tight ${active ? 'opacity-100 font-bold' : 'opacity-75'}`}>
-      {label}
-    </span>
-    {locked && <div className="absolute -top-1 -right-1 text-[#D4AF37] bg-white rounded-full p-0.5">{getIcon('lock', 'w-3 h-3')}</div>}
-  </button>
-);
+const NavButton: React.FC<NavButtonProps> = ({ id, icon, label, locked, active, onClick, onLongPress, moduleId }) => {
+  const longPressTimer = React.useRef<NodeJS.Timeout | null>(null);
+  const [isLongPressing, setIsLongPressing] = React.useState(false);
+
+  const handleTouchStart = () => {
+    if (!onLongPress || locked) return;
+    setIsLongPressing(false);
+    longPressTimer.current = setTimeout(() => {
+      setIsLongPressing(true);
+      if (onLongPress) {
+        onLongPress();
+      }
+    }, 500); // 500ms para long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    if (!isLongPressing) {
+      onClick();
+    }
+    setIsLongPressing(false);
+  };
+
+  const handleTouchCancel = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    setIsLongPressing(false);
+  };
+
+  return (
+    <button
+      disabled={locked}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
+      onMouseDown={() => {
+        if (!onLongPress || locked) return;
+        longPressTimer.current = setTimeout(() => {
+          if (onLongPress) {
+            onLongPress();
+          }
+        }, 500);
+      }}
+      onMouseUp={() => {
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+      }}
+      onMouseLeave={() => {
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+      }}
+      onClick={(e) => {
+        if (!isLongPressing) {
+          onClick();
+        }
+      }}
+      className={`flex flex-col items-center justify-center gap-1.5 transition-all duration-300 relative min-w-[56px] min-h-[56px] touch-manipulation ${
+        active ? 'text-[#E35B8F] scale-105' : locked ? 'text-[#8B5E75]/30 grayscale' : 'text-[#8B5E75] active:scale-95'
+      }`}
+      aria-label={label}
+    >
+      <div className={`p-2 rounded-xl transition-all ${active ? 'bg-[#E35B8F]/15' : ''}`}>
+        {getIcon(icon, "w-7 h-7")}
+      </div>
+      <span className={`text-[9px] font-black uppercase tracking-wider whitespace-nowrap font-inter leading-tight ${active ? 'opacity-100 font-bold' : 'opacity-75'}`}>
+        {label}
+      </span>
+      {locked && <div className="absolute -top-1 -right-1 text-[#D4AF37] bg-white rounded-full p-0.5">{getIcon('lock', 'w-3 h-3')}</div>}
+    </button>
+  );
+};
 
 export default Navigation;

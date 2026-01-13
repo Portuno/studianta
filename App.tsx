@@ -30,6 +30,8 @@ import NutritionModule from './components/NutritionModule';
 import Footer from './components/Footer';
 import OnboardingModal from './components/OnboardingModal';
 import CookieConsentBanner from './components/CookieConsentBanner';
+import DashboardStatsModule from './components/DashboardStatsModule';
+import PremiumPage from './components/PremiumPage';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -41,12 +43,14 @@ const App: React.FC = () => {
     if (pathname === '/privacidad' || pathname === '/privacidad/') return NavView.PRIVACY_POLICY;
     if (pathname === '/terminosycondiciones' || pathname === '/terminosycondiciones/') return NavView.TERMS_OF_SERVICE;
     if (pathname === '/docs' || pathname === '/docs/') return NavView.DOCS;
+    if (pathname === '/premium' || pathname === '/premium/') return NavView.PREMIUM;
     // Mantener compatibilidad con query params antiguos
     const urlParams = new URLSearchParams(window.location.search);
     const page = urlParams.get('page');
     if (page === 'privacy-policy') return NavView.PRIVACY_POLICY;
     if (page === 'terms-of-service') return NavView.TERMS_OF_SERVICE;
     if (page === 'docs') return NavView.DOCS;
+    if (page === 'premium') return NavView.PREMIUM;
     return NavView.DASHBOARD;
   };
   
@@ -63,9 +67,11 @@ const App: React.FC = () => {
       window.history.pushState({ view: 'terms' }, '', '/terminosycondiciones');
     } else if (view === NavView.DOCS) {
       window.history.pushState({ view: 'docs' }, '', '/docs');
+    } else if (view === NavView.PREMIUM) {
+      window.history.pushState({ view: 'premium' }, '', '/premium');
     } else if (view === NavView.DASHBOARD) {
-      // Si vuelve al dashboard desde una página de política/docs, limpiar la URL
-      if (window.location.pathname === '/privacidad' || window.location.pathname === '/terminosycondiciones' || window.location.pathname === '/docs') {
+      // Si vuelve al dashboard desde una página de política/docs/premium, limpiar la URL
+      if (window.location.pathname === '/privacidad' || window.location.pathname === '/terminosycondiciones' || window.location.pathname === '/docs' || window.location.pathname === '/premium') {
         window.history.pushState({ view: 'dashboard' }, '', '/');
       }
     }
@@ -1076,6 +1082,15 @@ const App: React.FC = () => {
             isNightMode={isNightMode}
           />
         );
+      case NavView.DASHBOARD_STATS:
+        return (
+          <DashboardStatsModule
+            studentProfileContext={studentProfileContext}
+            isMobile={isMobile}
+            isNightMode={isNightMode}
+            onNavigate={handleViewChange}
+          />
+        );
       case NavView.SUBJECTS:
         return <SubjectsModule 
           subjects={subjects} 
@@ -1180,6 +1195,25 @@ const App: React.FC = () => {
           isMobile={isMobile}
           isNightMode={isNightMode}
         />;
+      case NavView.PREMIUM:
+        return <PremiumPage 
+          user={user}
+          userProfile={userProfile}
+          isNightMode={isNightMode}
+          onSubscribe={async () => {
+            if (!user) {
+              setShowLoginModal(true);
+              return;
+            }
+            try {
+              const { url } = await supabaseService.createCheckoutSession(user.id);
+              window.location.href = url;
+            } catch (error: any) {
+              console.error('Error creating checkout session:', error);
+              alert('Error al crear la sesión de pago. Por favor, intenta nuevamente.');
+            }
+          }}
+        />;
       case NavView.BAZAR:
         return <BazarModule 
           isMobile={isMobile}
@@ -1228,18 +1262,18 @@ const App: React.FC = () => {
     }
   };
 
-  // Ocultar navegación en páginas de políticas, docs y pago exitoso
-  const isPolicyPage = activeView === NavView.PRIVACY_POLICY || activeView === NavView.TERMS_OF_SERVICE || activeView === NavView.DOCS || activeView === NavView.PAYMENT_SUCCESS;
+  // Ocultar navegación en páginas de políticas, docs, premium y pago exitoso
+  const isPolicyPage = activeView === NavView.PRIVACY_POLICY || activeView === NavView.TERMS_OF_SERVICE || activeView === NavView.DOCS || activeView === NavView.PREMIUM || activeView === NavView.PAYMENT_SUCCESS;
 
   const handleNavigationClick = (view: NavView) => {
     // Si no hay usuario y se intenta acceder a un módulo que no sea Dashboard o páginas públicas, mostrar login
-    if (!user && view !== NavView.DASHBOARD && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE && view !== NavView.DOCS) {
+    if (!user && view !== NavView.DASHBOARD && view !== NavView.PRIVACY_POLICY && view !== NavView.TERMS_OF_SERVICE && view !== NavView.DOCS && view !== NavView.PREMIUM) {
       setShowLoginModal(true);
       return;
     }
     
-    // Usar handleViewChange para políticas y docs, setActiveView normal para otras vistas
-    if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE || view === NavView.DOCS) {
+    // Usar handleViewChange para políticas, docs y premium, setActiveView normal para otras vistas
+    if (view === NavView.PRIVACY_POLICY || view === NavView.TERMS_OF_SERVICE || view === NavView.DOCS || view === NavView.PREMIUM) {
       handleViewChange(view);
     } else {
       setActiveView(view);

@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Subject, Transaction, JournalEntry, CustomCalendarEvent, Module, NutritionEntry, NutritionGoals, NutritionCorrelation } from '../types';
+import { Subject, Transaction, JournalEntry, CustomCalendarEvent, Module, NutritionEntry, NutritionGoals, NutritionCorrelation, NavigationConfig, NavigationModule, NavView } from '../types';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -2335,6 +2335,186 @@ export class SupabaseService {
       .getPublicUrl(path);
     
     return urlData.publicUrl;
+  }
+
+  // ============ NAVIGATION CONFIG ============
+
+  getDefaultNavigationConfig(): { desktop_modules: NavigationModule[]; mobile_modules: NavigationModule[] } {
+    return {
+      desktop_modules: [
+        { moduleId: 'subjects', order: 0, navView: NavView.SUBJECTS },
+        { moduleId: 'calendar', order: 1, navView: NavView.CALENDAR },
+        { moduleId: 'focus', order: 2, navView: NavView.FOCUS },
+        { moduleId: 'diary', order: 3, navView: NavView.DIARY },
+        { moduleId: 'balanza', order: 4, navView: NavView.BALANZA },
+      ],
+      mobile_modules: [
+        { moduleId: 'subjects', order: 0, navView: NavView.SUBJECTS },
+        { moduleId: 'diary', order: 1, navView: NavView.DIARY },
+        { moduleId: 'calendar', order: 2, navView: NavView.CALENDAR },
+        { moduleId: 'focus', order: 3, navView: NavView.FOCUS },
+        { moduleId: 'balanza', order: 4, navView: NavView.BALANZA },
+      ],
+    };
+  }
+
+  async getNavigationConfig(userId: string): Promise<NavigationConfig | null> {
+    try {
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from('user_navigation_config')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        if (result.error && isNetworkError(result.error)) {
+          throw result.error;
+        }
+        return result;
+      });
+
+      if (error) {
+        if (error.code === 'PGRST116' || error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+          // Si no existe configuración o la tabla no existe, retornar null para usar defaults
+          return null;
+        }
+        if (isNetworkError(error)) {
+          console.warn('Network error loading navigation config, returning null');
+          return null;
+        }
+        throw error;
+      }
+
+      if (!data) return null;
+
+      return {
+        id: data.id,
+        user_id: data.user_id,
+        desktop_modules: data.desktop_modules || [],
+        mobile_modules: data.mobile_modules || [],
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      };
+    } catch (error: any) {
+      if (error.code === 'PGRST116' || error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        return null;
+      }
+      if (isNetworkError(error)) {
+        console.warn('Network error loading navigation config, returning null');
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async updateNavigationConfig(userId: string, config: { desktop_modules: NavigationModule[]; mobile_modules: NavigationModule[] }): Promise<NavigationConfig> {
+    try {
+      // Verificar si existe configuración
+      const existing = await this.getNavigationConfig(userId);
+
+      if (existing) {
+        // Actualizar existente
+        const { data, error } = await retryWithBackoff(async () => {
+          const result = await supabase
+            .from('user_navigation_config')
+            .update({
+              desktop_modules: config.desktop_modules,
+              mobile_modules: config.mobile_modules,
+            })
+            .eq('user_id', userId)
+            .select()
+            .single();
+          
+          if (result.error && isNetworkError(result.error)) {
+            throw result.error;
+          }
+          return result;
+        });
+
+        if (error) {
+          if (isNetworkError(error)) {
+            throw new Error('Error de conexión. Por favor, intenta nuevamente.');
+          }
+          throw error;
+        }
+
+        if (!data) throw new Error('No se actualizó la configuración de navegación');
+
+        return {
+          id: data.id,
+          user_id: data.user_id,
+          desktop_modules: data.desktop_modules || [],
+          mobile_modules: data.mobile_modules || [],
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+        };
+      } else {
+        // Crear nueva configuración
+        const { data, error } = await retryWithBackoff(async () => {
+          const result = await supabase
+            .from('user_navigation_config')
+            .insert({
+              user_id: userId,
+              desktop_modules: config.desktop_modules,
+              mobile_modules: config.mobile_modules,
+            })
+            .select()
+            .single();
+          
+          if (result.error && isNetworkError(result.error)) {
+            throw result.error;
+          }
+          return result;
+        });
+
+        if (error) {
+          if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+            console.warn('Table user_navigation_config not found. Please run script 03_navigation_config.sql');
+            // Retornar configuración local como fallback
+            return {
+              id: '',
+              user_id: userId,
+              desktop_modules: config.desktop_modules,
+              mobile_modules: config.mobile_modules,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+          }
+          if (isNetworkError(error)) {
+            throw new Error('Error de conexión. Por favor, intenta nuevamente.');
+          }
+          throw error;
+        }
+
+        if (!data) throw new Error('No se creó la configuración de navegación');
+
+        return {
+          id: data.id,
+          user_id: data.user_id,
+          desktop_modules: data.desktop_modules || [],
+          mobile_modules: data.mobile_modules || [],
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+        };
+      }
+    } catch (error: any) {
+      if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
+        console.warn('Table user_navigation_config not found. Please run script 03_navigation_config.sql');
+        // Retornar configuración local como fallback
+        return {
+          id: '',
+          user_id: userId,
+          desktop_modules: config.desktop_modules,
+          mobile_modules: config.mobile_modules,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+      if (isNetworkError(error)) {
+        throw new Error('Error de conexión al actualizar configuración de navegación. Por favor, intenta nuevamente.');
+      }
+      throw error;
+    }
   }
 }
 
