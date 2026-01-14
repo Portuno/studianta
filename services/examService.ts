@@ -402,16 +402,21 @@ export class ExamService {
   /**
    * Obtiene historial de exámenes
    */
-  async getExamHistory(userId: string, subjectId?: string): Promise<Exam[]> {
+  async getExamHistory(userId: string, subjectId?: string, limit?: number): Promise<Exam[]> {
     try {
       let query = supabase
         .from('exams')
-        .select('*')
+        .select('id, user_id, subject_id, title, exam_type, difficulty, question_count, mode, material_ids, created_at, updated_at, completed_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (subjectId) {
         query = query.eq('subject_id', subjectId);
+      }
+
+      // Agregar límite si se especifica (por defecto 50 para carga inicial)
+      if (limit) {
+        query = query.limit(limit);
       }
 
       const { data, error } = await query;

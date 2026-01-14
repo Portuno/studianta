@@ -118,6 +118,14 @@ const App: React.FC = () => {
   const [exams, setExams] = useState<Exam[]>([]);
   const [examResults, setExamResults] = useState<ExamResult[]>([]);
 
+  // Flags para trackear qué datos ya están cargados (cache)
+  const [dataLoadedFlags, setDataLoadedFlags] = useState({
+    transactions: false,
+    journalEntries: false,
+    customEvents: false,
+    exams: false,
+  });
+
   const toggleTheme = () => {
     setIsNightMode(prev => !prev);
   };
@@ -211,6 +219,13 @@ const App: React.FC = () => {
 
         if (session?.user) {
           setUser(session.user);
+          
+          // Cargar contraseña de encriptación desde Supabase si está configurada
+          supabaseService.loadEncryptionPasswordFromSupabase(session.user.id)
+            .catch(err => {
+              console.error('Error loading encryption password:', err);
+            });
+          
           // Cargar datos en paralelo para ser más rápido
           loadAllData(session.user.id)
             .then(() => {
@@ -272,6 +287,13 @@ const App: React.FC = () => {
           // Solo recargar datos cuando el usuario inicia sesión explícitamente
           if (session?.user) {
             setUser(session.user);
+            
+            // Cargar contraseña de encriptación desde Supabase si está configurada
+            supabaseService.loadEncryptionPasswordFromSupabase(session.user.id)
+              .catch(err => {
+                console.error('Error loading encryption password:', err);
+              });
+            
             // NO usar setInitialLoading aquí - solo recargar datos en segundo plano
             // para no interrumpir la experiencia del usuario
             dataLoadedRef.current = false; // Resetear para permitir recarga
@@ -311,6 +333,13 @@ const App: React.FC = () => {
           setNutritionCorrelations([]);
           setExams([]);
           setExamResults([]);
+          // Resetear flags de datos cargados
+          setDataLoadedFlags({
+            transactions: false,
+            journalEntries: false,
+            customEvents: false,
+            exams: false,
+          });
           // NO cambiar initialLoading aquí - solo limpiar datos
         }
       });
@@ -353,6 +382,10 @@ const App: React.FC = () => {
       
       if (profile) {
         setUserProfile(profile);
+        // Actualizar monthlyBudget desde el perfil
+        if (profile.monthly_budget !== undefined) {
+          setMonthlyBudget(profile.monthly_budget);
+        }
         // Verificar si necesita mostrar el onboarding
         if (!profile.onboarding_completed) {
           setShowOnboarding(true);
@@ -365,23 +398,15 @@ const App: React.FC = () => {
         setSecurityPin(securityConfig.security_pin);
       }
 
-      // Cargar todo lo demás en paralelo para ser más rápido
-      // Usar Promise.allSettled para que si una tabla no existe, las demás sigan funcionando
+      // Cargar solo datos esenciales al inicio: Profile, Modules, Subjects
+      // El resto se carga bajo demanda cuando el usuario visita cada vista
       const results = await Promise.allSettled([
         supabaseService.getModules(userId),
         supabaseService.getSubjects(userId),
-        supabaseService.getTransactions(userId),
-        supabaseService.getJournalEntries(userId),
-        supabaseService.getCalendarEvents(userId),
-        supabaseService.getBalanzaProTransactions(userId),
-        supabaseService.getNutritionEntries(userId),
-        supabaseService.getNutritionGoals(userId),
-        supabaseService.getNutritionCorrelations(userId, 50), // Obtener últimas 50 correlaciones
-        examService.getExamHistory(userId),
       ]);
 
-      // Procesar resultados
-      const [userModulesResult, subjectsResult, transactionsResult, entriesResult, eventsResult, balanzaProResult, nutritionEntriesResult, nutritionGoalsResult, nutritionCorrelationsResult, examsResult] = results;
+      // Procesar resultados (solo Modules y Subjects)
+      const [userModulesResult, subjectsResult] = results;
 
       // Procesar módulos
       if (userModulesResult.status === 'fulfilled') {
@@ -403,94 +428,116 @@ const App: React.FC = () => {
         setModules(INITIAL_MODULES);
       }
 
-      // Actualizar estados (solo si las tablas existen)
+      // Actualizar estados (solo Modules y Subjects)
       if (subjectsResult.status === 'fulfilled') {
         setSubjects(subjectsResult.value);
       } else {
         console.warn('Table subjects not found, using empty array');
         setSubjects([]);
       }
-
-      if (transactionsResult.status === 'fulfilled') {
-        setTransactions(transactionsResult.value);
-      } else {
-        console.warn('Table transactions not found, using empty array');
-        setTransactions([]);
-      }
-
-      if (entriesResult.status === 'fulfilled') {
-        setJournalEntries(entriesResult.value);
-      } else {
-        console.warn('Table journal_entries not found, using empty array');
-        setJournalEntries([]);
-      }
-
-      if (eventsResult.status === 'fulfilled') {
-        setCustomEvents(eventsResult.value);
-      } else {
-        console.warn('Table calendar_events not found, using empty array');
-        setCustomEvents([]);
-      }
-
-      // Procesar Balanza Pro
-      if (balanzaProResult.status === 'fulfilled') {
-        setBalanzaProTransactions(balanzaProResult.value);
-      } else {
-        console.warn('Table balanza_pro_transactions not found, using empty array');
-        setBalanzaProTransactions([]);
-      }
-
-      // Procesar Nutrición
-      if (nutritionEntriesResult.status === 'fulfilled') {
-        setNutritionEntries(nutritionEntriesResult.value);
-      } else {
-        console.warn('Table nutrition_entries not found, using empty array');
-        setNutritionEntries([]);
-      }
-
-      if (nutritionGoalsResult.status === 'fulfilled') {
-        setNutritionGoals(nutritionGoalsResult.value);
-      } else {
-        console.warn('Table nutrition_goals not found, using null');
-        setNutritionGoals(null);
-      }
-
-      if (nutritionCorrelationsResult.status === 'fulfilled') {
-        setNutritionCorrelations(nutritionCorrelationsResult.value);
-      } else {
-        console.warn('Table nutrition_correlations not found, using empty array');
-        setNutritionCorrelations([]);
-      }
-
-      // Procesar Exámenes
-      if (examsResult.status === 'fulfilled') {
-        const examsData = examsResult.value;
-        setExams(examsData);
-        
-        // Cargar resultados de exámenes completados
-        const completedExams = examsData.filter(e => e.completed_at);
-        if (completedExams.length > 0) {
-          try {
-            const resultsPromises = completedExams.map(exam => 
-              examService.getExamResults(exam.id).catch(() => null)
-            );
-            const resultsData = await Promise.all(resultsPromises);
-            const validResults = resultsData.filter((r): r is ExamResult => r !== null);
-            setExamResults(validResults);
-          } catch (error) {
-            console.warn('Error loading exam results:', error);
-            setExamResults([]);
-          }
-        } else {
-          setExamResults([]);
-        }
-      } else {
-        console.warn('Error loading exams, using empty array');
-        setExams([]);
-        setExamResults([]);
-      }
     } catch (error) {
       console.error('Error loading data:', error);
+    }
+  };
+
+  // Cargar datos bajo demanda según la vista activa
+  const loadDataForView = async (userId: string, view: NavView) => {
+    try {
+      switch (view) {
+        case NavView.CALENDAR:
+          // Cargar transactions, journalEntries, customEvents si no están cargados
+          if (!dataLoadedFlags.transactions || !dataLoadedFlags.journalEntries || !dataLoadedFlags.customEvents) {
+            const calendarResults = await Promise.allSettled([
+              !dataLoadedFlags.transactions ? supabaseService.getTransactions(userId, 100) : Promise.resolve(transactions),
+              !dataLoadedFlags.journalEntries ? supabaseService.getJournalEntries(userId, 50, false) : Promise.resolve(journalEntries),
+              !dataLoadedFlags.customEvents ? supabaseService.getCalendarEvents(userId, 100) : Promise.resolve(customEvents),
+            ]);
+
+            if (calendarResults[0].status === 'fulfilled' && !dataLoadedFlags.transactions) {
+              setTransactions(calendarResults[0].value);
+              setDataLoadedFlags(prev => ({ ...prev, transactions: true }));
+            }
+            if (calendarResults[1].status === 'fulfilled' && !dataLoadedFlags.journalEntries) {
+              setJournalEntries(calendarResults[1].value);
+              setDataLoadedFlags(prev => ({ ...prev, journalEntries: true }));
+            }
+            if (calendarResults[2].status === 'fulfilled' && !dataLoadedFlags.customEvents) {
+              setCustomEvents(calendarResults[2].value);
+              setDataLoadedFlags(prev => ({ ...prev, customEvents: true }));
+            }
+          }
+          break;
+
+        case NavView.DIARY:
+          // Cargar journalEntries si no están cargados
+          if (!dataLoadedFlags.journalEntries) {
+            try {
+              const entries = await supabaseService.getJournalEntries(userId, 50, false);
+              setJournalEntries(entries);
+              setDataLoadedFlags(prev => ({ ...prev, journalEntries: true }));
+            } catch (error) {
+              console.warn('Error loading journal entries:', error);
+            }
+          }
+          break;
+
+        case NavView.EXAM_GENERATOR:
+          // Cargar exams si no están cargados
+          if (!dataLoadedFlags.exams) {
+            try {
+              const examsData = await examService.getExamHistory(userId);
+              setExams(examsData);
+              
+              // Cargar resultados de exámenes completados
+              const completedExams = examsData.filter(e => e.completed_at);
+              if (completedExams.length > 0) {
+                const resultsPromises = completedExams.map(exam => 
+                  examService.getExamResults(exam.id).catch(() => null)
+                );
+                const resultsData = await Promise.all(resultsPromises);
+                const validResults = resultsData.filter((r): r is ExamResult => r !== null);
+                setExamResults(validResults);
+              } else {
+                setExamResults([]);
+              }
+              
+              setDataLoadedFlags(prev => ({ ...prev, exams: true }));
+            } catch (error) {
+              console.warn('Error loading exams:', error);
+            }
+          }
+          break;
+
+        case NavView.ORACLE:
+        case NavView.PROFILE:
+          // Cargar todos los datos necesarios para Oracle y Profile
+          if (!dataLoadedFlags.transactions || !dataLoadedFlags.journalEntries || !dataLoadedFlags.customEvents) {
+            const oracleResults = await Promise.allSettled([
+              !dataLoadedFlags.transactions ? supabaseService.getTransactions(userId, 100) : Promise.resolve(transactions),
+              !dataLoadedFlags.journalEntries ? supabaseService.getJournalEntries(userId, 50, false) : Promise.resolve(journalEntries),
+              !dataLoadedFlags.customEvents ? supabaseService.getCalendarEvents(userId, 100) : Promise.resolve(customEvents),
+            ]);
+
+            if (oracleResults[0].status === 'fulfilled' && !dataLoadedFlags.transactions) {
+              setTransactions(oracleResults[0].value);
+              setDataLoadedFlags(prev => ({ ...prev, transactions: true }));
+            }
+            if (oracleResults[1].status === 'fulfilled' && !dataLoadedFlags.journalEntries) {
+              setJournalEntries(oracleResults[1].value);
+              setDataLoadedFlags(prev => ({ ...prev, journalEntries: true }));
+            }
+            if (oracleResults[2].status === 'fulfilled' && !dataLoadedFlags.customEvents) {
+              setCustomEvents(oracleResults[2].value);
+              setDataLoadedFlags(prev => ({ ...prev, customEvents: true }));
+            }
+          }
+          break;
+
+        // BALANZA y NUTRITION ya cargan sus propios datos en sus módulos
+        // No necesitan carga adicional aquí
+      }
+    } catch (error) {
+      console.error('Error loading data for view:', error);
     }
   };
 
@@ -516,6 +563,13 @@ const App: React.FC = () => {
       }
     };
   }, []);
+
+  // Lazy loading: cargar datos cuando el usuario navega a una vista específica
+  useEffect(() => {
+    if (!user) return;
+    
+    loadDataForView(user.id, activeView);
+  }, [activeView, user]);
 
   // Guardar cambios en Supabase cuando cambian los datos
   useEffect(() => {
@@ -561,6 +615,7 @@ const App: React.FC = () => {
 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showPinSetupModal, setShowPinSetupModal] = useState(false);
+  const [showEncryptionPasswordModal, setShowEncryptionPasswordModal] = useState(false);
   const [pendingModuleId, setPendingModuleId] = useState<string | null>(null);
   const [showCalculatorFloating, setShowCalculatorFloating] = useState(false);
 
@@ -687,11 +742,61 @@ const App: React.FC = () => {
     const mod = modules.find(m => m.id === moduleId);
     if (!mod) return;
     
-    // Si es el módulo de seguridad y no está activo, pedir PIN primero
+    // Si es el módulo de seguridad y no está activo, verificar si ya tiene contraseña configurada
     if (moduleId === 'security' && !mod.active) {
-      setPendingModuleId(moduleId);
-      setShowPinSetupModal(true);
-      return;
+      try {
+        // Verificar si ya tiene contraseña de encriptación configurada
+        const hasEncryptionPassword = await supabaseService.hasEncryptionPasswordConfigured(user.id);
+        
+        if (hasEncryptionPassword && supabaseService.hasEncryptionPassword()) {
+          // Ya tiene contraseña configurada y cargada, solo pedir PIN si no lo tiene
+          const securityConfig = await supabaseService.getSecurityConfig(user.id);
+          if (!securityConfig || !securityConfig.security_pin) {
+            // No tiene PIN, pedirlo
+            setPendingModuleId(moduleId);
+            setShowPinSetupModal(true);
+            return;
+          } else {
+            // Ya tiene PIN y contraseña, pero NO activar automáticamente
+            // El usuario debe activar el módulo manualmente después de configurar
+            // Solo proceder con el flujo normal de activación
+          }
+        } else if (hasEncryptionPassword && !supabaseService.hasEncryptionPassword()) {
+          // Tiene contraseña configurada en Supabase pero no está cargada en memoria
+          // Esto puede pasar si es un nuevo dispositivo o se limpió el localStorage
+          // Intentar cargar desde Supabase primero
+          const loaded = await supabaseService.loadEncryptionPasswordFromSupabase(user.id);
+          if (loaded) {
+            // Se cargó exitosamente, verificar PIN
+            const securityConfig = await supabaseService.getSecurityConfig(user.id);
+            if (!securityConfig || !securityConfig.security_pin) {
+              setPendingModuleId(moduleId);
+              setShowPinSetupModal(true);
+              return;
+            } else {
+              // Ya tiene PIN y contraseña cargada, pero NO activar automáticamente
+              // El usuario debe activar el módulo manualmente
+              // Solo proceder con el flujo normal de activación
+            }
+          } else {
+            // No se pudo cargar, pedir contraseña nuevamente
+            setPendingModuleId(moduleId);
+            setShowEncryptionPasswordModal(true);
+            return;
+          }
+        } else {
+          // No tiene contraseña configurada, pedir PIN primero
+          setPendingModuleId(moduleId);
+          setShowPinSetupModal(true);
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking encryption password:', error);
+        // En caso de error, proceder con el flujo normal (pedir PIN)
+        setPendingModuleId(moduleId);
+        setShowPinSetupModal(true);
+        return;
+      }
     }
     
     if (!mod.active) {
@@ -723,16 +828,70 @@ const App: React.FC = () => {
       await supabaseService.updateSecurityConfig(user.id, { security_pin: trimmedPin });
       setSecurityPin(trimmedPin);
       
+      // Cerrar modal de PIN
+      setShowPinSetupModal(false);
+      
+      // Verificar si ya tiene contraseña de encriptación configurada
+      const hasEncryptionPassword = await supabaseService.hasEncryptionPasswordConfigured(user.id);
+      
+      if (hasEncryptionPassword && supabaseService.hasEncryptionPassword()) {
+        // Ya tiene contraseña configurada y cargada, activar módulo directamente
+        const updatedModules = modules.map(m => m.id === pendingModuleId ? { ...m, active: true } : m);
+        setModules(updatedModules);
+        await supabaseService.updateModule(user.id, pendingModuleId, { active: true });
+        setPendingModuleId(null);
+      } else if (hasEncryptionPassword && !supabaseService.hasEncryptionPassword()) {
+        // Tiene contraseña configurada en Supabase pero no está cargada en memoria
+        // Intentar cargar desde Supabase primero
+        const loaded = await supabaseService.loadEncryptionPasswordFromSupabase(user.id);
+        if (loaded) {
+          // Se cargó exitosamente, activar módulo directamente
+          const updatedModules = modules.map(m => m.id === pendingModuleId ? { ...m, active: true } : m);
+          setModules(updatedModules);
+          await supabaseService.updateModule(user.id, pendingModuleId, { active: true });
+          setPendingModuleId(null);
+        } else {
+          // No se pudo cargar, pedir contraseña nuevamente
+          setShowEncryptionPasswordModal(true);
+        }
+      } else {
+        // No tiene contraseña configurada, pedirla
+        setShowEncryptionPasswordModal(true);
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Error al configurar la seguridad. Intenta nuevamente.';
+      console.error('Error setting up security:', error);
+      alert(errorMessage);
+    }
+  };
+
+  const handleEncryptionPasswordSetup = async (password: string, confirmPassword: string) => {
+    if (!user || !pendingModuleId) return;
+
+    if (password.length < 8) {
+      alert('La contraseña de encriptación debe tener al menos 8 caracteres');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      alert('Las contraseñas no coinciden');
+      return;
+    }
+
+    try {
+      // Guardar contraseña de encriptación en Supabase
+      await supabaseService.setEncryptionPasswordFromUser(user.id, password);
+      
       // Activar el módulo
       const updatedModules = modules.map(m => m.id === pendingModuleId ? { ...m, active: true } : m);
       setModules(updatedModules);
       await supabaseService.updateModule(user.id, pendingModuleId, { active: true });
       
-      setShowPinSetupModal(false);
+      setShowEncryptionPasswordModal(false);
       setPendingModuleId(null);
     } catch (error: any) {
-      const errorMessage = error?.message || 'Error al configurar la seguridad. Intenta nuevamente.';
-      console.error('Error setting up security:', error);
+      const errorMessage = error?.message || 'Error al configurar la contraseña de encriptación. Intenta nuevamente.';
+      console.error('Error setting up encryption password:', error);
       alert(errorMessage);
     }
   };
@@ -1258,7 +1417,17 @@ const App: React.FC = () => {
           isNightMode={isNightMode}
         />;
       default:
-        return <Dashboard modules={modules} onActivate={toggleModule} isMobile={isMobile} setActiveView={setActiveView} isNightMode={isNightMode} />;
+        return <Dashboard 
+          modules={modules} 
+          onActivate={toggleModule} 
+          isMobile={isMobile} 
+          setActiveView={setActiveView}
+          user={user}
+          showLoginModal={showLoginModal}
+          setShowLoginModal={setShowLoginModal}
+          onAuthSuccess={handleAuthSuccess}
+          isNightMode={isNightMode}
+        />;
     }
   };
 
@@ -1340,6 +1509,16 @@ const App: React.FC = () => {
           onSetup={handlePinSetup}
           onCancel={() => {
             setShowPinSetupModal(false);
+            setPendingModuleId(null);
+          }}
+        />
+      )}
+
+      {showEncryptionPasswordModal && (
+        <EncryptionPasswordModal
+          onSetup={handleEncryptionPasswordSetup}
+          onCancel={() => {
+            setShowEncryptionPasswordModal(false);
             setPendingModuleId(null);
           }}
         />
@@ -1702,6 +1881,222 @@ const PinSetupModal: React.FC<{ onSetup: (pin: string) => void; onCancel: () => 
               Continuar
             </button>
           )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Componente Modal de Configuración de Contraseña de Encriptación
+const EncryptionPasswordModal: React.FC<{ 
+  onSetup: (password: string, confirmPassword: string) => void; 
+  onCancel: () => void 
+}> = ({ onSetup, onCancel }) => {
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus en el campo de contraseña cuando se abre el modal
+  useEffect(() => {
+    if (passwordRef.current && !isConfirming) {
+      passwordRef.current.focus();
+    } else if (confirmPasswordRef.current && isConfirming) {
+      confirmPasswordRef.current.focus();
+    }
+  }, [isConfirming]);
+
+  // Removido: No pasar automáticamente a confirmación
+  // El usuario debe hacer clic en "Continuar" para pasar a la confirmación
+
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    setError('');
+  };
+
+  const handleConfirmPasswordChange = (value: string) => {
+    setConfirmPassword(value);
+    setError('');
+  };
+
+  const handleSubmit = () => {
+    if (!isConfirming) {
+      if (password.length < 8) {
+        setError('La contraseña debe tener al menos 8 caracteres');
+        return;
+      }
+      setIsConfirming(true);
+      setTimeout(() => {
+        confirmPasswordRef.current?.focus();
+      }, 100);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+
+    setError('');
+    onSetup(password, confirmPassword);
+  };
+
+  const getPasswordStrength = (pwd: string): { strength: 'weak' | 'medium' | 'strong'; text: string } => {
+    if (pwd.length < 8) return { strength: 'weak', text: 'Débil' };
+    if (pwd.length >= 12 && /[A-Z]/.test(pwd) && /[a-z]/.test(pwd) && /[0-9]/.test(pwd) && /[^A-Za-z0-9]/.test(pwd)) {
+      return { strength: 'strong', text: 'Fuerte' };
+    }
+    return { strength: 'medium', text: 'Media' };
+  };
+
+  const passwordStrength = getPasswordStrength(password);
+
+  return (
+    <div 
+      className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" 
+      onClick={onCancel}
+    >
+      <div 
+        className="glass-card rounded-2xl p-6 lg:p-8 shadow-2xl max-w-md w-full" 
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#4A233E]/10 flex items-center justify-center">
+            {getIcon('lock', 'w-8 h-8 text-[#D4AF37]')}
+          </div>
+          <h3 className="font-cinzel text-3xl lg:text-3xl text-[#2D1A26] mb-2">
+            {isConfirming ? 'Confirmar Contraseña' : 'Contraseña de Encriptación'}
+          </h3>
+          <p className="font-garamond text-[#8B5E75] text-base">
+            {isConfirming 
+              ? 'Confirma tu contraseña de encriptación' 
+              : 'Establece una contraseña para proteger tus datos en la nube. Esta contraseña se sincronizará entre todos tus dispositivos.'}
+          </p>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          {!isConfirming ? (
+            <>
+              <div>
+                <label className="block text-sm font-garamond text-[#2D1A26] mb-2">
+                  Contraseña (mínimo 8 caracteres)
+                </label>
+                <div className="relative">
+                  <input
+                    ref={passwordRef}
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => handlePasswordChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && password.length >= 8) {
+                        handleSubmit();
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-[#F8C8DC] focus:border-[#D4AF37] focus:outline-none font-garamond text-[#2D1A26]"
+                    placeholder="Ingresa tu contraseña"
+                    maxLength={100}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8B5E75] hover:text-[#E35B8F]"
+                  >
+                    {showPassword ? getIcon('eye-off', 'w-5 h-5') : getIcon('eye', 'w-5 h-5')}
+                  </button>
+                </div>
+                {password.length > 0 && (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`flex-1 h-2 rounded-full ${
+                        passwordStrength.strength === 'weak' ? 'bg-red-300' :
+                        passwordStrength.strength === 'medium' ? 'bg-yellow-300' :
+                        'bg-green-300'
+                      }`} />
+                      <span className={`text-xs font-garamond ${
+                        passwordStrength.strength === 'weak' ? 'text-red-600' :
+                        passwordStrength.strength === 'medium' ? 'text-yellow-600' :
+                        'text-green-600'
+                      }`}>
+                        {passwordStrength.text}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-garamond text-[#2D1A26] mb-2">
+                  Confirma tu contraseña
+                </label>
+                <div className="relative">
+                  <input
+                    ref={confirmPasswordRef}
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => handleConfirmPasswordChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSubmit();
+                      }
+                    }}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-[#F8C8DC] focus:border-[#D4AF37] focus:outline-none font-garamond text-[#2D1A26]"
+                    placeholder="Confirma tu contraseña"
+                    maxLength={100}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8B5E75] hover:text-[#E35B8F]"
+                  >
+                    {showConfirmPassword ? getIcon('eye-off', 'w-5 h-5') : getIcon('eye', 'w-5 h-5')}
+                  </button>
+                </div>
+                {confirmPassword.length > 0 && password !== confirmPassword && (
+                  <p className="mt-1 text-sm text-red-600 font-garamond">
+                    Las contraseñas no coinciden
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+              <p className="text-red-600 text-sm font-garamond">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-3 rounded-xl bg-gray-100 text-[#2D1A26] font-cinzel font-bold hover:bg-gray-200 transition-all active:scale-95"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!isConfirming ? password.length < 8 : password !== confirmPassword || confirmPassword.length < 8}
+            className={`flex-1 py-3 rounded-xl font-cinzel font-bold transition-all active:scale-95 ${
+              (!isConfirming ? password.length < 8 : password !== confirmPassword || confirmPassword.length < 8)
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-[#D4AF37] text-[#2D1A26] hover:bg-[#C9A030]'
+            }`}
+          >
+            {isConfirming ? 'Confirmar' : 'Continuar'}
+          </button>
         </div>
       </div>
     </div>

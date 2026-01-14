@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Subject, Transaction, JournalEntry, CustomCalendarEvent, Module, NutritionEntry, NutritionGoals, NutritionCorrelation, NavigationConfig, NavigationModule, NavView } from '../types';
+import { encryptionService } from './encryptionService';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -120,6 +121,259 @@ export interface SecurityConfig {
 }
 
 export class SupabaseService {
+  // Contraseña de encriptación almacenada en memoria (solo durante la sesión)
+  private encryptionPassword: string | null = null;
+
+  // ============ ENCRYPTION MANAGEMENT ============
+
+  /**
+   * Establece la contraseña de encriptación para la sesión actual
+   * Debe llamarse después del login con la contraseña del usuario
+   */
+  setEncryptionPassword(password: string): void {
+    this.encryptionPassword = password;
+  }
+
+  /**
+   * Limpia la contraseña de encriptación (útil para logout)
+   */
+  clearEncryptionPassword(): void {
+    this.encryptionPassword = null;
+    encryptionService.clearCache();
+  }
+
+  /**
+   * Verifica si hay una contraseña de encriptación disponible
+   */
+  hasEncryptionPassword(): boolean {
+    return this.encryptionPassword !== null;
+  }
+
+  /**
+   * Verifica si el usuario ya tiene una contraseña de encriptación configurada en Supabase
+   */
+  async hasEncryptionPasswordConfigured(userId: string): Promise<boolean> {
+    try {
+      // Usar select('*') para evitar error 406 si los campos no existen aún
+      const { data, error } = await supabase
+        .from('user_encryption_keys')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return false; // No existe registro, no está configurada
+        }
+        // Error 406 puede indicar que los campos no existen aún
+        if (error.code === 'PGRST301' || error.message?.includes('406') || (error as any).status === 406) {
+          console.warn('Encryption password fields may not exist yet. Migration 30 may not have been executed.');
+          return false;
+        }
+        console.error('Error checking encryption password config:', error);
+        return false;
+      }
+
+      if (!data) {
+        return false;
+      }
+
+      // Verificar si el campo existe en los datos retornados
+      if (!('encryption_password_configured' in data)) {
+        return false;
+      }
+
+      return data.encryption_password_configured === true;
+    } catch (error) {
+      console.error('Error checking encryption password config:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Guarda la contraseña de encriptación en Supabase (encriptada)
+   */
+  async saveEncryptionPasswordToSupabase(userId: string, password: string): Promise<void> {
+    try {
+      // Encriptar la contraseña usando clave derivada del userId
+      const encryptedPassword = await encryptionService.encryptWithUserId(password, userId);
+
+      // Asegurarse de que el salt existe primero (esto puede crear el registro si no existe)
+      const salt = await encryptionService.getOrCreateSalt(userId);
+
+      // Usar upsert para insertar o actualizar el registro
+      // Esto evita errores de clave duplicada si el registro ya existe
+      const { error: upsertError } = await supabase
+        .from('user_encryption_keys')
+        .upsert({
+          user_id: userId,
+          salt: salt,
+          encrypted_password: encryptedPassword,
+          encryption_password_configured: true,
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (upsertError) {
+        // Si upsert falla, intentar update como fallback
+        const { error: updateError } = await supabase
+          .from('user_encryption_keys')
+          .update({
+            encrypted_password: encryptedPassword,
+            encryption_password_configured: true,
+          })
+          .eq('user_id', userId);
+
+        if (updateError) throw updateError;
+      }
+
+      // Establecer en memoria para uso inmediato
+      this.setEncryptionPassword(password);
+    } catch (error: any) {
+      console.error('Error saving encryption password to Supabase:', error);
+      throw new Error('No se pudo guardar la contraseña de encriptación');
+    }
+  }
+
+  /**
+   * Carga la contraseña de encriptación desde Supabase y la establece en memoria
+   */
+  async loadEncryptionPasswordFromSupabase(userId: string): Promise<boolean> {
+    try {
+      // Primero intentar obtener todos los campos disponibles para verificar si existen los nuevos campos
+      const { data, error } = await supabase
+        .from('user_encryption_keys')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No existe registro, no hay contraseña configurada
+          return false;
+        }
+        // Error 406 puede indicar que los campos no existen aún (migración no ejecutada)
+        // o problema con RLS - retornar false silenciosamente
+        if (error.code === 'PGRST301' || error.message?.includes('406') || (error as any).status === 406) {
+          console.warn('Encryption password fields may not exist yet or RLS issue:', error);
+          return false;
+        }
+        console.error('Error loading encryption password:', error);
+        return false;
+      }
+
+      // Verificar si los campos existen en los datos retornados
+      if (!data) {
+        return false;
+      }
+
+      // Si los campos no existen en el objeto, la migración no se ha ejecutado
+      if (!('encryption_password_configured' in data) || !('encrypted_password' in data)) {
+        console.warn('Encryption password fields do not exist yet. Migration 30 may not have been executed.');
+        return false;
+      }
+
+      if (!data.encryption_password_configured || !data.encrypted_password) {
+        // No está configurada
+        return false;
+      }
+
+      // Desencriptar la contraseña
+      const decryptedPassword = await encryptionService.decryptWithUserId(
+        data.encrypted_password,
+        userId
+      );
+
+      // Establecer en memoria
+      this.setEncryptionPassword(decryptedPassword);
+      return true;
+    } catch (error: any) {
+      console.error('Error loading encryption password from Supabase:', error);
+      // Si hay error al desencriptar, la contraseña puede estar corrupta
+      // Retornar false para que se pida nuevamente
+      return false;
+    }
+  }
+
+  /**
+   * Establece la contraseña de encriptación desde el usuario (y la guarda en Supabase)
+   */
+  async setEncryptionPasswordFromUser(userId: string, password: string): Promise<void> {
+    // Guardar en Supabase (esto también la establece en memoria)
+    await this.saveEncryptionPasswordToSupabase(userId, password);
+  }
+
+  /**
+   * Detecta si un string está encriptado (formato base64 con IV)
+   */
+  isEncrypted(text: string | null | undefined): boolean {
+    if (!text) return false;
+    // Los datos encriptados son base64 y tienen un tamaño mínimo (IV + algunos datos)
+    // Un string encriptado mínimo sería ~20 caracteres en base64
+    try {
+      // Intentar decodificar base64
+      atob(text);
+      // Si es base64 válido y tiene un tamaño razonable, asumimos que está encriptado
+      // Esto no es perfecto, pero funciona para la mayoría de casos
+      return text.length > 20 && /^[A-Za-z0-9+/=]+$/.test(text);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Encripta un campo si hay contraseña disponible
+   */
+  private async encryptField(field: string | null | undefined, userId: string): Promise<string | null | undefined> {
+    if (!field || !this.encryptionPassword) return field;
+    try {
+      return await encryptionService.encrypt(field, this.encryptionPassword, userId);
+    } catch (error) {
+      console.error('Error encrypting field:', error);
+      return field; // Retornar sin encriptar si hay error
+    }
+  }
+
+  /**
+   * Desencripta un campo si está encriptado
+   */
+  private async decryptField(field: string | null | undefined, userId: string): Promise<string | null | undefined> {
+    if (!field || !this.encryptionPassword) return field;
+    if (!this.isEncrypted(field)) return field; // No está encriptado
+    try {
+      return await encryptionService.decrypt(field, this.encryptionPassword, userId);
+    } catch (error) {
+      console.error('Error decrypting field:', error);
+      return field; // Retornar tal cual si hay error
+    }
+  }
+
+  /**
+   * Encripta un array de strings
+   */
+  private async encryptArray(items: string[] | null | undefined, userId: string): Promise<string[] | null | undefined> {
+    if (!items || items.length === 0 || !this.encryptionPassword) return items;
+    try {
+      return await encryptionService.encryptArray(items, this.encryptionPassword, userId);
+    } catch (error) {
+      console.error('Error encrypting array:', error);
+      return items;
+    }
+  }
+
+  /**
+   * Desencripta un array de strings
+   */
+  private async decryptArray(items: string[] | null | undefined, userId: string): Promise<string[] | null | undefined> {
+    if (!items || items.length === 0 || !this.encryptionPassword) return items;
+    try {
+      return await encryptionService.decryptArray(items, this.encryptionPassword, userId);
+    } catch (error) {
+      console.error('Error decrypting array:', error);
+      return items;
+    }
+  }
+
   // ============ AUTHENTICATION ============
   
   async signUp(email: string, password: string, fullName?: string) {
@@ -166,6 +420,11 @@ export class SupabaseService {
       throw error;
     }
     
+    // Cargar contraseña de encriptación desde Supabase si está configurada
+    if (data.user) {
+      await this.loadEncryptionPasswordFromSupabase(data.user.id);
+    }
+    
     return data;
   }
 
@@ -195,6 +454,8 @@ export class SupabaseService {
   async signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    // Limpiar contraseña de encriptación al cerrar sesión
+    this.clearEncryptionPassword();
   }
 
   async getCurrentUser() {
@@ -534,14 +795,21 @@ export class SupabaseService {
 
   // ============ TRANSACTIONS ============
 
-  async getTransactions(userId: string): Promise<Transaction[]> {
+  async getTransactions(userId: string, limit?: number): Promise<Transaction[]> {
     try {
       const { data, error } = await retryWithBackoff(async () => {
-        const result = await supabase
+        let query = supabase
           .from('transactions')
-          .select('*')
+          .select('id, type, category, amount, date, description')
           .eq('user_id', userId)
           .order('date', { ascending: false });
+        
+        // Agregar límite si se especifica (por defecto 100 para carga inicial)
+        if (limit) {
+          query = query.limit(limit);
+        }
+        
+        const result = await query;
         
         if (result.error && isNetworkError(result.error)) {
           throw result.error;
@@ -642,14 +910,26 @@ export class SupabaseService {
 
   // ============ JOURNAL ENTRIES ============
 
-  async getJournalEntries(userId: string): Promise<JournalEntry[]> {
+  async getJournalEntries(userId: string, limit?: number, includePhotos: boolean = false): Promise<JournalEntry[]> {
     try {
       const { data, error } = await retryWithBackoff(async () => {
-        const result = await supabase
+        // Seleccionar campos específicos, incluyendo photos solo si se necesitan
+        const selectFields = includePhotos 
+          ? 'id, date, mood, content, photo, photos, is_locked, sentiment'
+          : 'id, date, mood, content, is_locked, sentiment';
+        
+        let query = supabase
           .from('journal_entries')
-          .select('*')
+          .select(selectFields)
           .eq('user_id', userId)
           .order('date', { ascending: false });
+        
+        // Agregar límite si se especifica (por defecto 50 para carga inicial)
+        if (limit) {
+          query = query.limit(limit);
+        }
+        
+        const result = await query;
         
         if (result.error && isNetworkError(result.error)) {
           throw result.error;
@@ -670,7 +950,8 @@ export class SupabaseService {
       }
       if (!data) return [];
       
-      return data.map((row: any) => {
+      // Procesar y desencriptar cada entrada del diario
+      return await Promise.all(data.map(async (row: any) => {
         // Manejar photos: si es un array con elementos, usarlo; si es null/undefined pero hay photo, convertir a array
         let photos: string[] | undefined = undefined;
         if (row.photos && Array.isArray(row.photos) && row.photos.length > 0) {
@@ -685,17 +966,24 @@ export class SupabaseService {
           console.log('Entry photos loaded:', row.id, photos);
         }
         
+        // Desencriptar content si está encriptado
+        const decryptedContent = await this.decryptField(row.content, userId);
+        
+        // Desencriptar photos si están encriptados (solo las referencias, no las URLs reales)
+        const decryptedPhotos = photos ? await this.decryptArray(photos, userId) : photos;
+        const decryptedPhoto = row.photo ? await this.decryptField(row.photo, userId) : row.photo;
+
         return {
           id: row.id,
           date: row.date,
           mood: row.mood,
-          content: row.content,
-          photo: row.photo, // Mantener para compatibilidad
-          photos: photos, // Array de URLs
+          content: decryptedContent || '',
+          photo: decryptedPhoto, // Mantener para compatibilidad
+          photos: decryptedPhotos, // Array de URLs desencriptadas
           isLocked: row.is_locked,
           sentiment: row.sentiment ? parseFloat(row.sentiment) : undefined,
         };
-      });
+      }));
     } catch (error: any) {
       if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
         return [];
@@ -709,17 +997,22 @@ export class SupabaseService {
   }
 
   async createJournalEntry(userId: string, entry: Omit<JournalEntry, 'id'>): Promise<JournalEntry> {
+    // Encriptar campos sensibles antes de insertar
+    const encryptedContent = await this.encryptField(entry.content, userId);
+    const encryptedPhotos = entry.photos ? await this.encryptArray(entry.photos, userId) : undefined;
+    const encryptedPhoto = entry.photo ? await this.encryptField(entry.photo, userId) : undefined;
+
     const insertData: any = {
       date: entry.date,
       mood: entry.mood,
-      content: entry.content,
+      content: encryptedContent,
       is_locked: entry.isLocked,
       user_id: userId,
     };
     
     // Solo incluir campos opcionales si tienen valor
-    if (entry.photo !== undefined) insertData.photo = entry.photo;
-    if (entry.photos !== undefined && entry.photos.length > 0) insertData.photos = entry.photos;
+    if (encryptedPhoto !== undefined) insertData.photo = encryptedPhoto;
+    if (encryptedPhotos !== undefined && encryptedPhotos.length > 0) insertData.photos = encryptedPhotos;
     if (entry.sentiment !== undefined) insertData.sentiment = entry.sentiment;
 
     const { data, error } = await supabase
@@ -729,13 +1022,19 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
+    
+    // Desencriptar datos al retornar
+    const decryptedContent = await this.decryptField(data.content, userId);
+    const decryptedPhotos = data.photos ? await this.decryptArray(data.photos, userId) : (data.photo ? [await this.decryptField(data.photo, userId)] : undefined);
+    const decryptedPhoto = data.photo ? await this.decryptField(data.photo, userId) : data.photo;
+
     return {
       id: data.id,
       date: data.date,
       mood: data.mood,
-      content: data.content,
-      photo: data.photo,
-      photos: data.photos || (data.photo ? [data.photo] : undefined),
+      content: decryptedContent || '',
+      photo: decryptedPhoto,
+      photos: decryptedPhotos,
       isLocked: data.is_locked,
       sentiment: data.sentiment ? parseFloat(data.sentiment) : undefined,
     };
@@ -745,17 +1044,24 @@ export class SupabaseService {
     const dbUpdates: any = {};
     if (updates.date !== undefined) dbUpdates.date = updates.date;
     if (updates.mood !== undefined) dbUpdates.mood = updates.mood;
-    if (updates.content !== undefined) dbUpdates.content = updates.content;
     if (updates.isLocked !== undefined) dbUpdates.is_locked = updates.isLocked;
     if (updates.sentiment !== undefined) dbUpdates.sentiment = updates.sentiment;
+    
+    // Encriptar campos sensibles antes de actualizar
+    if (updates.content !== undefined) {
+      dbUpdates.content = await this.encryptField(updates.content, userId);
+    }
     
     // Manejar photo y photos - si photos está definido, usar photos; si photo está definido, usar photo
     if (updates.photos !== undefined) {
       // Si photos es un array vacío o undefined, establecerlo como null
-      dbUpdates.photos = updates.photos && updates.photos.length > 0 ? updates.photos : null;
+      const encryptedPhotos = updates.photos && updates.photos.length > 0 
+        ? await this.encryptArray(updates.photos, userId) 
+        : null;
+      dbUpdates.photos = encryptedPhotos;
     }
     if (updates.photo !== undefined) {
-      dbUpdates.photo = updates.photo;
+      dbUpdates.photo = await this.encryptField(updates.photo, userId);
     }
 
     const { data, error } = await supabase
@@ -767,13 +1073,19 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
+    
+    // Desencriptar datos al retornar
+    const decryptedContent = await this.decryptField(data.content, userId);
+    const decryptedPhotos = data.photos ? await this.decryptArray(data.photos, userId) : (data.photo ? [await this.decryptField(data.photo, userId)] : undefined);
+    const decryptedPhoto = data.photo ? await this.decryptField(data.photo, userId) : data.photo;
+
     return {
       id: data.id,
       date: data.date,
       mood: data.mood,
-      content: data.content,
-      photo: data.photo,
-      photos: data.photos || (data.photo ? [data.photo] : undefined),
+      content: decryptedContent || '',
+      photo: decryptedPhoto,
+      photos: decryptedPhotos,
       isLocked: data.is_locked,
       sentiment: data.sentiment ? parseFloat(data.sentiment) : undefined,
     };
@@ -791,14 +1103,21 @@ export class SupabaseService {
 
   // ============ CALENDAR EVENTS ============
 
-  async getCalendarEvents(userId: string): Promise<CustomCalendarEvent[]> {
+  async getCalendarEvents(userId: string, limit?: number): Promise<CustomCalendarEvent[]> {
     try {
       const { data, error } = await retryWithBackoff(async () => {
-        const result = await supabase
+        let query = supabase
           .from('calendar_events')
-          .select('*')
+          .select('id, title, description, date, time, end_time, color, priority')
           .eq('user_id', userId)
           .order('date', { ascending: true });
+        
+        // Agregar límite si se especifica (por defecto 100 para carga inicial)
+        if (limit) {
+          query = query.limit(limit);
+        }
+        
+        const result = await query;
         
         if (result.error && isNetworkError(result.error)) {
           throw result.error;
@@ -819,16 +1138,24 @@ export class SupabaseService {
       }
       if (!data) return [];
       
-      return data.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        date: row.date,
-        time: row.time,
-        endTime: row.end_time,
-        color: row.color,
-        priority: row.priority,
-      }));
+      // Desencriptar descriptions
+      const decryptedEvents = await Promise.all(
+        data.map(async (row: any) => {
+          const decryptedDescription = await this.decryptField(row.description, userId);
+          return {
+            id: row.id,
+            title: row.title,
+            description: decryptedDescription,
+            date: row.date,
+            time: row.time,
+            endTime: row.end_time,
+            color: row.color,
+            priority: row.priority,
+          };
+        })
+      );
+      
+      return decryptedEvents;
     } catch (error: any) {
       if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
         return [];
@@ -843,12 +1170,15 @@ export class SupabaseService {
 
   async createCalendarEvent(userId: string, event: Omit<CustomCalendarEvent, 'id'>): Promise<CustomCalendarEvent> {
     try {
+      // Encriptar description antes de insertar
+      const encryptedDescription = await this.encryptField(event.description, userId);
+      
       const { data, error } = await retryWithBackoff(async () => {
         const result = await supabase
           .from('calendar_events')
           .insert({
             title: event.title,
-            description: event.description,
+            description: encryptedDescription,
             date: event.date,
             time: event.time,
             end_time: event.endTime,
@@ -873,10 +1203,13 @@ export class SupabaseService {
         throw error;
       }
       
+      // Desencriptar description al retornar
+      const decryptedDescription = await this.decryptField(data.description, userId);
+      
       return {
         id: data.id,
         title: data.title,
-        description: data.description,
+        description: decryptedDescription,
         date: data.date,
         time: data.time,
         endTime: data.end_time,
@@ -893,11 +1226,14 @@ export class SupabaseService {
   }
 
   async updateCalendarEvent(userId: string, event: CustomCalendarEvent): Promise<CustomCalendarEvent> {
+    // Encriptar description antes de actualizar
+    const encryptedDescription = await this.encryptField(event.description, userId);
+    
     const { data, error } = await supabase
       .from('calendar_events')
       .update({
         title: event.title,
-        description: event.description,
+        description: encryptedDescription,
         date: event.date,
         time: event.time,
         end_time: event.endTime,
@@ -910,10 +1246,14 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
+    
+    // Desencriptar description al retornar
+    const decryptedDescription = await this.decryptField(data.description, userId);
+    
     return {
       id: data.id,
       title: data.title,
-      description: data.description,
+      description: decryptedDescription,
       date: data.date,
       time: data.time,
       endTime: data.end_time,
@@ -1116,12 +1456,13 @@ export class SupabaseService {
       status?: 'Pendiente' | 'Completado';
       isExtra?: boolean;
       isRecurring?: boolean;
-    }
+    },
+    limit?: number
   ) {
     try {
       let query = supabase
         .from('balanza_pro_transactions')
-        .select('*')
+        .select('id, user_id, type, amount, payment_method, is_extra, is_recurring, tags, status, recurring_config, due_date, description, date, created_at, updated_at')
         .eq('user_id', userId)
         .order('date', { ascending: false });
 
@@ -1149,6 +1490,11 @@ export class SupabaseService {
         }
       }
 
+      // Agregar límite si se especifica
+      if (limit) {
+        query = query.limit(limit);
+      }
+
       const { data, error } = await query;
 
       if (error) {
@@ -1159,20 +1505,30 @@ export class SupabaseService {
         throw error;
       }
 
-      return (data || []).map((t: any) => ({
-        id: t.id,
-        type: t.type,
-        amount: parseFloat(t.amount),
-        payment_method: t.payment_method,
-        is_extra: t.is_extra,
-        is_recurring: t.is_recurring,
-        tags: t.tags || [],
-        status: t.status,
-        recurring_config: t.recurring_config,
-        due_date: t.due_date,
-        description: t.description,
-        date: t.date,
-      }));
+      // Desencriptar description y tags
+      const decryptedTransactions = await Promise.all(
+        (data || []).map(async (t: any) => {
+          const decryptedDescription = await this.decryptField(t.description, userId);
+          const decryptedTags = t.tags ? await this.decryptArray(t.tags, userId) : [];
+          
+          return {
+            id: t.id,
+            type: t.type,
+            amount: parseFloat(t.amount),
+            payment_method: t.payment_method,
+            is_extra: t.is_extra,
+            is_recurring: t.is_recurring,
+            tags: decryptedTags || [],
+            status: t.status,
+            recurring_config: t.recurring_config,
+            due_date: t.due_date,
+            description: decryptedDescription,
+            date: t.date,
+          };
+        })
+      );
+      
+      return decryptedTransactions;
     } catch (error: any) {
       if (error.code === 'PGRST205' || error.message?.includes('Could not find the table')) {
         console.warn('Table balanza_pro_transactions not found');
@@ -1196,6 +1552,10 @@ export class SupabaseService {
     date: string;
   }) {
     try {
+      // Encriptar description y tags antes de insertar
+      const encryptedDescription = await this.encryptField(transaction.description, userId);
+      const encryptedTags = transaction.tags ? await this.encryptArray(transaction.tags, userId) : [];
+      
       const { data, error } = await supabase
         .from('balanza_pro_transactions')
         .insert({
@@ -1205,11 +1565,11 @@ export class SupabaseService {
           payment_method: transaction.payment_method,
           is_extra: transaction.is_extra,
           is_recurring: transaction.is_recurring,
-          tags: transaction.tags,
+          tags: encryptedTags,
           status: transaction.status,
           recurring_config: transaction.recurring_config || null,
           due_date: transaction.due_date || null,
-          description: transaction.description || null,
+          description: encryptedDescription || null,
           date: transaction.date,
         })
         .select()
@@ -1222,6 +1582,10 @@ export class SupabaseService {
         throw error;
       }
 
+      // Desencriptar description y tags al retornar
+      const decryptedDescription = await this.decryptField(data.description, userId);
+      const decryptedTags = data.tags ? await this.decryptArray(data.tags, userId) : [];
+
       return {
         id: data.id,
         type: data.type,
@@ -1229,11 +1593,11 @@ export class SupabaseService {
         payment_method: data.payment_method,
         is_extra: data.is_extra,
         is_recurring: data.is_recurring,
-        tags: data.tags || [],
+        tags: decryptedTags || [],
         status: data.status,
         recurring_config: data.recurring_config,
         due_date: data.due_date,
-        description: data.description,
+        description: decryptedDescription,
         date: data.date,
       };
     } catch (error: any) {
@@ -1268,12 +1632,18 @@ export class SupabaseService {
       if (updates.payment_method !== undefined) dbUpdates.payment_method = updates.payment_method;
       if (updates.is_extra !== undefined) dbUpdates.is_extra = updates.is_extra;
       if (updates.is_recurring !== undefined) dbUpdates.is_recurring = updates.is_recurring;
-      if (updates.tags !== undefined) dbUpdates.tags = updates.tags;
       if (updates.status !== undefined) dbUpdates.status = updates.status;
       if (updates.recurring_config !== undefined) dbUpdates.recurring_config = updates.recurring_config;
       if (updates.due_date !== undefined) dbUpdates.due_date = updates.due_date;
-      if (updates.description !== undefined) dbUpdates.description = updates.description;
       if (updates.date !== undefined) dbUpdates.date = updates.date;
+      
+      // Encriptar campos sensibles antes de actualizar
+      if (updates.tags !== undefined) {
+        dbUpdates.tags = updates.tags ? await this.encryptArray(updates.tags, userId) : [];
+      }
+      if (updates.description !== undefined) {
+        dbUpdates.description = await this.encryptField(updates.description, userId);
+      }
 
       const { data, error } = await supabase
         .from('balanza_pro_transactions')
@@ -1290,6 +1660,10 @@ export class SupabaseService {
         throw error;
       }
 
+      // Desencriptar description y tags al retornar
+      const decryptedDescription = await this.decryptField(data.description, userId);
+      const decryptedTags = data.tags ? await this.decryptArray(data.tags, userId) : [];
+
       return {
         id: data.id,
         type: data.type,
@@ -1297,11 +1671,11 @@ export class SupabaseService {
         payment_method: data.payment_method,
         is_extra: data.is_extra,
         is_recurring: data.is_recurring,
-        tags: data.tags || [],
+        tags: decryptedTags || [],
         status: data.status,
         recurring_config: data.recurring_config,
         due_date: data.due_date,
-        description: data.description,
+        description: decryptedDescription,
         date: data.date,
       };
     } catch (error: any) {
@@ -1486,7 +1860,14 @@ export class SupabaseService {
         }
         return null;
       }
-      return data;
+      
+      // Desencriptar security_pin si está encriptado
+      const decryptedPin = data.security_pin ? await this.decryptField(data.security_pin, userId) : data.security_pin;
+      
+      return {
+        ...data,
+        security_pin: decryptedPin,
+      };
     } catch (error: any) {
       // Manejar errores de red o otros errores inesperados
       if (error?.code === 'PGRST116' || error?.code === '42P01' || error?.code === 'PGRST301' || error?.status === 404 || error?.message?.includes('schema cache') || error?.message?.includes('Could not find the table')) {
@@ -1502,11 +1883,14 @@ export class SupabaseService {
 
   async createSecurityConfig(userId: string, config: Partial<SecurityConfig>): Promise<SecurityConfig> {
     try {
+      // Encriptar security_pin antes de insertar
+      const encryptedPin = config.security_pin ? await this.encryptField(config.security_pin, userId) : config.security_pin;
+      
       const { data, error } = await supabase
         .from('security_config')
         .insert({
           user_id: userId,
-          security_pin: config.security_pin,
+          security_pin: encryptedPin,
           biometrics_enabled: config.biometrics_enabled || false,
         })
         .select()
@@ -1519,7 +1903,14 @@ export class SupabaseService {
         }
         throw error;
       }
-      return data;
+      
+      // Desencriptar security_pin al retornar
+      const decryptedPin = data.security_pin ? await this.decryptField(data.security_pin, userId) : data.security_pin;
+      
+      return {
+        ...data,
+        security_pin: decryptedPin,
+      };
     } catch (error: any) {
       if (error?.code === '42P01' || error?.message?.includes('security_config')) {
         throw new Error('La tabla security_config no existe. Por favor, ejecuta el script SQL 09_security_config.sql en Supabase.');
@@ -1531,8 +1922,12 @@ export class SupabaseService {
   async updateSecurityConfig(userId: string, updates: Partial<SecurityConfig>): Promise<SecurityConfig> {
     try {
       const dbUpdates: any = {};
-      if (updates.security_pin !== undefined) dbUpdates.security_pin = updates.security_pin;
       if (updates.biometrics_enabled !== undefined) dbUpdates.biometrics_enabled = updates.biometrics_enabled;
+      
+      // Encriptar security_pin antes de actualizar
+      if (updates.security_pin !== undefined) {
+        dbUpdates.security_pin = await this.encryptField(updates.security_pin, userId);
+      }
 
       // Verificar si existe
       const existing = await this.getSecurityConfig(userId);
@@ -1551,7 +1946,14 @@ export class SupabaseService {
           }
           throw error;
         }
-        return data;
+        
+        // Desencriptar security_pin al retornar
+        const decryptedPin = data.security_pin ? await this.decryptField(data.security_pin, userId) : data.security_pin;
+        
+        return {
+          ...data,
+          security_pin: decryptedPin,
+        };
       } else {
         return this.createSecurityConfig(userId, updates);
       }
@@ -1901,17 +2303,20 @@ export class SupabaseService {
 
   // ============ NUTRITION ============
 
-  async getNutritionEntries(userId: string, date?: string): Promise<NutritionEntry[]> {
+  async getNutritionEntries(userId: string, date?: string, limit?: number): Promise<NutritionEntry[]> {
     try {
       let query = supabase
         .from('nutrition_entries')
-        .select('*')
+        .select('id, user_id, date, time, input_type, input_text, photo_url, foods, total_calories, total_protein, total_carbs, total_fats, estimated_glucose_impact, energy_score, brain_food_tags, created_at, updated_at')
         .eq('user_id', userId)
         .order('date', { ascending: false })
         .order('time', { ascending: false });
 
       if (date) {
         query = query.eq('date', date);
+      } else if (limit) {
+        // Solo agregar límite si no hay filtro de fecha
+        query = query.limit(limit);
       }
 
       const { data, error } = await retryWithBackoff(async () => {
@@ -2115,7 +2520,7 @@ export class SupabaseService {
 
       if (error) {
         // Error 406 puede ocurrir si la tabla no existe o RLS no está configurado
-        if (error.code === 'PGRST116' || error.code === 'PGRST205' || error.status === 406 || error.message?.includes('Could not find the table')) {
+        if (error.code === 'PGRST116' || error.code === 'PGRST205' || (error as any).status === 406 || error.message?.includes('Could not find the table')) {
           console.warn('Table nutrition_goals not found or not accessible');
           return null;
         }
@@ -2515,6 +2920,149 @@ export class SupabaseService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Migra los datos existentes de un usuario a formato encriptado
+   * Solo encripta datos que aún no están encriptados
+   */
+  async migrateUserData(userId: string, encryptionPassword: string): Promise<{
+    journalEntries: number;
+    calendarEvents: number;
+    balanzaTransactions: number;
+    securityConfig: boolean;
+  }> {
+    console.log('🚀 Iniciando migración de datos para usuario:', userId);
+    
+    // Establecer la contraseña de encriptación
+    this.setEncryptionPassword(encryptionPassword);
+    
+    const results = {
+      journalEntries: 0,
+      calendarEvents: 0,
+      balanzaTransactions: 0,
+      securityConfig: false,
+    };
+    
+    try {
+      // 1. Migrar entradas del diario
+      console.log('\n📝 Migrando entradas del diario...');
+      const journalEntries = await this.getJournalEntries(userId);
+      
+      for (const entry of journalEntries) {
+        // Verificar si ya está encriptado
+        const isContentEncrypted = this.isEncrypted(entry.content);
+        const arePhotosEncrypted = entry.photos?.every(photo => 
+          !photo || this.isEncrypted(photo)
+        ) ?? true;
+        
+        if (isContentEncrypted && arePhotosEncrypted) {
+          continue;
+        }
+        
+        // Encriptar y actualizar
+        try {
+          await this.updateJournalEntry(userId, entry.id, {
+            content: entry.content,
+            photos: entry.photos || [],
+          });
+          results.journalEntries++;
+          console.log(`  ✅ Entrada ${entry.id.substring(0, 8)}... migrada`);
+        } catch (error) {
+          console.error(`  ❌ Error migrando entrada ${entry.id}:`, error);
+        }
+      }
+      console.log(`  📊 Total: ${results.journalEntries} entradas migradas`);
+      
+      // 2. Migrar eventos del calendario
+      console.log('\n📅 Migrando eventos del calendario...');
+      const calendarEvents = await this.getCalendarEvents(userId);
+      
+      for (const event of calendarEvents) {
+        // Verificar si ya está encriptado
+        if (this.isEncrypted(event.description)) {
+          continue;
+        }
+        
+        // Encriptar y actualizar
+        try {
+          await this.updateCalendarEvent(userId, event.id, {
+            description: event.description || '',
+          });
+          results.calendarEvents++;
+          console.log(`  ✅ Evento ${event.id.substring(0, 8)}... migrado`);
+        } catch (error) {
+          console.error(`  ❌ Error migrando evento ${event.id}:`, error);
+        }
+      }
+      console.log(`  📊 Total: ${results.calendarEvents} eventos migrados`);
+      
+      // 3. Migrar transacciones de Balanza Pro
+      console.log('\n💰 Migrando transacciones de Balanza Pro...');
+      const balanzaTransactions = await this.getBalanzaProTransactions(userId);
+      
+      for (const transaction of balanzaTransactions) {
+        // Verificar si ya está encriptado
+        const isDescriptionEncrypted = !transaction.description || 
+          this.isEncrypted(transaction.description);
+        const areTagsEncrypted = !transaction.tags || 
+          transaction.tags.every(tag => !tag || this.isEncrypted(tag));
+        
+        if (isDescriptionEncrypted && areTagsEncrypted) {
+          continue;
+        }
+        
+        // Encriptar y actualizar
+        try {
+          await this.updateBalanzaProTransaction(userId, transaction.id, {
+            description: transaction.description || '',
+            tags: transaction.tags || [],
+          });
+          results.balanzaTransactions++;
+          console.log(`  ✅ Transacción ${transaction.id.substring(0, 8)}... migrada`);
+        } catch (error) {
+          console.error(`  ❌ Error migrando transacción ${transaction.id}:`, error);
+        }
+      }
+      console.log(`  📊 Total: ${results.balanzaTransactions} transacciones migradas`);
+      
+      // 4. Migrar configuración de seguridad (PIN)
+      console.log('\n🔒 Migrando configuración de seguridad (PIN)...');
+      try {
+        const securityConfig = await this.getSecurityConfig(userId);
+        if (securityConfig && securityConfig.security_pin) {
+          // Verificar si ya está encriptado
+          if (this.isEncrypted(securityConfig.security_pin)) {
+            console.log('  ⏭️  PIN ya está encriptado, saltando...');
+          } else {
+            // Encriptar y actualizar
+            await this.updateSecurityConfig(userId, {
+              security_pin: securityConfig.security_pin,
+            });
+            results.securityConfig = true;
+            console.log('  ✅ PIN migrado');
+          }
+        } else {
+          console.log('  ⏭️  No hay PIN configurado');
+        }
+      } catch (error) {
+        console.error('  ❌ Error migrando configuración de seguridad:', error);
+      }
+      
+      // Resumen final
+      console.log('\n✨ Migración completada!');
+      console.log('📊 Resumen:');
+      console.log(`   - Entradas del diario: ${results.journalEntries} migradas`);
+      console.log(`   - Eventos del calendario: ${results.calendarEvents} migrados`);
+      console.log(`   - Transacciones Balanza Pro: ${results.balanzaTransactions} migradas`);
+      console.log(`   - Configuración de seguridad: ${results.securityConfig ? 'migrada' : 'no aplicable'}`);
+      
+      return results;
+    } catch (error) {
+      console.error('❌ Error durante la migración:', error);
+      throw error;
+    }
+    // NO limpiar la contraseña aquí, el usuario puede querer seguir usándola
   }
 }
 
