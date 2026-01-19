@@ -449,7 +449,7 @@ const App: React.FC = () => {
           if (!dataLoadedFlags.transactions || !dataLoadedFlags.journalEntries || !dataLoadedFlags.customEvents) {
             const calendarResults = await Promise.allSettled([
               !dataLoadedFlags.transactions ? supabaseService.getTransactions(userId, 100) : Promise.resolve(transactions),
-              !dataLoadedFlags.journalEntries ? supabaseService.getJournalEntries(userId, 50, false) : Promise.resolve(journalEntries),
+              !dataLoadedFlags.journalEntries ? supabaseService.getJournalEntries(userId, 50, true) : Promise.resolve(journalEntries),
               !dataLoadedFlags.customEvents ? supabaseService.getCalendarEvents(userId, 100) : Promise.resolve(customEvents),
             ]);
 
@@ -472,7 +472,7 @@ const App: React.FC = () => {
           // Cargar journalEntries si no están cargados
           if (!dataLoadedFlags.journalEntries) {
             try {
-              const entries = await supabaseService.getJournalEntries(userId, 50, false);
+              const entries = await supabaseService.getJournalEntries(userId, 50, true);
               setJournalEntries(entries);
               setDataLoadedFlags(prev => ({ ...prev, journalEntries: true }));
             } catch (error) {
@@ -514,7 +514,7 @@ const App: React.FC = () => {
           if (!dataLoadedFlags.transactions || !dataLoadedFlags.journalEntries || !dataLoadedFlags.customEvents) {
             const oracleResults = await Promise.allSettled([
               !dataLoadedFlags.transactions ? supabaseService.getTransactions(userId, 100) : Promise.resolve(transactions),
-              !dataLoadedFlags.journalEntries ? supabaseService.getJournalEntries(userId, 50, false) : Promise.resolve(journalEntries),
+              !dataLoadedFlags.journalEntries ? supabaseService.getJournalEntries(userId, 50, true) : Promise.resolve(journalEntries),
               !dataLoadedFlags.customEvents ? supabaseService.getCalendarEvents(userId, 100) : Promise.resolve(customEvents),
             ]);
 
@@ -1013,12 +1013,23 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAddJournalEntry = async (entry: Omit<JournalEntry, 'id'>) => {
+  const handleAddJournalEntry = async (entry: JournalEntry | Omit<JournalEntry, 'id'>) => {
     if (!user) return;
     
     try {
-      const created = await supabaseService.createJournalEntry(user.id, entry);
-      setJournalEntries([created, ...journalEntries]);
+      // Si la entrada ya tiene un ID de UUID (fue creada en DiaryModule con fotos),
+      // solo agregarla al estado sin volver a crearla en la BD
+      const entryWithId = entry as JournalEntry;
+      const isUUID = entryWithId.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryWithId.id);
+      
+      if (isUUID) {
+        // La entrada ya fue creada en la BD, solo actualizar el estado local
+        setJournalEntries([entryWithId, ...journalEntries]);
+      } else {
+        // Crear nueva entrada en la BD
+        const created = await supabaseService.createJournalEntry(user.id, entry);
+        setJournalEntries([created, ...journalEntries]);
+      }
     } catch (error) {
       console.error('Error creating journal entry:', error);
     }

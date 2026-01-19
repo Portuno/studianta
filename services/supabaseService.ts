@@ -363,11 +363,29 @@ export class SupabaseService {
 
   /**
    * Desencripta un array de strings
+   * Verifica cada elemento individualmente para manejar datos mixtos (URLs antiguas sin encriptar + datos nuevos encriptados)
    */
   private async decryptArray(items: string[] | null | undefined, userId: string): Promise<string[] | null | undefined> {
     if (!items || items.length === 0 || !this.encryptionPassword) return items;
     try {
-      return await encryptionService.decryptArray(items, this.encryptionPassword, userId);
+      // Procesar cada item individualmente para manejar datos mixtos
+      const results = await Promise.all(
+        items.map(async (item) => {
+          if (!item) return item;
+          // Si no está encriptado (ej: URL antigua), retornar tal cual
+          if (!this.isEncrypted(item)) {
+            return item;
+          }
+          // Si está encriptado, desencriptar
+          try {
+            return await encryptionService.decrypt(item, this.encryptionPassword!, userId);
+          } catch (error) {
+            console.error('Error decrypting individual item:', error);
+            return item; // Retornar original si falla
+          }
+        })
+      );
+      return results;
     } catch (error) {
       console.error('Error decrypting array:', error);
       return items;

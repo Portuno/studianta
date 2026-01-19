@@ -258,9 +258,7 @@ body {
   font-weight: bold;
   margin: 0.5rem 0 0.25rem 0;
   color: #4A233E;
-}
-
-[contenteditable] hr {
+}[contenteditable] hr {
   border: none;
   border-top: 2px solid rgba(212, 175, 55, 0.3);
   margin: 1rem 0;
