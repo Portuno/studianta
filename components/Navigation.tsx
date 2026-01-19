@@ -13,9 +13,11 @@ interface NavigationProps {
   userProfile?: UserProfile | null;
   isNightMode?: boolean;
   toggleTheme?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMobile, modules, user, userProfile, isNightMode = false, toggleTheme }) => {
+const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMobile, modules, user, userProfile, isNightMode = false, toggleTheme, collapsed = false, onToggleCollapse }) => {
   const [navigationConfig, setNavigationConfig] = useState<NavigationConfig | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [showMobileModuleSelector, setShowMobileModuleSelector] = useState<{ index: number; moduleId: string } | null>(null);
@@ -216,6 +218,11 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
     label: getModuleLabel(navMod.moduleId),
   }));
 
+  // Si está colapsado y es desktop, ocultar completamente
+  if (collapsed && !isMobile) {
+    return null;
+  }
+
   return (
     <aside className={`w-20 md:w-24 lg:w-64 h-full flex flex-col z-50 shadow-2xl border-r transition-all duration-500 backdrop-blur-[15px] ${
       isNightMode 
@@ -224,19 +231,36 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
     }`}>
       {/* Header fijo */}
       <div className="p-4 lg:p-8 flex-shrink-0">
-        <div 
-          className="flex flex-col items-center cursor-pointer"
-          onClick={() => setActiveView(NavView.DASHBOARD)}
-        >
-          <h1 className={`font-cinzel text-2xl lg:text-3xl font-black tracking-[0.2em] transition-colors duration-500 ${
-            isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
-          }`}>
-            ST<span className="hidden lg:inline">UDI<span className="text-[#E35B8F]">A</span>NTA</span>
-            <span className="lg:hidden text-[#E35B8F]">A</span>
-          </h1>
-          <div className={`h-0.5 w-8 lg:w-12 mt-1 transition-colors duration-500 ${
-            isNightMode ? 'bg-[#D4AF37]' : 'bg-[#D4AF37]'
-          }`} />
+        <div className="flex items-center justify-between mb-2">
+          <div 
+            className="flex flex-col items-center cursor-pointer flex-1"
+            onClick={() => setActiveView(NavView.DASHBOARD)}
+          >
+            <h1 className={`font-cinzel text-2xl lg:text-3xl font-black tracking-[0.2em] transition-colors duration-500 ${
+              isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
+            }`}>
+              ST<span className="hidden lg:inline">UDI<span className="text-[#E35B8F]">A</span>NTA</span>
+              <span className="lg:hidden text-[#E35B8F]">A</span>
+            </h1>
+            <div className={`h-0.5 w-8 lg:w-12 mt-1 transition-colors duration-500 ${
+              isNightMode ? 'bg-[#D4AF37]' : 'bg-[#D4AF37]'
+            }`} />
+          </div>
+          {/* Botón para colapsar sidebar (solo desktop) */}
+          {!isMobile && onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className={`ml-2 p-2 rounded-lg transition-all duration-300 hover:scale-110 ${
+                isNightMode
+                  ? 'text-[#7A748E] hover:text-[#A68A56] hover:bg-[rgba(48,43,79,0.6)]'
+                  : 'text-[#8B5E75] hover:text-[#E35B8F] hover:bg-[#FFD1DC]/40'
+              }`}
+              aria-label="Ocultar navegación"
+              title="Ocultar navegación"
+            >
+              {getIcon('chevron-left', 'w-5 h-5')}
+            </button>
+          )}
         </div>
       </div>
 

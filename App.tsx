@@ -98,6 +98,12 @@ const App: React.FC = () => {
   };
 
   const [deviceType, setDeviceType] = useState(getDeviceType());
+  
+  // Estado para controlar si el sidebar está colapsado (solo desktop)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
   const isMobile = deviceType.isMobile;
   const isTablet = deviceType.isTablet;
   
@@ -1460,6 +1466,15 @@ const App: React.FC = () => {
     }
   };
 
+  // Función para toggle del sidebar
+  const toggleSidebar = () => {
+    setSidebarCollapsed(prev => {
+      const newValue = !prev;
+      localStorage.setItem('sidebarCollapsed', JSON.stringify(newValue));
+      return newValue;
+    });
+  };
+
   return (
     <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} h-screen w-screen overflow-hidden transition-colors duration-500 ${
       isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF9FA]'
@@ -1477,25 +1492,43 @@ const App: React.FC = () => {
 
       {/* Desktop Sidebar - Oculto en mobile */}
       {!isMobile && !isPolicyPage && (
-        <Navigation 
-          activeView={activeView} 
-          setActiveView={handleNavigationClick} 
-          isMobile={false}
-          modules={modules}
-          user={user}
-          userProfile={userProfile}
-          isNightMode={isNightMode}
-          toggleTheme={toggleTheme}
-        />
+        <>
+          <Navigation 
+            activeView={activeView} 
+            setActiveView={handleNavigationClick} 
+            isMobile={false}
+            modules={modules}
+            user={user}
+            userProfile={userProfile}
+            isNightMode={isNightMode}
+            toggleTheme={toggleTheme}
+            collapsed={sidebarCollapsed}
+            onToggleCollapse={toggleSidebar}
+          />
+          {/* Botón flotante para expandir sidebar cuando está colapsado */}
+          {sidebarCollapsed && (
+            <button
+              onClick={toggleSidebar}
+              className={`fixed left-4 top-4 z-[60] p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 backdrop-blur-sm ${
+                isNightMode
+                  ? 'bg-[rgba(48,43,79,0.9)] text-[#A68A56] border border-[#A68A56]/40 hover:bg-[rgba(48,43,79,1)]'
+                  : 'bg-white/90 text-[#4A233E] border border-[#F8C8DC] hover:bg-white'
+              }`}
+              aria-label="Mostrar navegación"
+            >
+              {getIcon('menu', 'w-6 h-6')}
+            </button>
+          )}
+        </>
       )}
       
       {/* Área de contenido principal */}
-      <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'pt-16 pb-28' : ''} transition-colors duration-500 ${
+      <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'pt-16 pb-28' : ''} transition-all duration-500 ${
         isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF9FA]'
       }`}>
-        <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pt-4' : ''} transition-colors duration-500 ${
+        <main className={`flex-1 relative overflow-y-auto ${isPolicyPage ? '' : 'p-4 md:p-8'} ${isMobile && !isPolicyPage ? 'pt-4' : ''} transition-all duration-500 ${
           isNightMode ? 'bg-[#1A1A2E]' : 'bg-[#FFF9FA]'
-        }`}>
+        } ${!isMobile && sidebarCollapsed ? 'max-w-7xl mx-auto w-full' : ''}`}>
           {renderView()}
         </main>
       </div>
