@@ -61,17 +61,17 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
       'focus': 'Enfoque',
       'diary': 'Diario',
       'balanza': 'Balanza',
-      'nutrition': 'Nutrición',
+      'nutrition': 'Nutriciรณn',
       'bazar': 'Bazar',
       'scientific-calculator': 'Calculadora',
-      'exam-generator': 'Exámenes',
+      'exam-generator': 'Exรกmenes',
       'dashboard-stats': 'Dashboard',
     };
     return labels[moduleId] || module.name;
   };
 
   if (isMobile) {
-    // Obtener módulos móviles configurados o usar defaults
+    // Obtener mรณdulos mรณviles configurados o usar defaults
     const mobileModules = loadingConfig 
       ? supabaseService.getDefaultNavigationConfig().mobile_modules
       : (navigationConfig?.mobile_modules.length 
@@ -98,33 +98,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
           </button>
         </div>
 
-        {/* Dashboard Stats - Botón adicional en mobile */}
-        <div className="relative flex-shrink-0">
-          <button 
-            onClick={() => setActiveView(NavView.DASHBOARD_STATS)}
-            className={`min-w-[56px] min-h-[56px] rounded-full border-2 border-white shadow-xl flex flex-col items-center justify-center transition-all duration-300 active:scale-95 ${
-              activeView === NavView.DASHBOARD_STATS 
-                ? isNightMode
-                  ? 'bg-[#C77DFF] text-white scale-105 border-[#C77DFF]'
-                  : 'bg-[#E35B8F] text-white scale-105 border-[#E35B8F]'
-                : isNightMode
-                  ? 'bg-[rgba(48,43,79,0.6)] text-[#A68A56] border-[#A68A56]/40'
-                  : 'bg-white/60 text-[#8B5E75] border-[#F8C8DC]'
-            }`}
-            aria-label="Dashboard Estadísticas"
-          >
-            <div className="p-1">
-              {getIcon('dashboard', "w-5 h-5")}
-            </div>
-            <span className={`text-[7px] font-black uppercase tracking-[0.1em] mt-0.5 leading-tight ${
-              activeView === NavView.DASHBOARD_STATS ? 'opacity-100' : 'opacity-70'
-            }`}>
-              STATS
-            </span>
-          </button>
-        </div>
-
-        {/* Módulos configurables */}
+        {/* Mรณdulos configurables */}
         <div className="flex flex-1 justify-around items-center max-w-full ml-2">
           {mobileModules.map((navMod, index) => (
             <NavButton 
@@ -145,22 +119,22 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
           ))}
         </div>
 
-        {/* Modal para cambiar módulo en mobile */}
+        {/* Modal para cambiar mรณdulo en mobile */}
         {showMobileModuleSelector !== null && user && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200]" onClick={() => setShowMobileModuleSelector(null)}>
             <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
               <h3 className="font-cinzel text-lg font-bold text-[#2D1A26] mb-4 uppercase tracking-wider">
-                Cambiar Módulo
+                Cambiar Mรณdulo
               </h3>
               <p className="font-garamond text-sm text-[#8B5E75] mb-4">
-                Selecciona un módulo para reemplazar "{getModuleLabel(showMobileModuleSelector.moduleId)}"
+                Selecciona un mรณdulo para reemplazar "{getModuleLabel(showMobileModuleSelector.moduleId)}"
               </p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {INITIAL_MODULES.filter(mod => {
-                  // Excluir módulos fijos y el módulo actual
+                  // Excluir mรณdulos fijos y el mรณdulo actual
                   if (mod.id === 'profile' || mod.id === 'ai' || mod.id === 'security' || mod.id === 'social') return false;
                   if (mod.id === showMobileModuleSelector.moduleId) return false;
-                  // Solo mostrar módulos que no estén ya en la navegación
+                  // Solo mostrar mรณdulos que no estรฉn ya en la navegaciรณn
                   const currentModuleIds = mobileModules.map(m => m.moduleId);
                   if (currentModuleIds.includes(mod.id)) return false;
                   return true;
@@ -175,6 +149,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
                     'bazar': NavView.BAZAR,
                     'scientific-calculator': NavView.CALCULATOR,
                     'exam-generator': NavView.EXAM_GENERATOR,
+                    'dashboard-stats': NavView.DASHBOARD_STATS,
                   };
                   const navView = moduleToNavView[mod.id];
                   if (!navView) return null;
@@ -196,12 +171,12 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
                               desktop_modules: navigationConfig?.desktop_modules || supabaseService.getDefaultNavigationConfig().desktop_modules,
                               mobile_modules: updatedModules,
                             });
-                            // Recargar configuración
+                            // Recargar configuraciรณn
                             await loadConfig();
                             setShowMobileModuleSelector(null);
                           } catch (error) {
                             console.error('Error updating navigation:', error);
-                            alert('Error al actualizar la navegación. Por favor, intenta desde el perfil.');
+                            alert('Error al actualizar la navegaciรณn. Por favor, intenta desde el perfil.');
                           }
                         }
                       }}
@@ -227,7 +202,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
   }
 
   // Tablet/Desktop Sidebar
-  // Obtener módulos desktop configurados o usar defaults
+  // Obtener mรณdulos desktop configurados o usar defaults
   const desktopModules = loadingConfig 
     ? supabaseService.getDefaultNavigationConfig().desktop_modules
     : (navigationConfig?.desktop_modules.length 
@@ -265,7 +240,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
         </div>
       </div>
 
-      {/* Sección de módulos scrolleable */}
+      {/* Secciรณn de mรณdulos scrolleable */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         <nav className="p-4 lg:p-8 pt-0 lg:pt-0 space-y-4 lg:space-y-2">
           {sidebarItems.map((item) => {
@@ -297,7 +272,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
         </nav>
       </div>
 
-      {/* Sección inferior siempre visible (Tema, Dashboard Stats, Oráculo, Perfil) */}
+      {/* Secciรณn inferior siempre visible (Tema, Orรกculo, Perfil) */}
       <div className={`p-4 lg:p-6 border-t space-y-4 lg:space-y-4 transition-colors duration-500 flex-shrink-0 ${
         isNightMode ? 'bg-[#151525] border-[#A68A56]/30' : 'bg-[#FFF9FA]/50 border-[#F8C8DC]/30'
       }`}>
@@ -327,22 +302,6 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
         )}
         
         <button 
-          onClick={() => setActiveView(NavView.DASHBOARD_STATS)}
-          className={`w-full flex items-center justify-center gap-3 py-3.5 px-2 lg:px-4 rounded-2xl shadow-lg hover:scale-[1.05] transition-all group ${
-            activeView === NavView.DASHBOARD_STATS
-              ? isNightMode
-                ? 'bg-[#C77DFF] text-white shadow-[0_0_20px_rgba(199,125,255,0.3)]'
-                : 'bg-[#E35B8F] text-white'
-              : isNightMode
-                ? 'bg-[rgba(48,43,79,0.6)] text-[#A68A56] border border-[#A68A56]/40 hover:bg-[rgba(48,43,79,0.8)]'
-                : 'bg-[#2D1A26] text-[#D4AF37]'
-          }`}
-        >
-          {getIcon('dashboard', 'w-6 h-6 lg:w-5 lg:h-5 transition-transform')}
-          <span className="hidden lg:inline font-cinzel text-[10px] font-black uppercase tracking-[0.2em]">Dashboard</span>
-        </button>
-        
-        <button 
           onClick={() => setActiveView(NavView.ORACLE)}
           className={`w-full flex items-center justify-center gap-3 py-3.5 px-2 lg:px-4 rounded-2xl shadow-lg hover:scale-[1.05] transition-all group ${
             activeView === NavView.ORACLE
@@ -355,7 +314,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
           }`}
         >
           {getIcon('brain', 'w-6 h-6 lg:w-5 lg:h-5 transition-transform')}
-          <span className="hidden lg:inline font-cinzel text-[10px] font-black uppercase tracking-[0.2em]">Oráculo</span>
+          <span className="hidden lg:inline font-cinzel text-[10px] font-black uppercase tracking-[0.2em]">Orรกculo</span>
         </button>
 
         <button 
@@ -405,7 +364,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
                  ? userProfile.full_name 
                  : user 
                    ? user.email?.split('@')[0] || 'Usuario'
-                   : 'Iniciar Sesión'}
+                   : 'Iniciar Sesiรณn'}
              </p>
              <p className={`text-[8px] uppercase font-black tracking-widest transition-colors duration-500 ${
                activeView === NavView.PROFILE 
@@ -414,7 +373,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
                    ? 'text-[#7A748E]' 
                    : 'text-[#8B5E75] opacity-60'
              }`}>
-               {user ? 'Perfil' : 'Iniciar Sesión'}
+               {user ? 'Perfil' : 'Iniciar Sesiรณn'}
              </p>
           </div>
         </button>

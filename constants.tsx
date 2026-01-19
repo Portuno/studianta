@@ -389,5 +389,13 @@ export const INITIAL_MODULES: Module[] = [
     active: true,
     icon: 'apple',
   },
+  {
+    id: 'dashboard-stats',
+    name: 'Dashboard',
+    description: 'Visualiza estadísticas y métricas de tu progreso académico',
+    cost: 0,
+    active: true,
+    icon: 'chart',
+  },
 ];
 
