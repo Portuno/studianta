@@ -126,39 +126,51 @@ Disfruta de sesiones de estudio prolongadas con nuestro modo nocturno cuidadosam
 
 ## 💳 Configuración de Stripe (Suscripciones Premium)
 
-Para habilitar las suscripciones premium, necesitas configurar las siguientes variables de entorno:
+Para habilitar las suscripciones premium, necesitas configurar las siguientes variables de entorno. **Nota importante:** Todo el flujo de Stripe se maneja completamente en el backend a través de Supabase Edge Functions, por lo que no se requiere ninguna clave pública en el frontend.
 
-### Variables de Entorno Frontend (.env)
+### Variables de Entorno Frontend (.env o .env.local) - Opcional
+
+Si utilizas un archivo `.env` local para desarrollo, puedes configurar:
+
 ```
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_live_...
 ```
+
+**Nota:** Esta variable es opcional para desarrollo local. La configuración principal se realiza en Supabase Edge Functions Secrets.
 
 ### Variables de Entorno Supabase Edge Functions
+
 Configura estas en el dashboard de Supabase bajo Settings > Edge Functions > Secrets:
 
 ```
-STRIPE_SECRET_KEY=sk_test_...
+STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_ID=price_...
 ```
 
+**Importante:** Usa las claves de **producción** (`sk_live_...`) para habilitar cobros reales. Las claves de prueba (`sk_test_...`) solo funcionan en modo test.
+
 ### Configuración de Webhooks en Stripe
 
 1. Ve a tu Dashboard de Stripe > Developers > Webhooks
-2. Agrega un nuevo endpoint: `https://[tu-proyecto].supabase.co/functions/v1/stripe-webhook`
-3. Selecciona los siguientes eventos:
+2. Asegúrate de estar en **modo Live** (no Test mode)
+3. Agrega un nuevo endpoint: `https://[tu-proyecto].supabase.co/functions/v1/stripe-webhook`
+4. Selecciona los siguientes eventos:
    - `checkout.session.completed`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
    - `invoice.payment_failed`
-4. Copia el "Signing secret" y úsalo como `STRIPE_WEBHOOK_SECRET`
+5. Copia el "Signing secret" (formato: `whsec_...`) y úsalo como `STRIPE_WEBHOOK_SECRET` en Supabase
 
-### Crear Producto y Precio en Stripe
+### Producto de Producción
 
-1. Ve a Products en Stripe Dashboard
-2. Crea un nuevo producto "Studianta Premium"
-3. Agrega un precio de 14,99€/mes (recurring)
-4. Copia el Price ID y úsalo como `STRIPE_PRICE_ID`
+**Product ID:** `prod_TpNYbWp1N8BZUH`
+
+1. Ve a Products en Stripe Dashboard (modo Live)
+2. Busca el producto con ID `prod_TpNYbWp1N8BZUH`
+3. Verifica que tiene un precio configurado de 14,99€/mes (recurring)
+4. Copia el **Price ID** asociado (formato: `price_...`)
+5. Usa este Price ID como `STRIPE_PRICE_ID` en Supabase Edge Functions Secrets
 
 ---
 
