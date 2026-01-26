@@ -111,15 +111,18 @@ const FocusModule: React.FC<FocusModuleProps> = ({
   useEffect(() => {
     // Si estamos usando estado global, NO ejecutar timer aquí (se maneja en App.tsx)
     if (onFocusStateChange && focusState) {
-      // El timer global en App.tsx maneja la actualización
+      // El timer global en App.tsx maneja la actualización usando timestamps
+      // Solo detectar cuando el timer llega a 0 para completar la sesión
       if (timeLeft === 0 && isActive && !isPaused) {
         handleCompleteSession();
       }
       return;
     }
 
-    // Solo ejecutar timer local si NO estamos usando estado global
-    if (isActive && !isPaused && timeLeft >= 0) {
+    // Solo ejecutar timer local si NO estamos usando estado global (fallback)
+    // Este timer local también debería usar timestamps para consistencia, pero por ahora
+    // mantenemos la lógica simple para el modo local
+    if (isActive && !isPaused && timeLeft > 0) {
       timerRef.current = setInterval(() => {
         setLocalTimeLeft(prev => {
           const newTime = prev - 1;
@@ -142,10 +145,13 @@ const FocusModule: React.FC<FocusModuleProps> = ({
   const handleStart = () => {
     // Ya no requiere asignatura - es opcional
     // Auto-iniciar deep focus (sanctuary mode)
+    // Asegurar que se incluya totalTime al iniciar para que el sistema de timestamps funcione correctamente
     updateState({ 
       isActive: true, 
       isPaused: false,
-      sanctuaryMode: true 
+      sanctuaryMode: true,
+      totalTime: totalTime, // Incluir totalTime para que el sistema de timestamps lo use
+      timeLeft: totalTime // Inicializar timeLeft con totalTime
     });
   };
 

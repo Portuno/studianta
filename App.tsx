@@ -159,63 +159,452 @@ const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Solo ejecutar una vez al montar
 
-  // Estado global del Focus Timer
+  // Estado global del Focus Timer con timestamps para precisión
   const [focusState, setFocusState] = useState<{
+    isActive: boolean;
+    isPaused: boolean;
+    timeLeft: number; // Calculado dinámicamente
+    totalTime: number;
+    startTime: number | null; // Timestamp cuando se inició
+    pausedTime: number | null; // Timestamp cuando se pausó
+    accumulatedPauseTime: number; // Tiempo total pausado en ms
+    selectedSubjectId: string | null;
+    sanctuaryMode: boolean;
+  }>(() => {
+    // Intentar cargar desde localStorage al inicializar
+    try {
+      const saved = localStorage.getItem('focusTimerState');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const now = Date.now();
+        
+        // Si el timer estaba activo, recalcular timeLeft
+        if (parsed.isActive && parsed.startTime) {
+          if (parsed.isPaused && parsed.pausedTime) {
+            // Si estaba pausado, actualizar el tiempo acumulado de pausa
+            const pauseDuration = now - parsed.pausedTime;
+            const updatedAccumulatedPauseTime = parsed.accumulatedPauseTime + pauseDuration;
+            
+            return {
+              ...parsed,
+              accumulatedPauseTime: updatedAccumulatedPauseTime,
+              pausedTime: now, // Actualizar pausedTime para que el cálculo sea correcto
+            };
+          } else if (!parsed.isPaused) {
+            // Si estaba activo y no pausado, recalcular timeLeft
+            const elapsed = now - parsed.startTime - (parsed.accumulatedPauseTime || 0);
+            const calculatedTimeLeft = Math.max(0, parsed.totalTime * 1000 - elapsed);
+            
+            // Si el tiempo se agotó mientras estaba en background, marcar como completado
+            if (calculatedTimeLeft <= 0) {
+              return {
+                isActive: false,
+                isPaused: false,
+                timeLeft: 0,
+                totalTime: parsed.totalTime,
+                startTime: null,
+                pausedTime: null,
+                accumulatedPauseTime: 0,
+                selectedSubjectId: parsed.selectedSubjectId,
+                sanctuaryMode: false,
+              };
+            }
+            
+            return {
+              ...parsed,
+              timeLeft: Math.floor(calculatedTimeLeft / 1000),
+              startTime: parsed.startTime,
+              pausedTime: null,
+              accumulatedPauseTime: parsed.accumulatedPauseTime || 0,
+            };
+          }
+        }
+        
+        // Si no estaba activo, devolver el estado guardado
+        return {
+          ...parsed,
+          timeLeft: parsed.timeLeft || parsed.totalTime,
+          startTime: parsed.startTime || null,
+          pausedTime: parsed.pausedTime || null,
+          accumulatedPauseTime: parsed.accumulatedPauseTime || 0,
+        };
+      }
+    } catch (error) {
+      console.error('Error loading focus timer state:', error);
+    }
+    
+    // Estado inicial por defecto
+    return {
+      isActive: false,
+      isPaused: false,
+      timeLeft: 25 * 60,
+      totalTime: 25 * 60,
+      startTime: null,
+      pausedTime: null,
+      accumulatedPauseTime: 0,
+      selectedSubjectId: null,
+      sanctuaryMode: false,
+    };
+  });
+
+  // Función helper para calcular timeLeft basado en timestamps
+  const calculateTimeLeft = (
+    totalTime: number,
+    startTime: number | null,
+    accumulatedPauseTime: number,
+    pausedTime: number | null
+  ): number => {
+    if (!startTime) return totalTime;
+    
+    const now = Date.now();
+    const elapsed = pausedTime 
+      ? pausedTime - startTime - accumulatedPauseTime
+      : now - startTime - accumulatedPauseTime;
+    
+    const timeLeftMs = Math.max(0, totalTime * 1000 - elapsed);
+    return Math.floor(timeLeftMs / 1000);
+  };
+
+  // Persistir estado en localStorage cuando cambia
+  useEffect(() => {
+    try {
+      localStorage.setItem('focusTimerState', JSON.stringify({
+        isActive: focusState.isActive,
+        isPaused: focusState.isPaused,
+        timeLeft: focusState.timeLeft,
+        totalTime: focusState.totalTime,
+        startTime: focusState.startTime,
+        pausedTime: focusState.pausedTime,
+        accumulatedPauseTime: focusState.accumulatedPauseTime,
+        selectedSubjectId: focusState.selectedSubjectId,
+        sanctuaryMode: focusState.sanctuaryMode,
+      }));
+    } catch (error) {
+      console.error('Error saving focus timer state:', error);
+    }
+  }, [focusState]);
+
+  // Ref para rastrear el intervalo activo y prevenir race conditions
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastUpdateTimeRef = useRef<number>(Date.now());
+
+  // Timer global que funciona en todas las vistas usando timestamps
+  useEffect(() => {
+    // Limpiar intervalos anteriores
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    if (focusState.isActive && !focusState.isPaused && focusState.startTime) {
+      lastUpdateTimeRef.current = Date.now();
+      
+      // Función de actualización usando requestAnimationFrame para mayor precisión
+      const updateTimer = () => {
+        const now = Date.now();
+        const timeLeft = calculateTimeLeft(
+          focusState.totalTime,
+          focusState.startTime,
+          focusState.accumulatedPauseTime,
+          focusState.pausedTime
+        );
+
+        // Solo actualizar si ha pasado al menos 100ms (evitar actualizaciones excesivas)
+        if (now - lastUpdateTimeRef.current >= 100) {
+          setFocusState(prev => {
+            if (!prev.startTime) return prev;
+            
+            const calculatedTimeLeft = calculateTimeLeft(
+              prev.totalTime,
+              prev.startTime,
+              prev.accumulatedPauseTime,
+              prev.pausedTime
+            );
+
+            if (calculatedTimeLeft <= 0) {
+              // Timer completado
+              return {
+                ...prev,
+                isActive: false,
+                isPaused: false,
+                sanctuaryMode: false,
+                timeLeft: 0,
+                startTime: null,
+                pausedTime: null,
+                accumulatedPauseTime: 0,
+              };
+            }
+
+            return {
+              ...prev,
+              timeLeft: calculatedTimeLeft,
+            };
+          });
+          
+          lastUpdateTimeRef.current = now;
+        }
+
+        // Continuar animación si el timer sigue activo
+        if (focusState.isActive && !focusState.isPaused) {
+          animationFrameRef.current = requestAnimationFrame(updateTimer);
+        }
+      };
+
+      // Usar setInterval como respaldo para asegurar actualizaciones regulares
+      timerIntervalRef.current = setInterval(() => {
+        setFocusState(prev => {
+          if (!prev.isActive || prev.isPaused || !prev.startTime) return prev;
+          
+          const calculatedTimeLeft = calculateTimeLeft(
+            prev.totalTime,
+            prev.startTime,
+            prev.accumulatedPauseTime,
+            prev.pausedTime
+          );
+
+          if (calculatedTimeLeft <= 0) {
+            // Timer completado
+            return {
+              ...prev,
+              isActive: false,
+              isPaused: false,
+              sanctuaryMode: false,
+              timeLeft: 0,
+              startTime: null,
+              pausedTime: null,
+              accumulatedPauseTime: 0,
+            };
+          }
+
+          return {
+            ...prev,
+            timeLeft: calculatedTimeLeft,
+          };
+        });
+      }, 1000);
+
+      // Iniciar requestAnimationFrame loop
+      animationFrameRef.current = requestAnimationFrame(updateTimer);
+    }
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+  }, [focusState.isActive, focusState.isPaused, focusState.startTime, focusState.totalTime]);
+
+  // Detectar cuando la pestaña vuelve a estar visible y recalcular tiempo
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && focusState.isActive && !focusState.isPaused && focusState.startTime) {
+        // Recalcular timeLeft cuando la pestaña vuelve a estar activa
+        setFocusState(prev => {
+          if (!prev.startTime) return prev;
+          
+          const calculatedTimeLeft = calculateTimeLeft(
+            prev.totalTime,
+            prev.startTime,
+            prev.accumulatedPauseTime,
+            prev.pausedTime
+          );
+
+          if (calculatedTimeLeft <= 0) {
+            return {
+              ...prev,
+              isActive: false,
+              isPaused: false,
+              sanctuaryMode: false,
+              timeLeft: 0,
+              startTime: null,
+              pausedTime: null,
+              accumulatedPauseTime: 0,
+            };
+          }
+
+          return {
+            ...prev,
+            timeLeft: calculatedTimeLeft,
+          };
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [focusState.isActive, focusState.isPaused, focusState.startTime]);
+
+  // Sistema de heartbeat para detectar timers detenidos incorrectamente
+  useEffect(() => {
+    if (!focusState.isActive || focusState.isPaused || !focusState.startTime) return;
+
+    const heartbeatInterval = setInterval(() => {
+      setFocusState(prev => {
+        if (!prev.isActive || prev.isPaused || !prev.startTime) return prev;
+        
+        const calculatedTimeLeft = calculateTimeLeft(
+          prev.totalTime,
+          prev.startTime,
+          prev.accumulatedPauseTime,
+          prev.pausedTime
+        );
+
+        // Si el tiempo calculado es significativamente diferente al guardado, corregir
+        if (Math.abs(calculatedTimeLeft - prev.timeLeft) > 2) {
+          if (calculatedTimeLeft <= 0) {
+            return {
+              ...prev,
+              isActive: false,
+              isPaused: false,
+              sanctuaryMode: false,
+              timeLeft: 0,
+              startTime: null,
+              pausedTime: null,
+              accumulatedPauseTime: 0,
+            };
+          }
+          
+          return {
+            ...prev,
+            timeLeft: calculatedTimeLeft,
+          };
+        }
+        
+        return prev;
+      });
+    }, 5000); // Verificar cada 5 segundos
+
+    return () => clearInterval(heartbeatInterval);
+  }, [focusState.isActive, focusState.isPaused, focusState.startTime]);
+
+  // Funciones helper para manejar el timer con timestamps
+  const handleFocusStart = (totalTimeSeconds: number, selectedSubjectId: string | null = null, sanctuaryMode: boolean = true) => {
+    const now = Date.now();
+    setFocusState(prev => ({
+      ...prev,
+      isActive: true,
+      isPaused: false,
+      timeLeft: totalTimeSeconds,
+      totalTime: totalTimeSeconds,
+      startTime: now,
+      pausedTime: null,
+      accumulatedPauseTime: 0,
+      selectedSubjectId: selectedSubjectId ?? prev.selectedSubjectId,
+      sanctuaryMode,
+    }));
+  };
+
+  const handleFocusPause = () => {
+    setFocusState(prev => {
+      if (!prev.isActive || prev.isPaused || !prev.startTime) return prev;
+      
+      const now = Date.now();
+      return {
+        ...prev,
+        isPaused: true,
+        pausedTime: now,
+      };
+    });
+  };
+
+  const handleFocusResume = () => {
+    setFocusState(prev => {
+      if (!prev.isActive || prev.isPaused || !prev.startTime || !prev.pausedTime) return prev;
+      
+      const now = Date.now();
+      const pauseDuration = now - prev.pausedTime;
+      
+      return {
+        ...prev,
+        isPaused: false,
+        accumulatedPauseTime: prev.accumulatedPauseTime + pauseDuration,
+        pausedTime: null,
+      };
+    });
+  };
+
+  const handleFocusStop = () => {
+    setFocusState(prev => ({
+      ...prev,
+      isActive: false,
+      isPaused: false,
+      sanctuaryMode: false,
+      startTime: null,
+      pausedTime: null,
+      accumulatedPauseTime: 0,
+    }));
+  };
+
+  const handleFocusStateChange = (updates: Partial<{
     isActive: boolean;
     isPaused: boolean;
     timeLeft: number;
     totalTime: number;
     selectedSubjectId: string | null;
     sanctuaryMode: boolean;
-  }>({
-    isActive: false,
-    isPaused: false,
-    timeLeft: 25 * 60,
-    totalTime: 25 * 60,
-    selectedSubjectId: null,
-    sanctuaryMode: false,
-  });
-
-  // Timer global que funciona en todas las vistas
-  useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-
-    if (focusState.isActive && !focusState.isPaused && focusState.timeLeft >= 0) {
-      intervalId = setInterval(() => {
-        setFocusState(prev => {
-          const newTime = prev.timeLeft - 1;
-          if (newTime >= 0) {
-            return { ...prev, timeLeft: newTime };
-          } else {
-            // Timer completado - detener
-            return { ...prev, isActive: false, isPaused: false, sanctuaryMode: false, timeLeft: 0 };
-          }
-        });
-      }, 1000);
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
+  }>) => {
+    setFocusState(prev => {
+      const newState = { ...prev, ...updates };
+      
+      // Si se está iniciando el timer
+      if (updates.isActive === true && !prev.isActive) {
+        const now = Date.now();
+        newState.startTime = now;
+        newState.pausedTime = null;
+        newState.accumulatedPauseTime = 0;
+        newState.timeLeft = updates.totalTime ?? prev.totalTime;
       }
-    };
-  }, [focusState.isActive, focusState.isPaused]);
-
-  // Detectar cuando el timer llega a 0 y completar la sesión
-  useEffect(() => {
-    if (focusState.timeLeft === 0 && focusState.isActive && !focusState.isPaused) {
-      // Pequeño delay para asegurar que el estado se actualizó
-      const timeoutId = setTimeout(() => {
-        setFocusState(prev => ({
-          ...prev,
-          isActive: false,
-          isPaused: false,
-          sanctuaryMode: false
-        }));
-      }, 100);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [focusState.timeLeft, focusState.isActive, focusState.isPaused]);
+      
+      // Si se está pausando
+      if (updates.isPaused === true && !prev.isPaused && prev.startTime) {
+        const now = Date.now();
+        newState.pausedTime = now;
+      }
+      
+      // Si se está reanudando
+      if (updates.isPaused === false && prev.isPaused && prev.startTime && prev.pausedTime) {
+        const now = Date.now();
+        const pauseDuration = now - prev.pausedTime;
+        newState.accumulatedPauseTime = prev.accumulatedPauseTime + pauseDuration;
+        newState.pausedTime = null;
+      }
+      
+      // Si se está deteniendo
+      if (updates.isActive === false && prev.isActive) {
+        newState.startTime = null;
+        newState.pausedTime = null;
+        newState.accumulatedPauseTime = 0;
+      }
+      
+      // Si se cambia el tiempo total mientras está activo, reiniciar el timer
+      if (updates.totalTime !== undefined && updates.totalTime !== prev.totalTime && prev.isActive) {
+        const now = Date.now();
+        newState.startTime = now;
+        newState.accumulatedPauseTime = 0;
+        // Si estaba pausado, mantener la pausa pero con el nuevo tiempo
+        if (prev.isPaused) {
+          newState.pausedTime = now;
+        } else {
+          newState.pausedTime = null;
+        }
+        newState.timeLeft = updates.totalTime;
+      }
+      
+      return newState;
+    });
+  };
 
   // Ref para rastrear si los datos ya se cargaron (evita recargas duplicadas)
   const dataLoadedRef = useRef(false);
@@ -1358,7 +1747,7 @@ const App: React.FC = () => {
           isMobile={isMobile}
           userId={user?.id}
           focusState={focusState}
-          onFocusStateChange={setFocusState}
+          onFocusStateChange={handleFocusStateChange}
           isNightMode={isNightMode}
         />;
       case NavView.DIARY:
@@ -1623,11 +2012,9 @@ const App: React.FC = () => {
           timeLeft={focusState.timeLeft}
           isActive={focusState.isActive}
           isPaused={focusState.isPaused}
-          onPause={() => setFocusState(prev => ({ ...prev, isPaused: true }))}
-          onResume={() => setFocusState(prev => ({ ...prev, isPaused: false }))}
-          onStop={() => {
-            setFocusState(prev => ({ ...prev, isActive: false, isPaused: false, sanctuaryMode: false }));
-          }}
+          onPause={handleFocusPause}
+          onResume={handleFocusResume}
+          onStop={handleFocusStop}
           onOpen={() => setActiveView(NavView.FOCUS)}
           isMobile={isMobile}
           isNightMode={isNightMode}
