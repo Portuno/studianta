@@ -169,9 +169,10 @@ interface SealButtonProps {
   label?: string;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  disabled?: boolean;
 }
 
-const SealButton: React.FC<SealButtonProps> = ({ onClick, label = "Sellar Crónica", className = "", size = 'md' }) => {
+const SealButton: React.FC<SealButtonProps> = ({ onClick, label = "Sellar Crónica", className = "", size = 'md', disabled = false }) => {
   const sizeClasses = {
     sm: 'px-6 py-2.5 text-[9px]',
     md: 'px-8 py-3 text-[10px]',
@@ -186,8 +187,9 @@ const SealButton: React.FC<SealButtonProps> = ({ onClick, label = "Sellar Cróni
   
   return (
     <button 
-      onClick={onClick} 
-      className={`${sizeClasses[size]} rounded-full font-cinzel font-black uppercase tracking-[0.4em] shadow-[0_8px_20px_rgba(227,91,143,0.5),inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)] hover:scale-[1.03] active:scale-[0.98] transition-all relative flex items-center justify-center gap-2 ${className}`}
+      onClick={onClick}
+      disabled={disabled}
+      className={`${sizeClasses[size]} rounded-full font-cinzel font-black uppercase tracking-[0.4em] shadow-[0_8px_20px_rgba(227,91,143,0.5),inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)] hover:scale-[1.03] active:scale-[0.98] transition-all relative flex items-center justify-center gap-2 ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
       style={{
         background: 'linear-gradient(135deg, #E35B8F 0%, #C94A7A 100%)',
         filter: 'drop-shadow(0 4px 8px rgba(212,175,55,0.4))'
@@ -228,6 +230,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
   const [unlockedEntries, setUnlockedEntries] = useState<Set<string>>(new Set()); // IDs de entradas desbloqueadas en esta sesión
   const [showStories, setShowStories] = useState(false); // Toggle entre editor e historias
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null); // ID de la entrada que se está editando
+  const [isSaving, setIsSaving] = useState(false); // Flag para prevenir múltiples guardados simultáneos
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const randomPrompt = useMemo(() => PROMPTS[Math.floor(Math.random() * PROMPTS.length)], []);
@@ -353,7 +356,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
     return ((hash % 400) / 100) - 2; // Entre -2 y 2
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     
@@ -361,43 +364,66 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
     const remainingSlots = 3 - photos.length;
     if (remainingSlots <= 0) {
       alert("Ya has alcanzado el límite de 3 fotos por entrada.");
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
     
     const filesToProcess = files.slice(0, remainingSlots);
-    const newPhotos: string[] = [];
-    const newRotations: number[] = [];
     
-    // Guardar los archivos File para subirlos después
-    setPhotoFiles(prev => [...prev, ...filesToProcess]);
-    
-    filesToProcess.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        newPhotos.push(reader.result as string); // Base64 para preview
-        newRotations.push(Math.random() * 4 - 2); // Entre -2 y 2 grados
-        
-        // Cuando todas las fotos se hayan cargado
-        if (newPhotos.length === filesToProcess.length) {
-          setPhotos(prev => [...prev, ...newPhotos]);
-          setPhotoRotations(prev => [...prev, ...newRotations]);
-        }
-      };
-      reader.readAsDataURL(file);
+    // Procesar todas las fotos de forma sincronizada con Promise.all
+    const photoPromises = filesToProcess.map((file) => {
+      return new Promise<{ dataUrl: string; rotation: number }>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve({
+            dataUrl: reader.result as string,
+            rotation: Math.random() * 4 - 2 // Entre -2 y 2 grados
+          });
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
     });
+    
+    try {
+      const processedPhotos = await Promise.all(photoPromises);
+      
+      // Actualizar estado solo cuando todas las fotos estén listas
+      const newPhotos = processedPhotos.map(p => p.dataUrl);
+      const newRotations = processedPhotos.map(p => p.rotation);
+      
+      setPhotoFiles(prev => [...prev, ...filesToProcess]);
+      setPhotos(prev => [...prev, ...newPhotos]);
+      setPhotoRotations(prev => [...prev, ...newRotations]);
+      
+      // Limpiar el input después de procesar
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error) {
+      console.error('Error procesando fotos:', error);
+      alert('Error al procesar las fotos. Por favor, intenta nuevamente.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleSave = async () => {
+    // Prevenir múltiples ejecuciones simultáneas
+    if (isSaving) {
+      return;
+    }
+    
     if (!activeMood) {
       alert("Por favor, selecciona un cristal de ánimo antes de sellar tu memoria.");
       return;
     }
+    
+    setIsSaving(true);
     
     try {
       // Obtener el usuario actual
       const user = await supabaseService.getCurrentUser();
       if (!user) {
         alert("Debes estar autenticado para guardar entradas.");
+        setIsSaving(false);
         return;
       }
 
@@ -406,34 +432,30 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
       // Si hay fotos nuevas para subir (photoFiles), subirlas al bucket
       if (photoFiles.length > 0) {
         if (editingEntryId) {
-          // Editar: subir nuevas fotos usando el entryId existente
+          // Editar: calcular el índice inicial basándose en el número de fotos existentes
+          const existingEntry = entries.find(e => e.id === editingEntryId);
+          const existingPhotos = existingEntry?.photos || (existingEntry?.photo ? [existingEntry.photo] : []);
+          const existingUrls = existingPhotos.filter((p: string) => p && p.startsWith('http'));
+          const startIndex = existingUrls.length; // Índice inicial para nuevas fotos
+          
+          // Subir nuevas fotos usando el entryId existente con índices correctos
           for (let i = 0; i < photoFiles.length; i++) {
             const url = await supabaseService.uploadJournalPhoto(
               user.id,
               editingEntryId,
               photoFiles[i],
-              i
+              startIndex + i // Índice correcto basado en fotos existentes
             );
             photoUrls.push(url);
           }
         } else {
           // Crear: primero crear la entrada para obtener el ID, luego subir fotos
-          const tempEntry: JournalEntry = {
-            id: Math.random().toString(36).substring(7),
+          const createdEntry = await supabaseService.createJournalEntry(user.id, {
             date: entryDate,
             mood: activeMood,
             content: content,
             isLocked: isLocked,
             sentiment: 0
-          };
-          
-          // Crear entrada sin fotos primero
-          const createdEntry = await supabaseService.createJournalEntry(user.id, {
-            date: tempEntry.date,
-            mood: tempEntry.mood,
-            content: tempEntry.content,
-            isLocked: tempEntry.isLocked,
-            sentiment: tempEntry.sentiment
           });
 
           // Subir fotos usando el ID de la entrada creada
@@ -454,7 +476,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
             { photos: photoUrls }
           );
 
-          // Llamar al callback con la entrada completa
+          // Llamar al callback con la entrada completa (solo una vez)
           onAddEntry(updatedEntry);
 
           // Limpiar el formulario
@@ -465,6 +487,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
           setPhotoRotations([]);
           setIsLocked(false);
           setEntryDate(new Date().toISOString().split('T')[0]);
+          setIsSaving(false);
           return;
         }
       }
@@ -477,34 +500,41 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
           const existingPhotos = existingEntry.photos || (existingEntry.photo ? [existingEntry.photo] : []);
           const existingUrls = existingPhotos.filter((p: string) => p && p.startsWith('http'));
           
-          // Combinar URLs existentes con nuevas fotos subidas
+          // Combinar URLs existentes con nuevas fotos subidas (evitar duplicados)
           const allPhotoUrls = [...existingUrls, ...photoUrls];
           
           // Si hay fotos, usar el array; si no, usar undefined para que se maneje correctamente
           const finalPhotos = allPhotoUrls.length > 0 ? allPhotoUrls : undefined;
           
-          const updatedEntry: JournalEntry = {
-            ...existingEntry,
-            date: entryDate,
-            mood: activeMood,
-            content: content,
-            photos: finalPhotos,
-            isLocked: isLocked
-          };
-          onUpdateEntry(updatedEntry);
+          // Actualizar la entrada en la BD primero
+          const updatedEntryFromDB = await supabaseService.updateJournalEntry(
+            user.id,
+            editingEntryId,
+            {
+              date: entryDate,
+              mood: activeMood,
+              content: content,
+              photos: finalPhotos,
+              isLocked: isLocked
+            }
+          );
+          
+          // Llamar al callback solo una vez con la entrada actualizada
+          onUpdateEntry(updatedEntryFromDB);
         }
         setEditingEntryId(null);
       } else if (photoFiles.length === 0) {
         // Crear entrada sin fotos
-        const newEntry: JournalEntry = {
-          id: Math.random().toString(36).substring(7),
+        const createdEntry = await supabaseService.createJournalEntry(user.id, {
           date: entryDate,
           mood: activeMood,
           content: content,
           isLocked: isLocked,
           sentiment: 0
-        };
-        onAddEntry(newEntry);
+        });
+        
+        // Llamar al callback solo una vez
+        onAddEntry(createdEntry);
       }
 
       // Limpiar el formulario
@@ -523,6 +553,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
       } else {
         alert(`Error al guardar la entrada: ${errorMessage}. Por favor, intenta nuevamente.`);
       }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1074,7 +1106,8 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                <div className="flex flex-col items-center gap-1">
                  <button 
                    onClick={handleSave}
-                   className="w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(227,91,143,0.5),inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)] active:scale-95 transition-all relative"
+                   disabled={isSaving}
+                   className={`w-16 h-16 rounded-full flex items-center justify-center shadow-[0_8px_20px_rgba(227,91,143,0.5),inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.2)] active:scale-95 transition-all relative ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
                    style={{
                      background: 'linear-gradient(135deg, #E35B8F 0%, #C94A7A 100%)',
                      filter: 'drop-shadow(0 4px 8px rgba(212,175,55,0.4))'
@@ -1419,7 +1452,7 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   {getIcon(isLocked ? 'lock' : 'unlock', 'w-4 h-4')} <span className="hidden lg:inline">{isLocked ? 'Cierre Activo' : 'Biometría'}</span>
                 </button>
               </div>
-              <SealButton onClick={handleSave} size="md" className="w-full lg:w-auto" />
+              <SealButton onClick={handleSave} size="md" className="w-full lg:w-auto" disabled={isSaving} />
             </div>
           </div>
         </div>

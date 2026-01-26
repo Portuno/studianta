@@ -116,7 +116,10 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [securityPin, setSecurityPin] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [isNightMode, setIsNightMode] = useState<boolean>(false);
+  const [isNightMode, setIsNightMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('isNightMode');
+    return saved ? JSON.parse(saved) : false;
+  });
   const [balanzaProTransactions, setBalanzaProTransactions] = useState<BalanzaProTransaction[]>([]);
   const [nutritionEntries, setNutritionEntries] = useState<NutritionEntry[]>([]);
   const [nutritionGoals, setNutritionGoals] = useState<NutritionGoals | null>(null);
@@ -133,8 +136,28 @@ const App: React.FC = () => {
   });
 
   const toggleTheme = () => {
-    setIsNightMode(prev => !prev);
+    setIsNightMode(prev => {
+      const newValue = !prev;
+      localStorage.setItem('isNightMode', JSON.stringify(newValue));
+      return newValue;
+    });
   };
+
+  // Sincronizar el estado del tema con localStorage al cargar (solo una vez)
+  useEffect(() => {
+    const saved = localStorage.getItem('isNightMode');
+    if (saved !== null) {
+      try {
+        const savedValue = JSON.parse(saved);
+        setIsNightMode(savedValue);
+      } catch (error) {
+        console.error('Error parsing saved theme preference:', error);
+        // Si hay error, usar el valor por defecto
+        localStorage.setItem('isNightMode', JSON.stringify(false));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo ejecutar una vez al montar
 
   // Estado global del Focus Timer
   const [focusState, setFocusState] = useState<{
@@ -1028,13 +1051,39 @@ const App: React.FC = () => {
       const entryWithId = entry as JournalEntry;
       const isUUID = entryWithId.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entryWithId.id);
       
+      // Verificar si la entrada ya existe en el estado para evitar duplicados
+      if (entryWithId.id) {
+        const existingEntry = journalEntries.find(e => e.id === entryWithId.id);
+        if (existingEntry) {
+          console.warn('Entrada ya existe en el estado, evitando duplicado:', entryWithId.id);
+          return;
+        }
+      }
+      
       if (isUUID) {
         // La entrada ya fue creada en la BD, solo actualizar el estado local
-        setJournalEntries([entryWithId, ...journalEntries]);
+        setJournalEntries(prev => {
+          // Verificar nuevamente antes de agregar (por si acaso el estado cambió)
+          const exists = prev.find(e => e.id === entryWithId.id);
+          if (exists) {
+            console.warn('Entrada ya existe, evitando duplicado:', entryWithId.id);
+            return prev;
+          }
+          return [entryWithId, ...prev];
+        });
       } else {
         // Crear nueva entrada en la BD
         const created = await supabaseService.createJournalEntry(user.id, entry);
-        setJournalEntries([created, ...journalEntries]);
+        
+        // Verificar que no exista antes de agregar
+        setJournalEntries(prev => {
+          const exists = prev.find(e => e.id === created.id);
+          if (exists) {
+            console.warn('Entrada ya existe, evitando duplicado:', created.id);
+            return prev;
+          }
+          return [created, ...prev];
+        });
       }
     } catch (error) {
       console.error('Error creating journal entry:', error);
