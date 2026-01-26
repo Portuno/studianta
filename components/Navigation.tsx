@@ -63,17 +63,17 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
       'focus': 'Enfoque',
       'diary': 'Diario',
       'balanza': 'Balanza',
-      'nutrition': 'Nutriciรณn',
+      'nutrition': 'Nutrición',
       'bazar': 'Bazar',
       'scientific-calculator': 'Calculadora',
-      'exam-generator': 'Exรกmenes',
+      'exam-generator': 'Exámenes',
       'dashboard-stats': 'Dashboard',
     };
     return labels[moduleId] || module.name;
   };
 
   if (isMobile) {
-    // Obtener mรณdulos mรณviles configurados o usar defaults
+    // Obtener módulos móviles configurados o usar defaults
     const mobileModules = loadingConfig 
       ? supabaseService.getDefaultNavigationConfig().mobile_modules
       : (navigationConfig?.mobile_modules.length 
@@ -100,7 +100,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
           </button>
         </div>
 
-        {/* Mรณdulos configurables */}
+        {/* Módulos configurables */}
         <div className="flex flex-1 justify-around items-center max-w-full ml-2">
           {mobileModules.map((navMod, index) => (
             <NavButton 
@@ -121,22 +121,22 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
           ))}
         </div>
 
-        {/* Modal para cambiar mรณdulo en mobile */}
+        {/* Modal para cambiar módulo en mobile */}
         {showMobileModuleSelector !== null && user && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200]" onClick={() => setShowMobileModuleSelector(null)}>
             <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
               <h3 className="font-cinzel text-lg font-bold text-[#2D1A26] mb-4 uppercase tracking-wider">
-                Cambiar Mรณdulo
+                Cambiar Módulo
               </h3>
               <p className="font-garamond text-sm text-[#8B5E75] mb-4">
-                Selecciona un mรณdulo para reemplazar "{getModuleLabel(showMobileModuleSelector.moduleId)}"
+                Selecciona un módulo para reemplazar "{getModuleLabel(showMobileModuleSelector.moduleId)}"
               </p>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {INITIAL_MODULES.filter(mod => {
-                  // Excluir mรณdulos fijos y el mรณdulo actual
+                  // Excluir módulos fijos y el módulo actual
                   if (mod.id === 'profile' || mod.id === 'ai' || mod.id === 'security' || mod.id === 'social') return false;
                   if (mod.id === showMobileModuleSelector.moduleId) return false;
-                  // Solo mostrar mรณdulos que no estรฉn ya en la navegaciรณn
+                  // Solo mostrar módulos que no estén ya en la navegación
                   const currentModuleIds = mobileModules.map(m => m.moduleId);
                   if (currentModuleIds.includes(mod.id)) return false;
                   return true;
@@ -173,12 +173,12 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
                               desktop_modules: navigationConfig?.desktop_modules || supabaseService.getDefaultNavigationConfig().desktop_modules,
                               mobile_modules: updatedModules,
                             });
-                            // Recargar configuraciรณn
+                            // Recargar configuración
                             await loadConfig();
                             setShowMobileModuleSelector(null);
                           } catch (error) {
                             console.error('Error updating navigation:', error);
-                            alert('Error al actualizar la navegaciรณn. Por favor, intenta desde el perfil.');
+                            alert('Error al actualizar la navegación. Por favor, intenta desde el perfil.');
                           }
                         }
                       }}
@@ -204,7 +204,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
   }
 
   // Tablet/Desktop Sidebar
-  // Obtener mรณdulos desktop configurados o usar defaults
+  // Obtener módulos desktop configurados o usar defaults
   const desktopModules = loadingConfig 
     ? supabaseService.getDefaultNavigationConfig().desktop_modules
     : (navigationConfig?.desktop_modules.length 
@@ -264,7 +264,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
         </div>
       </div>
 
-      {/* Secciรณn de mรณdulos scrolleable */}
+      {/* Sección de módulos scrolleable */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         <nav className="p-4 lg:p-8 pt-0 lg:pt-0 space-y-4 lg:space-y-2">
           {sidebarItems.map((item) => {
@@ -296,7 +296,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
         </nav>
       </div>
 
-      {/* Secciรณn inferior siempre visible (Tema, Orรกculo, Perfil) */}
+      {/* Sección inferior siempre visible (Tema, Oráculo, Perfil) */}
       <div className={`p-4 lg:p-6 border-t space-y-4 lg:space-y-4 transition-colors duration-500 flex-shrink-0 ${
         isNightMode ? 'bg-[#151525] border-[#A68A56]/30' : 'bg-[#FFF9FA]/50 border-[#F8C8DC]/30'
       }`}>
@@ -338,7 +338,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
           }`}
         >
           {getIcon('brain', 'w-6 h-6 lg:w-5 lg:h-5 transition-transform')}
-          <span className="hidden lg:inline font-cinzel text-[10px] font-black uppercase tracking-[0.2em]">Orรกculo</span>
+          <span className="hidden lg:inline font-cinzel text-[10px] font-black uppercase tracking-[0.2em]">Oráculo</span>
         </button>
 
         <button 
@@ -388,7 +388,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
                  ? userProfile.full_name 
                  : user 
                    ? user.email?.split('@')[0] || 'Usuario'
-                   : 'Iniciar Sesiรณn'}
+                   : 'Iniciar Sesión'}
              </p>
              <p className={`text-[8px] uppercase font-black tracking-widest transition-colors duration-500 ${
                activeView === NavView.PROFILE 
@@ -397,7 +397,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeView, setActiveView, isMo
                    ? 'text-[#7A748E]' 
                    : 'text-[#8B5E75] opacity-60'
              }`}>
-               {user ? 'Perfil' : 'Iniciar Sesiรณn'}
+               {user ? 'Perfil' : 'Iniciar Sesión'}
              </p>
           </div>
         </button>

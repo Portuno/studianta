@@ -45,7 +45,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
   const [localIsActive, setLocalIsActive] = useState(false);
   const [localTimeLeft, setLocalTimeLeft] = useState(25 * 60);
   const [localTotalTime, setLocalTotalTime] = useState(25 * 60);
-  const [localSelectedSubjectId, setLocalSelectedSubjectId] = useState<string | null>(subjects[0]?.id || null);
+  const [localSelectedSubjectId, setLocalSelectedSubjectId] = useState<string | null>(null);
   const [localIsPaused, setLocalIsPaused] = useState(false);
   const [localSanctuaryMode, setLocalSanctuaryMode] = useState(false);
 
@@ -69,6 +69,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
   const [showFocusAnnotations, setShowFocusAnnotations] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const completionHandledRef = useRef(false);
 
   // Cargar preferencia de mostrar anotaciones de enfoque
   useEffect(() => {
@@ -108,13 +109,29 @@ const FocusModule: React.FC<FocusModuleProps> = ({
     }
   };
 
+  // Detectar cuando el timer se completa (llega a 0)
   useEffect(() => {
     // Si estamos usando estado global, NO ejecutar timer aquí (se maneja en App.tsx)
     if (onFocusStateChange && focusState) {
       // El timer global en App.tsx maneja la actualización usando timestamps
-      // Solo detectar cuando el timer llega a 0 para completar la sesión
+      // Detectar cuando el timer llega a 0 y se desactiva (completado)
+      if (timeLeft === 0 && !isActive && !isPaused && focusState.timeLeft === 0) {
+        // Pequeño delay para asegurar que el estado se actualizó completamente
+        const timeoutId = setTimeout(() => {
+          if (!showReflection) {
+            handleCompleteSession();
+          }
+        }, 200);
+        return () => clearTimeout(timeoutId);
+      }
+      // También detectar si está activo pero llegó a 0 (caso edge)
       if (timeLeft === 0 && isActive && !isPaused) {
-        handleCompleteSession();
+        const timeoutId = setTimeout(() => {
+          if (!showReflection) {
+            handleCompleteSession();
+          }
+        }, 200);
+        return () => clearTimeout(timeoutId);
       }
       return;
     }
@@ -146,6 +163,7 @@ const FocusModule: React.FC<FocusModuleProps> = ({
     // Ya no requiere asignatura - es opcional
     // Auto-iniciar deep focus (sanctuary mode)
     // Asegurar que se incluya totalTime al iniciar para que el sistema de timestamps funcione correctamente
+    completionHandledRef.current = false; // Resetear el flag cuando se inicia
     updateState({ 
       isActive: true, 
       isPaused: false,
@@ -170,10 +188,25 @@ const FocusModule: React.FC<FocusModuleProps> = ({
   };
 
   const handleCompleteSession = () => {
+    if (completionHandledRef.current) return; // Evitar múltiples llamadas
+    completionHandledRef.current = true;
     updateState({ isActive: false, isPaused: false, sanctuaryMode: false });
     setReflectionData(prev => ({ ...prev, wasInterrupted: false }));
     setShowReflection(true);
   };
+  
+  // Detectar específicamente cuando el timer se completa (timeLeft === 0 y no está activo)
+  useEffect(() => {
+    if (onFocusStateChange && focusState) {
+      // Detectar cuando el timer se completa: timeLeft es 0, no está activo, y no está pausado
+      if (timeLeft === 0 && !isActive && !isPaused && !completionHandledRef.current) {
+        const timeoutId = setTimeout(() => {
+          handleCompleteSession();
+        }, 300);
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [timeLeft, isActive, isPaused, focusState, onFocusStateChange]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -274,58 +307,419 @@ const FocusModule: React.FC<FocusModuleProps> = ({
         </div>
       )}
 
-      <div className="max-w-4xl w-full flex flex-col items-center gap-8 lg:gap-12 animate-fade-in transition-all duration-500 overflow-visible">
-        <header className="text-center">
-          <h1 className={`font-cinzel text-2xl md:text-3xl lg:text-4xl tracking-[0.4em] uppercase opacity-60 mb-2 transition-colors duration-500 ${
-            isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
+      <div className="max-w-7xl w-full flex flex-col items-center gap-6 lg:gap-8 animate-fade-in transition-all duration-500 overflow-visible px-4">
+        {/* Título visible y destacado */}
+        <header className="text-center w-full mb-4">
+          <h1 className={`font-cinzel text-3xl md:text-4xl lg:text-5xl tracking-[0.3em] uppercase font-bold mb-3 transition-colors duration-500 ${
+            isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'
           }`}>
             El Reloj de Arena
           </h1>
-          <div className="h-0.5 w-16 lg:w-24 bg-[#D4AF37] mx-auto opacity-30" />
+          <div className="h-1 w-24 lg:w-32 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent mx-auto opacity-60" />
         </header>
 
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#E35B8F]/10 to-[#D4AF37]/10 rounded-full blur-[80px] opacity-50 group-hover:opacity-100 transition-opacity duration-1000" />
-          <div className={`w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-full flex flex-col items-center justify-center border-2 shadow-2xl relative z-10 overflow-hidden backdrop-blur-[15px] transition-colors duration-500 ${
-            isNightMode 
-              ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/40 shadow-[0_0_40px_rgba(199,125,255,0.3)]' 
-              : 'glass-card border-[#F8C8DC]/40'
-          }`}>
-            {/* Efecto de llenado con líquido rosado traslúcido */}
-            <div 
-              className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#E35B8F]/40 via-[#E35B8F]/30 to-[#E35B8F]/20 transition-all duration-1000 ease-out"
-              style={{ 
-                height: `${fillProgress}%`,
-                clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)'
-              }}
-            />
-            {/* Partículas doradas flotantes */}
-            {fillProgress > 10 && Array.from({ length: Math.floor(fillProgress / 10) }).map((_, i) => (
-              <div
-                key={i}
-                className="absolute rounded-full bg-[#D4AF37]/60 animate-pulse"
-                style={{
-                  bottom: `${Math.random() * fillProgress}%`,
-                  left: `${Math.random() * 100}%`,
-                  width: `${Math.random() * 6 + 3}px`,
-                  height: `${Math.random() * 6 + 3}px`,
-                  animationDelay: `${Math.random() * 2}s`,
-                  animationDuration: `${Math.random() * 3 + 2}s`
-                }}
+        {/* Layout: Reloj de arena a la izquierda, Temporizador a la derecha */}
+        <div className="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-12 mb-6">
+          {/* Columna izquierda: Reloj de Arena */}
+          <div className="flex flex-col items-center gap-4 flex-shrink-0">
+            <div className="relative w-56 h-72 md:w-72 md:h-96 lg:w-80 lg:h-[26rem] flex items-center justify-center">
+              {/* Sombra del reloj */}
+              <div className="absolute bottom-0 w-3/4 h-6 bg-black/25 blur-2xl rounded-full" />
+              
+              {/* Contenedor del reloj de arena - Estética Premium con Curvas Orgánicas */}
+              <svg 
+                viewBox="0 0 100 150" 
+                className="w-full h-full relative z-10"
+                preserveAspectRatio="xMidYMid meet"
+              >
+              {/* Defs para efectos premium */}
+              <defs>
+                {/* Gradiente neón para el marco (rosa a dorado a rosa) */}
+                <linearGradient id={`neonFrameGrad-${selectedSubjectId || 'default'}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={isNightMode ? '#a855f7' : '#ff6ec4'} stopOpacity="1" />
+                  <stop offset="50%" stopColor={isNightMode ? '#d8b4fe' : '#ffd700'} stopOpacity="1" />
+                  <stop offset="100%" stopColor={isNightMode ? '#a855f7' : '#ff6ec4'} stopOpacity="1" />
+                </linearGradient>
+                
+                {/* Gradiente radial para la arena (centro claro, bordes oscuros) */}
+                <radialGradient id={`sandGrad-${selectedSubjectId || 'default'}`} cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                  <stop offset="0%" stopColor={isNightMode ? '#fff5e6' : '#fff5e6'} stopOpacity="1" />
+                  <stop offset="80%" stopColor={isNightMode ? '#d8b4fe' : '#fca5a5'} stopOpacity="1" />
+                  <stop offset="100%" stopColor={isNightMode ? '#a855f7' : '#dba3a3'} stopOpacity="1" />
+                </radialGradient>
+                
+                {/* Filtro de brillo neón externo (con feColorMatrix para intensidad) */}
+                <filter id={`outerGlow-${selectedSubjectId || 'default'}`} height="300%" width="300%" x="-75%" y="-75%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+                  <feColorMatrix 
+                    in="blur" 
+                    type="matrix" 
+                    values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" 
+                    result="goo" 
+                  />
+                  <feComposite in="SourceGraphic" in2="goo" operator="over" />
+                </filter>
+                
+              </defs>
+              
+              {/* Cuerpo del vidrio (fondo translúcido) */}
+              <path 
+                d={`M30,10 
+                    C15,10 15,65 48,75 
+                    C15,85 15,140 30,140 
+                    H70 
+                    C85,140 85,85 52,75 
+                    C85,65 85,10 70,10 
+                    Z`}
+                fill={isNightMode ? 'rgba(50, 20, 40, 0.2)' : 'rgba(50, 20, 40, 0.2)'} 
+                stroke="none" 
               />
-            ))}
-            <span className={`font-mono text-6xl md:text-8xl lg:text-9xl font-black tabular-nums tracking-tighter relative z-10 transition-colors duration-500 ${
-              isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
-            }`}>
-              {formatTime(timeLeft)}
-            </span>
-            <div className="mt-4 lg:mt-6 flex flex-col items-center gap-3 relative z-10">
+              
+              {/* Arena Superior - Dinámica según progreso */}
+              {progress < 100 && (() => {
+                const progressDecimal = progress / 100;
+                const sandHeight = 55 * (1 - progressDecimal);
+                const topY = 70 - sandHeight;
+                const widthAtTop = 20 * (1 - progressDecimal * 0.4);
+                const widthAtBottom = 20;
+                
+                return (
+                  <path 
+                    d={`M${32 + (widthAtTop/2)},${topY} 
+                        C${20 + (widthAtTop/2)},${topY} ${20},${topY + 10} ${32},${70} 
+                        L${68},${70} 
+                        C${80},${topY + 10} ${80 - (widthAtTop/2)},${topY} ${68 - (widthAtTop/2)},${topY} 
+                        Z`}
+                    fill={`url(#sandGrad-${selectedSubjectId || 'default'})`} 
+                    opacity="0.9"
+                    style={{
+                      transition: 'all 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }}
+                  />
+                );
+              })()}
+              
+              {/* Arena Inferior - Dinámica según progreso */}
+              {progress > 0 && (() => {
+                const progressDecimal = progress / 100;
+                const sandHeight = 55 * progressDecimal;
+                const bottomY = 135 - sandHeight;
+                const widthAtTop = 20;
+                const widthAtBottom = 20 * (0.6 + progressDecimal * 0.4);
+                
+                // Forma de montículo
+                const moundOffset = Math.min(12, 10 * progressDecimal);
+                
+                return (
+                  <path 
+                    d={`M${32},${135} 
+                        L${68},${135} 
+                        C${80},${135 - moundOffset} ${80},${bottomY + 5} ${68 - (widthAtBottom/2)},${bottomY} 
+                        C${50},${bottomY - 2} ${50},${bottomY - 2} ${32 + (widthAtBottom/2)},${bottomY} 
+                        C${20},${bottomY + 5} ${20},${135 - moundOffset} ${32},${135} 
+                        Z`}
+                    fill={`url(#sandGrad-${selectedSubjectId || 'default'})`} 
+                    opacity="0.9"
+                    style={{
+                      transition: 'all 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }}
+                  />
+                );
+              })()}
+              
+              {/* Hilo de arena (solo cuando está activo) */}
+              {isActive && !isPaused && progress > 0 && progress < 100 && (
+                <line 
+                  x1="50" 
+                  y1="70" 
+                  x2="50" 
+                  y2="135" 
+                  stroke={`url(#sandGrad-${selectedSubjectId || 'default'})`} 
+                  strokeWidth="1.5" 
+                  strokeLinecap="round" 
+                  opacity="0.8"
+                  style={{
+                    animation: 'sandFlow 1.5s linear infinite, sandFlicker 2s ease-in-out infinite',
+                  }}
+                />
+              )}
+              
+              {/* Reflejos de luz en los bordes (glassmorphism) */}
+              <path 
+                d="M32,15 C20,20 20,60 45,68" 
+                fill="none" 
+                stroke="white" 
+                strokeWidth="0.5" 
+                opacity="0.4" 
+              />
+              <path 
+                d="M28,135 C20,130 20,90 45,82" 
+                fill="none" 
+                stroke="white" 
+                strokeWidth="0.5" 
+                opacity="0.3" 
+              />
+              
+              {/* Marco neón del reloj (con filtro de brillo) */}
+              <path 
+                d={`M30,10 
+                    C15,10 15,65 48,75 
+                    C15,85 15,140 30,140 
+                    H70 
+                    C85,140 85,85 52,75 
+                    C85,65 85,10 70,10 
+                    Z`}
+                fill="none" 
+                stroke={`url(#neonFrameGrad-${selectedSubjectId || 'default'})`} 
+                strokeWidth="2.5" 
+                filter={`url(#outerGlow-${selectedSubjectId || 'default'})`} 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+              
+              {/* Puntos de luz decorativos */}
+              <circle 
+                cx="30" 
+                cy="20" 
+                r="1.5" 
+                fill="white" 
+                opacity="0.8" 
+                filter={`url(#outerGlow-${selectedSubjectId || 'default'})`}
+              />
+              <circle 
+                cx="70" 
+                cy="130" 
+                r="1" 
+                fill="white" 
+                opacity="0.6" 
+                filter={`url(#outerGlow-${selectedSubjectId || 'default'})`}
+              />
+              
+              {/* Línea de separación cuando está pausado */}
+              {isPaused && (
+                <line
+                  x1="47"
+                  y1="70"
+                  x2="53"
+                  y2="135"
+                  stroke={isNightMode ? '#a855f7' : '#ff6ec4'}
+                  strokeWidth="2.5"
+                  strokeDasharray="4,4"
+                  opacity="0.8"
+                  strokeLinecap="round"
+                  filter={`url(#outerGlow-${selectedSubjectId || 'default'})`}
+                />
+              )}
+              
+              
+              {/* Arena Superior - Con Textura Granular y Degradado Radial */}
+              {progress < 100 && (() => {
+                const progressDecimal = progress / 100;
+                const sandHeightTop = 65 * (1 - progressDecimal);
+                const topY = 100 - sandHeightTop;
+                const widthAtTop = 35 * (1 - progressDecimal * 0.4);
+                const widthAtBottom = 35;
+                
+                // Superficie cóncava de la arena
+                const surfaceCurve = Math.max(0, 5 * (1 - progressDecimal));
+                
+                return (
+                  <g>
+                    <path
+                      d={`M ${50 - widthAtTop} ${topY} 
+                          Q ${50 - widthAtTop/2} ${topY + surfaceCurve} ${50} ${topY + surfaceCurve}
+                          Q ${50 + widthAtTop/2} ${topY + surfaceCurve} ${50 + widthAtTop} ${topY}
+                          L ${50 + widthAtBottom} 100
+                          Q ${50 + widthAtBottom/2} 95 ${50} 100
+                          Q ${50 - widthAtBottom/2} 95 ${50 - widthAtBottom} 100 Z`}
+                      fill={`url(#sandGradientTop-${selectedSubjectId || 'default'})`}
+                      filter={`url(#sandTexture-${selectedSubjectId || 'default'})`}
+                      opacity="0.95"
+                      style={{
+                        transition: 'all 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                        filter: isNightMode 
+                          ? 'drop-shadow(0 0 6px rgba(216, 180, 254, 0.5))'
+                          : 'drop-shadow(0 0 6px rgba(248, 200, 220, 0.4))',
+                      }}
+                    />
+                    {/* Brillo en la superficie de la arena */}
+                    <ellipse
+                      cx="50"
+                      cy={topY + surfaceCurve}
+                      rx={widthAtTop * 0.6}
+                      ry={surfaceCurve + 2}
+                      fill="rgba(255, 255, 255, 0.4)"
+                      opacity={0.6}
+                    />
+                  </g>
+                );
+              })()}
+              
+              {/* Hilo de arena animado (solo cuando está activo) - Con Parpadeo */}
+              {isActive && !isPaused && progress > 0 && progress < 100 && (
+                <g>
+                  {/* Línea del hilo de arena con efecto neón y parpadeo */}
+                  <line
+                    x1="50"
+                    y1="100"
+                    x2="50"
+                    y2="120"
+                    stroke={isNightMode ? '#d8b4fe' : '#f8c8dc'}
+                    strokeWidth="1.5"
+                    strokeDasharray="2 3"
+                    style={{
+                      animation: 'sandFlow 1.5s linear infinite, sandFlicker 2s ease-in-out infinite',
+                      filter: isNightMode 
+                        ? 'drop-shadow(0 0 4px rgba(216, 180, 254, 0.8))'
+                        : 'drop-shadow(0 0 4px rgba(248, 200, 220, 0.7))',
+                    }}
+                  />
+                  
+                  {/* Partículas de arena cayendo - más granulares */}
+                  {Array.from({ length: 10 }).map((_, i) => {
+                    const randomOffset = (Math.sin(i * 0.8) + Math.cos(i * 1.2)) * 1.2;
+                    const delay = i * 0.12;
+                    return (
+                      <circle
+                        key={`falling-${i}`}
+                        cx={50 + randomOffset}
+                        cy={100}
+                        r={0.8 + (i % 2) * 0.3}
+                        fill={isNightMode ? '#d8b4fe' : '#f8c8dc'}
+                        opacity={0.85 - (i * 0.08)}
+                        style={{
+                          animation: `sandFall ${0.7 + (i * 0.1)}s cubic-bezier(0.4, 0, 0.2, 1) infinite`,
+                          animationDelay: `${delay}s`,
+                          filter: isNightMode 
+                            ? 'drop-shadow(0 0 2px rgba(216, 180, 254, 0.6))'
+                            : 'drop-shadow(0 0 2px rgba(248, 200, 220, 0.5))',
+                        }}
+                      />
+                    );
+                  })}
+                </g>
+              )}
+              
+              {/* Arena Inferior - Con Montículo y Textura Granular */}
+              {progress > 0 && (() => {
+                const progressDecimal = progress / 100;
+                const sandHeightBottom = 65 * progressDecimal;
+                const bottomY = 120 + sandHeightBottom;
+                const widthAtTop = 35;
+                const widthAtBottom = 35 * (0.6 + progressDecimal * 0.4);
+                
+                // Forma de montículo (más redondeado cuando hay más arena)
+                const moundHeight = Math.min(15, 12 * progressDecimal);
+                const moundWidth = Math.min(30, 25 * progressDecimal);
+                
+                return (
+                  <g>
+                    <path
+                      d={`M ${50 - widthAtTop} 120 
+                          Q ${50 - widthAtTop/2} 115 ${50} 120
+                          Q ${50 + widthAtTop/2} 115 ${50 + widthAtTop} 120
+                          L ${50 + widthAtBottom} ${bottomY}
+                          Q ${50 + widthAtBottom/2} ${bottomY + 5} ${50} ${bottomY}
+                          Q ${50 - widthAtBottom/2} ${bottomY + 5} ${50 - widthAtBottom} ${bottomY} Z`}
+                      fill={`url(#sandGradientBottom-${selectedSubjectId || 'default'})`}
+                      filter={`url(#sandTexture-${selectedSubjectId || 'default'})`}
+                      opacity="0.95"
+                      style={{
+                        transition: 'all 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                        filter: isNightMode 
+                          ? 'drop-shadow(0 0 6px rgba(216, 180, 254, 0.5))'
+                          : 'drop-shadow(0 0 6px rgba(248, 200, 220, 0.4))',
+                      }}
+                    />
+                    {/* Montículo superior de la arena */}
+                    {progressDecimal > 0.1 && (
+                      <ellipse
+                        cx="50"
+                        cy={bottomY - moundHeight}
+                        rx={moundWidth}
+                        ry={moundHeight}
+                        fill={isNightMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 250, 240, 0.6)'}
+                        opacity={0.7}
+                        style={{
+                          transition: 'all 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                      />
+                    )}
+                    {/* Brillo en el centro del montículo */}
+                    {progressDecimal > 0.15 && (
+                      <ellipse
+                        cx="50"
+                        cy={bottomY - moundHeight - 2}
+                        rx={moundWidth * 0.6}
+                        ry={moundHeight * 0.5}
+                        fill="rgba(255, 255, 255, 0.4)"
+                        opacity={0.8}
+                        style={{
+                          transition: 'all 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                      />
+                    )}
+                  </g>
+                );
+              })()}
+              
+              {/* Línea de separación cuando está pausado - estilo neón */}
+              {isPaused && (
+                <line
+                  x1="47"
+                  y1="100"
+                  x2="53"
+                  y2="120"
+                  stroke={isNightMode ? '#a855f7' : '#E35B8F'}
+                  strokeWidth="2.5"
+                  strokeDasharray="4,4"
+                  opacity="0.8"
+                  strokeLinecap="round"
+                  style={{
+                    filter: isNightMode 
+                      ? 'drop-shadow(0 0 5px rgba(168, 85, 247, 0.9))'
+                      : 'drop-shadow(0 0 5px rgba(227, 91, 143, 0.8))',
+                  }}
+                />
+              )}
+            </svg>
+          </div>
+        </div>
+
+        {/* Columna derecha: Temporizador y Controles */}
+        <div className="flex flex-col items-center gap-6 flex-1 max-w-md w-full">
+          {/* Display del temporizador */}
+          <div className={`relative w-full max-w-sm flex flex-col items-center justify-center p-8 rounded-3xl shadow-2xl backdrop-blur-xl transition-all duration-500 ${
+            isNightMode 
+              ? 'bg-[rgba(48,43,79,0.7)] border-2 border-[#A68A56]/40' 
+              : 'glass-card border-2 border-[#D4AF37]/40'
+          }`}>
+            {/* Tiempo restante grande y claro */}
+            <div className="mb-6">
+              <span className={`font-mono text-7xl md:text-8xl lg:text-9xl font-black tabular-nums tracking-tighter transition-colors duration-500 ${
+                isNightMode ? 'text-[#E0E1DD]' : 'text-[#2D1A26]'
+              }`}>
+                {formatTime(timeLeft)}
+              </span>
+            </div>
+            
+            {/* Barra de progreso visual */}
+            <div className="w-full h-2 bg-[#F8C8DC]/20 rounded-full overflow-hidden mb-6">
+              <div 
+                className="h-full bg-gradient-to-r from-[#E35B8F] via-[#D4AF37] to-[#E35B8F] transition-all duration-1000 ease-linear"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            
+            {/* Controles del timer - Mejorados y más visibles */}
+            <div className="flex items-center justify-center gap-4">
               {!isActive ? (
                 <button 
                   onClick={handleStart}
-                  className="btn-primary w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
+                  className="btn-primary w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-2xl hover:shadow-[#E35B8F]/50"
+                  aria-label="Iniciar temporizador"
                 >
-                  <svg className="w-7 h-7 lg:w-8 lg:h-8 ml-1" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="w-10 h-10 md:w-12 md:h-12 ml-1" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8 5v14l11-7z"/>
                   </svg>
                 </button>
@@ -334,33 +728,47 @@ const FocusModule: React.FC<FocusModuleProps> = ({
                   {isPaused ? (
                     <button 
                       onClick={handleResume}
-                      className="btn-primary w-14 h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
+                      className="btn-primary w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-2xl hover:shadow-[#E35B8F]/50"
+                      aria-label="Reanudar temporizador"
                     >
-                      <svg className="w-7 h-7 lg:w-8 lg:h-8 ml-1" viewBox="0 0 24 24" fill="currentColor">
+                      <svg className="w-10 h-10 md:w-12 md:h-12 ml-1" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M8 5v14l11-7z"/>
                       </svg>
                     </button>
                   ) : (
                     <button 
                       onClick={handlePause}
-                      className="w-14 h-14 lg:w-16 lg:h-16 rounded-full border-2 border-[#D4AF37] text-[#D4AF37] flex items-center justify-center hover:bg-[#D4AF37]/10 transition-colors shadow-lg"
+                      className={`w-20 h-20 md:w-24 md:h-24 rounded-full border-3 flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-xl ${
+                        isNightMode 
+                          ? 'border-[#A68A56] text-[#A68A56] hover:bg-[#A68A56]/20' 
+                          : 'border-[#D4AF37] text-[#D4AF37] hover:bg-[#D4AF37]/20'
+                      }`}
+                      aria-label="Pausar temporizador"
                     >
-                      {getIcon('pause', 'w-4 h-4 lg:w-5 lg:h-5')}
+                      {getIcon('pause', 'w-8 h-8 md:w-10 md:h-10')}
                     </button>
                   )}
                   <button 
                     onClick={handleStop}
-                    className="w-14 h-14 lg:w-16 lg:h-16 rounded-full border-2 border-[#E35B8F] text-[#E35B8F] flex items-center justify-center hover:bg-[#E35B8F]/10 transition-colors shadow-lg"
+                    className={`w-20 h-20 md:w-24 md:h-24 rounded-full border-3 flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-xl ${
+                      isNightMode 
+                        ? 'border-[#E35B8F] text-[#E35B8F] hover:bg-[#E35B8F]/20' 
+                        : 'border-[#E35B8F] text-[#E35B8F] hover:bg-[#E35B8F]/20'
+                    }`}
+                    aria-label="Detener temporizador"
                   >
-                    <div className="w-4 h-4 lg:w-5 lg:h-5 bg-current rounded-sm" />
+                    <div className="w-6 h-6 md:w-8 md:h-8 bg-current rounded-sm" />
                   </button>
                 </>
               )}
             </div>
           </div>
         </div>
+        {/* Cierra el layout flex principal (línea 322) */}
+        </div>
 
-        <div className="w-full max-w-2xl lg:max-w-3xl">
+        {/* Sección Vínculo Académico - Debajo del layout principal */}
+        <div className="w-full max-w-4xl mt-4">
           <div className={`p-6 lg:p-8 rounded-[2.5rem] shadow-sm backdrop-blur-[15px] transition-colors duration-500 ${
             isNightMode 
               ? 'bg-[rgba(48,43,79,0.6)] border-[#A68A56]/30' 
@@ -374,8 +782,11 @@ const FocusModule: React.FC<FocusModuleProps> = ({
             <div className="space-y-5">
               <select 
                 disabled={isActive}
-                value={selectedSubjectId || ''}
-                onChange={(e) => updateState({ selectedSubjectId: e.target.value || null })}
+                value={selectedSubjectId ?? ''}
+                onChange={(e) => {
+                  const newValue = e.target.value === '' ? null : e.target.value;
+                  updateState({ selectedSubjectId: newValue });
+                }}
                 className="w-full bg-white/60 border border-[#F8C8DC] rounded-xl px-4 py-3.5 text-base font-garamond focus:outline-none focus:border-[#E35B8F] disabled:opacity-50 appearance-none shadow-inner"
               >
                 <option value="">Sin asignatura (Enfoque General)</option>
