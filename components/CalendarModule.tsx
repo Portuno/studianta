@@ -837,6 +837,32 @@ const CalendarModule: React.FC<CalendarModuleProps> = ({
             ))}
           </div>
 
+          {isGoogleConnected && (
+            <button
+              onClick={handleSyncGoogle}
+              disabled={isSyncing}
+              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[10px] font-cinzel font-black uppercase tracking-[0.15em] shadow-md min-h-[44px] touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                isNightMode 
+                  ? 'bg-[#C77DFF] text-white hover:bg-[#B56DE6] shadow-[#C77DFF]/30' 
+                  : 'bg-[#E35B8F] text-white hover:bg-[#E35B8F]/90'
+              }`}
+              title="Sincronizar con Google Calendar"
+              aria-label="Sincronizar con Google Calendar"
+            >
+              {isSyncing ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Sincronizando</span>
+                </>
+              ) : (
+                <>
+                  {getIcon('check', 'w-3 h-3')}
+                  <span>Sincronizar</span>
+                </>
+              )}
+            </button>
+          )}
+
           {/* Botón de Conectividad */}
           <button
             onClick={() => setShowConnectivitySection(!showConnectivitySection)}
