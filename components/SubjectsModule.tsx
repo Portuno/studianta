@@ -1870,8 +1870,33 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
   const [selectedText, setSelectedText] = useState('');
   const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState({ top: 0, left: 0 });
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const scrollCaretIntoView = () => {
+    const container = scrollContainerRef.current;
+    const editor = contentRef.current;
+    if (!container || !editor) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return;
+
+    const caretRect = range.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    const verticalPadding = 40;
+
+    if (caretRect.bottom > containerRect.bottom - verticalPadding) {
+      const delta = caretRect.bottom - (containerRect.bottom - verticalPadding);
+      container.scrollTop += delta;
+    } else if (caretRect.top < containerRect.top + verticalPadding) {
+      const delta = (containerRect.top + verticalPadding) - caretRect.top;
+      container.scrollTop -= delta;
+    }
+  };
 
   useEffect(() => {
     onFocusChange(true);
@@ -1882,6 +1907,10 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
     } else if (contentRef.current && !note) {
       contentRef.current.innerHTML = '';
       setContent('');
+    }
+    if (contentRef.current) {
+      contentRef.current.focus();
+      requestAnimationFrame(scrollCaretIntoView);
     }
     return () => onFocusChange(false);
   }, [onFocusChange, note]);
@@ -1938,6 +1967,7 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
     const editor = contentRef.current;
     if (!editor) return;
     setContent(editor.innerHTML);
+    requestAnimationFrame(scrollCaretIntoView);
   };
 
   const applyFormat = (command: string, value?: string) => {
@@ -2159,7 +2189,7 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
         </div>
 
         {/* Lienzo de Escritura con Líneas de Cuaderno */}
-        <div className="flex-1 relative overflow-auto">
+        <div ref={scrollContainerRef} className="flex-1 relative overflow-auto">
           <div 
             className="absolute inset-0 bg-gradient-to-b from-[#FFF9FB] to-[#FDF2F7] pointer-events-none"
             style={{
@@ -2176,6 +2206,8 @@ const NoteEditorModal: React.FC<NoteEditorModalProps> = ({ subject, note, onClos
             ref={contentRef}
             contentEditable
             onInput={(e) => handleContentChange(e as React.FormEvent<HTMLDivElement>)}
+            onKeyUp={scrollCaretIntoView}
+            onClick={scrollCaretIntoView}
             onSelect={handleTextSelection}
             onBlur={() => setTimeout(() => setShowToolbar(false), 200)}
             className="relative w-full h-full bg-transparent border-none outline-none p-8 font-garamond text-[20px] leading-[1.6] text-[#4A233E] min-h-full"
