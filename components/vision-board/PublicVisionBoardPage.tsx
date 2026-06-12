@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { VisionBoard, BoardBlock } from '../../types';
+import { VisionBoard, BoardBlock, CanvasElement } from '../../types';
 import { supabaseService } from '../../services/supabaseService';
-import VisionBoardGrid from './VisionBoardGrid';
+import InteractiveCanvas from './InteractiveCanvas';
 
 interface PublicVisionBoardPageProps {
   shareToken: string;
@@ -10,6 +10,7 @@ interface PublicVisionBoardPageProps {
 const PublicVisionBoardPage: React.FC<PublicVisionBoardPageProps> = ({ shareToken }) => {
   const [board, setBoard] = useState<VisionBoard | null>(null);
   const [blocks, setBlocks] = useState<BoardBlock[]>([]);
+  const [elements, setElements] = useState<CanvasElement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +22,8 @@ const PublicVisionBoardPage: React.FC<PublicVisionBoardPageProps> = ({ shareToke
           setError('Tablero no encontrado o no es público');
         } else {
           setBoard(result.board);
-          setBlocks(result.blocks.filter(b => b.status === 'en_proceso'));
+          setBlocks(result.blocks);
+          setElements(result.board.canvasElements || []);
         }
       } catch {
         setError('Error al cargar el tablero');
@@ -60,12 +62,14 @@ const PublicVisionBoardPage: React.FC<PublicVisionBoardPageProps> = ({ shareToke
         <p className="text-[#8B5E75] text-xs mt-1">Solo lectura</p>
       </header>
       <main className="max-w-5xl mx-auto p-4">
-        <VisionBoardGrid
-          blocks={blocks}
-          progressLogs={{}}
+        <InteractiveCanvas
+          elements={elements}
+          blocks={blocks.filter(b => b.status === 'en_proceso')}
           canEdit={false}
-          onBlockClick={() => {}}
-          onToggleChecklistItem={() => {}}
+          isMobile={typeof window !== 'undefined' && window.innerWidth < 768}
+          onElementsChange={() => {}}
+          onOpenBlock={() => {}}
+          onLinkSelection={async () => {}}
         />
       </main>
       <footer className="text-center py-6">

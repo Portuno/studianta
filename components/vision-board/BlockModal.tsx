@@ -12,6 +12,7 @@ interface BlockModalProps {
   progressLogs: BlockProgressLog[];
   canEdit: boolean;
   isNightMode?: boolean;
+  embedded?: boolean;
   journalEntries: JournalEntry[];
   onClose: () => void;
   onSave: (updates: Partial<BoardBlock>) => Promise<void>;
@@ -28,6 +29,7 @@ const BlockModal: React.FC<BlockModalProps> = ({
   progressLogs,
   canEdit,
   isNightMode = false,
+  embedded = false,
   journalEntries,
   onClose,
   onSave,
@@ -85,28 +87,16 @@ const BlockModal: React.FC<BlockModalProps> = ({
     debouncedSave({ moodTags: updated });
   };
 
-  return (
+  const formContent = (
     <>
-      <div
-        className={`fixed inset-0 z-[200] backdrop-blur-sm flex items-center justify-center p-4 ${
-          isNightMode ? 'bg-black/60' : 'bg-black/50'
-        }`}
-        onClick={onClose}
-      >
-        <div
-          className={`rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto ${
-            isNightMode ? 'bg-[#302B4F]/95 border border-[#D4AF37]/20' : 'glass-card'
-          }`}
-          onClick={e => e.stopPropagation()}
-        >
-          {block.imageUrl && (
+          {block.imageUrl && !embedded && (
             <div className="relative h-40 overflow-hidden rounded-t-2xl">
               <img src={block.imageUrl} alt={block.name} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
             </div>
           )}
 
-          <div className="p-5 space-y-4">
+          <div className={`space-y-4 ${embedded ? 'p-4' : 'p-5'}`}>
             <div className="flex items-start justify-between">
               <input
                 value={name}
@@ -116,11 +106,13 @@ const BlockModal: React.FC<BlockModalProps> = ({
                 }}
                 readOnly={!canEdit}
                 className={`font-cinzel text-xl font-semibold bg-transparent border-none outline-none w-full ${textPrimary}`}
-                placeholder="Nombre de la meta"
+                placeholder="Nombre del área"
               />
-              <button onClick={onClose} className={`p-1 ${textSecondary} hover:opacity-70`}>
-                <X className="w-5 h-5" />
-              </button>
+              {!embedded && (
+                <button onClick={onClose} className={`p-1 ${textSecondary} hover:opacity-70`}>
+                  <X className="w-5 h-5" />
+                </button>
+              )}
             </div>
 
             <textarea
@@ -342,8 +334,30 @@ const BlockModal: React.FC<BlockModalProps> = ({
               </div>
             )}
           </div>
+    </>
+  );
+
+  return (
+    <>
+      {embedded ? (
+        formContent
+      ) : (
+        <div
+          className={`fixed inset-0 z-[200] backdrop-blur-sm flex items-center justify-center p-4 ${
+            isNightMode ? 'bg-black/60' : 'bg-black/50'
+          }`}
+          onClick={onClose}
+        >
+          <div
+            className={`rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto ${
+              isNightMode ? 'bg-[#302B4F]/95 border border-[#D4AF37]/20' : 'glass-card'
+            }`}
+            onClick={e => e.stopPropagation()}
+          >
+            {formContent}
+          </div>
         </div>
-      </div>
+      )}
 
       {showAchieveModal && (
         <div

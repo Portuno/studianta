@@ -113,6 +113,27 @@ export interface JournalEntry {
 export type BlockStatus = 'en_proceso' | 'conseguido' | 'archivado';
 export type CollaboratorRole = 'viewer' | 'editor';
 export type BlockSizePreset = 'sm' | 'md' | 'lg' | 'wide' | 'tall';
+export type CanvasElementType = 'image' | 'text';
+export type CanvasFontFamily = 'cinzel' | 'garamond' | 'inter';
+
+export interface CanvasElement {
+  id: string;
+  type: CanvasElementType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation?: number;
+  zIndex: number;
+  blockId?: string | null;
+  imageUrl?: string;
+  text?: string;
+  fontFamily?: CanvasFontFamily;
+  fontSize?: number;
+  fontWeight?: 'normal' | 'bold';
+  color?: string;
+  backgroundColor?: string;
+}
 
 export interface ChecklistItem {
   id: string;
@@ -132,6 +153,7 @@ export interface VisionBoard {
   title: string;
   isPublic: boolean;
   shareToken?: string;
+  canvasElements?: CanvasElement[];
   createdAt: string;
   updatedAt: string;
 }
@@ -142,6 +164,7 @@ export interface BoardBlock {
   name: string;
   description: string;
   imageUrl?: string;
+  elementIds: string[];
   sizePreset: BlockSizePreset;
   gridCol: number;
   gridRow: number;

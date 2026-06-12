@@ -3,7 +3,7 @@ import {
   Subject, Transaction, JournalEntry, CustomCalendarEvent, Module,
   NutritionEntry, NutritionGoals, NutritionCorrelation, NavigationConfig, NavigationModule, NavView,
   VisionBoard, BoardBlock, BoardCollaborator, BlockProgressLog, UserAchievementSaving,
-  ChecklistItem, BlockStatus, CollaboratorRole, BlockSizePreset,
+  ChecklistItem, BlockStatus, CollaboratorRole, BlockSizePreset, CanvasElement,
 } from '../types';
 import { encryptionService } from './encryptionService';
 
@@ -3099,6 +3099,11 @@ export class SupabaseService {
 
   // ============ VISION BOARD ============
 
+  private mapCanvasElements(raw: unknown): CanvasElement[] {
+    if (!Array.isArray(raw)) return [];
+    return raw as CanvasElement[];
+  }
+
   private mapVisionBoard(row: any): VisionBoard {
     return {
       id: row.id,
@@ -3106,6 +3111,7 @@ export class SupabaseService {
       title: row.title,
       isPublic: row.is_public,
       shareToken: row.share_token || undefined,
+      canvasElements: this.mapCanvasElements(row.canvas_elements),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -3118,6 +3124,7 @@ export class SupabaseService {
       name: row.name || '',
       description: row.description || '',
       imageUrl: row.image_url || undefined,
+      elementIds: row.element_ids || [],
       sizePreset: row.size_preset || 'sm',
       gridCol: row.grid_col ?? 0,
       gridRow: row.grid_row ?? 0,
@@ -3231,13 +3238,35 @@ export class SupabaseService {
     return this.mapVisionBoard(data);
   }
 
+  async getVisionBoard(boardId: string): Promise<VisionBoard | null> {
+    const { data, error } = await supabase
+      .from('vision_boards')
+      .select('*')
+      .eq('id', boardId)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? this.mapVisionBoard(data) : null;
+  }
+
+  async updateCanvasElements(boardId: string, elements: CanvasElement[]): Promise<CanvasElement[]> {
+    const { data, error } = await supabase
+      .from('vision_boards')
+      .update({ canvas_elements: elements })
+      .eq('id', boardId)
+      .select('canvas_elements')
+      .single();
+    if (error) throw error;
+    return this.mapCanvasElements(data?.canvas_elements);
+  }
+
   async updateVisionBoard(
     userId: string,
     boardId: string,
-    updates: Partial<Pick<VisionBoard, 'title' | 'isPublic' | 'shareToken'>>
+    updates: Partial<Pick<VisionBoard, 'title' | 'isPublic' | 'shareToken' | 'canvasElements'>>
   ): Promise<VisionBoard> {
     const dbUpdates: any = {};
     if (updates.title !== undefined) dbUpdates.title = updates.title;
+    if (updates.canvasElements !== undefined) dbUpdates.canvas_elements = updates.canvasElements;
     if (updates.isPublic !== undefined) {
       dbUpdates.is_public = updates.isPublic;
       if (updates.isPublic && updates.shareToken === undefined) {
@@ -3334,6 +3363,7 @@ export class SupabaseService {
       name: block.name || 'Nueva meta',
       description: block.description || '',
       image_url: block.imageUrl || null,
+      element_ids: block.elementIds || [],
       size_preset: preset,
       grid_col: position.gridCol,
       grid_row: position.gridRow,
@@ -3381,6 +3411,7 @@ export class SupabaseService {
     if (updates.status !== undefined) dbUpdates.status = updates.status;
     if (updates.progressPercentage !== undefined) dbUpdates.progress_percentage = updates.progressPercentage;
     if (updates.sortOrder !== undefined) dbUpdates.sort_order = updates.sortOrder;
+    if (updates.elementIds !== undefined) dbUpdates.element_ids = updates.elementIds;
 
     const { data, error } = await supabase
       .from('board_blocks')
@@ -3391,6 +3422,32 @@ export class SupabaseService {
 
     if (error) throw error;
     return this.mapBoardBlock(data);
+  }
+
+  async linkElementsToBlock(
+    boardId: string,
+    elementIds: string[],
+    canvasElements: CanvasElement[],
+    name = 'Nueva meta'
+  ): Promise<{ block: BoardBlock; elements: CanvasElement[] }> {
+    const block = await this.createBoardBlock(boardId, {
+      name,
+      elementIds,
+      checklist: [],
+    });
+
+    const firstImage = canvasElements.find(e => elementIds.includes(e.id) && e.type === 'image');
+    if (firstImage?.imageUrl) {
+      await this.updateBoardBlock(block.id, { imageUrl: firstImage.imageUrl });
+    }
+
+    const updatedElements = canvasElements.map(el =>
+      elementIds.includes(el.id) ? { ...el, blockId: block.id } : el
+    );
+    await this.updateCanvasElements(boardId, updatedElements);
+    const updatedBlock = await this.updateBoardBlock(block.id, { elementIds });
+
+    return { block: updatedBlock, elements: updatedElements };
   }
 
   async deleteBoardBlock(blockId: string): Promise<void> {
@@ -3563,12 +3620,20 @@ export class SupabaseService {
     if (error) throw error;
   }
 
-  async uploadVisionBoardImage(userId: string, boardId: string, blockId: string, file: File): Promise<string> {
+  async uploadVisionBoardImage(
+    userId: string,
+    boardId: string,
+    targetId: string,
+    file: File,
+    subfolder = ''
+  ): Promise<string> {
     if (file.size > 5 * 1024 * 1024) {
       throw new Error('La imagen no puede superar 5MB');
     }
     const fileExt = file.name.split('.').pop() || 'jpg';
-    const path = `${userId}/${boardId}/${blockId}.${fileExt}`;
+    const path = subfolder
+      ? `${userId}/${boardId}/${subfolder}/${targetId}.${fileExt}`
+      : `${userId}/${boardId}/${targetId}.${fileExt}`;
 
     const { error } = await supabase.storage
       .from('vision-board-images')
