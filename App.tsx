@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavView, Subject, Module, Transaction, JournalEntry, CustomCalendarEvent, NutritionEntry, NutritionGoals, NutritionCorrelation, BalanzaProTransaction, Exam, ExamResult } from './types';
 import { INITIAL_MODULES, getIcon } from './constants';
-import { supabaseService, supabase, UserProfile } from './services/supabaseService';
+import { supabaseService, supabase, UserProfile, isSupabaseConfigured } from './services/supabaseService';
 import { googleCalendarService } from './services/googleCalendarService';
 import { examService } from './services/examService';
 import { Analytics } from '@vercel/analytics/react';
@@ -32,8 +32,16 @@ import OnboardingModal from './components/OnboardingModal';
 import CookieConsentBanner from './components/CookieConsentBanner';
 import DashboardStatsModule from './components/DashboardStatsModule';
 import PremiumPage from './components/PremiumPage';
+import VisionBoardModule from './components/vision-board/VisionBoardModule';
+import PublicVisionBoardPage from './components/vision-board/PublicVisionBoardPage';
+
+const getPublicShareToken = (): string | null => {
+  const match = window.location.pathname.match(/^\/vision-board\/share\/([^/]+)/);
+  return match ? match[1] : null;
+};
 
 const App: React.FC = () => {
+  const [publicShareToken] = useState<string | null>(getPublicShareToken());
   const [user, setUser] = useState<any>(null);
   const [initialLoading, setInitialLoading] = useState(true); // Solo para la carga inicial
   
@@ -679,8 +687,14 @@ const App: React.FC = () => {
 
     loadUserData();
 
-    // Escuchar cambios de autenticación
+    // Escuchar cambios de autenticación (solo si Supabase está configurado)
     try {
+      if (!isSupabaseConfigured()) {
+        return () => {
+          isMounted = false;
+        };
+      }
+
       const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (!isMounted) return;
 
@@ -887,6 +901,7 @@ const App: React.FC = () => {
           break;
 
         case NavView.DIARY:
+        case NavView.VISION_BOARD:
           // Cargar journalEntries si no están cargados
           if (!dataLoadedFlags.journalEntries) {
             try {
@@ -1763,6 +1778,34 @@ const App: React.FC = () => {
           onVerifyPin={verifyPin}
           isNightMode={isNightMode}
         />;
+      case NavView.VISION_BOARD:
+        if (!user) {
+          return (
+            <div className="flex flex-col items-center justify-center py-20">
+              <p className={`font-cinzel text-lg mb-4 ${isNightMode ? 'text-[#E0E1DD]' : 'text-[#4A233E]'}`}>
+                Inicia sesión para acceder a tu Vision Board
+              </p>
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="px-6 py-2 rounded-xl bg-[#E35B8F] text-white"
+              >
+                Iniciar sesión
+              </button>
+            </div>
+          );
+        }
+        return (
+          <VisionBoardModule
+            userId={user.id}
+            userTier={userProfile?.tier || 'Free'}
+            isMobile={isMobile}
+            isNightMode={isNightMode}
+            journalEntries={journalEntries}
+            onJournalEntryAdded={handleAddJournalEntry}
+            onJournalEntryUpdated={handleUpdateJournalEntry}
+            onNavigateToDiary={() => setActiveView(NavView.DIARY)}
+          />
+        );
       case NavView.PROFILE:
         return <ProfileModule 
           user={user} 
@@ -1912,6 +1955,10 @@ const App: React.FC = () => {
       return newValue;
     });
   };
+
+  if (publicShareToken) {
+    return <PublicVisionBoardPage shareToken={publicShareToken} />;
+  }
 
   return (
     <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} h-screen w-screen overflow-hidden transition-colors duration-500 ${

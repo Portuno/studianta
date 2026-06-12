@@ -1,18 +1,33 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Subject, Transaction, JournalEntry, CustomCalendarEvent, Module, NutritionEntry, NutritionGoals, NutritionCorrelation, NavigationConfig, NavigationModule, NavView } from '../types';
+import {
+  Subject, Transaction, JournalEntry, CustomCalendarEvent, Module,
+  NutritionEntry, NutritionGoals, NutritionCorrelation, NavigationConfig, NavigationModule, NavView,
+  VisionBoard, BoardBlock, BoardCollaborator, BlockProgressLog, UserAchievementSaving,
+  ChecklistItem, BlockStatus, CollaboratorRole, BlockSizePreset,
+} from '../types';
 import { encryptionService } from './encryptionService';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials are missing. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
+export const isSupabaseConfigured = (): boolean =>
+  Boolean(supabaseUrl && supabaseAnonKey);
+
+if (!isSupabaseConfigured()) {
+  console.warn(
+    'Supabase credentials are missing. Create a .env.local file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY'
+  );
 }
 
 // Singleton pattern para evitar múltiples instancias
 let supabaseInstance: SupabaseClient | null = null;
 
 const getSupabaseClient = (): SupabaseClient => {
+  if (!isSupabaseConfigured()) {
+    throw new Error(
+      'Supabase no está configurado. Crea un archivo .env.local con VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.'
+    );
+  }
   if (!supabaseInstance) {
     supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -38,7 +53,14 @@ const getSupabaseClient = (): SupabaseClient => {
   return supabaseInstance;
 };
 
-export const supabase: SupabaseClient = getSupabaseClient();
+// Inicialización lazy: no crear el cliente al importar el módulo
+export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const client = getSupabaseClient();
+    const value = Reflect.get(client, prop, client);
+    return typeof value === 'function' ? value.bind(client) : value;
+  },
+});
 
 // Helper function para reintentos con backoff exponencial
 const retryWithBackoff = async <T>(
@@ -395,8 +417,8 @@ export class SupabaseService {
   // ============ AUTHENTICATION ============
   
   async signUp(email: string, password: string, fullName?: string) {
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Supabase no está configurado. Por favor, configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu archivo .env');
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase no está configurado. Por favor, configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu archivo .env.local');
     }
     
     const { data, error } = await supabase.auth.signUp({
@@ -425,8 +447,8 @@ export class SupabaseService {
   }
 
   async signIn(email: string, password: string) {
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Supabase no está configurado. Por favor, configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu archivo .env');
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase no está configurado. Por favor, configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu archivo .env.local');
     }
     
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -447,8 +469,8 @@ export class SupabaseService {
   }
 
   async signInWithGoogle() {
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Supabase no está configurado. Por favor, configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu archivo .env');
+    if (!isSupabaseConfigured()) {
+      throw new Error('Supabase no está configurado. Por favor, configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu archivo .env.local');
     }
     
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -470,6 +492,7 @@ export class SupabaseService {
   }
 
   async signOut() {
+    if (!isSupabaseConfigured()) return;
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     // Limpiar contraseña de encriptación al cerrar sesión
@@ -477,25 +500,21 @@ export class SupabaseService {
   }
 
   async getCurrentUser() {
+    if (!isSupabaseConfigured()) return null;
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) throw error;
     return user;
   }
 
   async getSession() {
+    if (!isSupabaseConfigured()) return null;
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        // Si no hay credenciales configuradas, retornar null
-        if (!supabaseUrl || !supabaseAnonKey) {
-          return null;
-        }
-        throw error;
-      }
+      if (error) throw error;
       return session;
     } catch (error: any) {
-      // Si hay un error de conexión o credenciales faltantes, retornar null
-      if (!supabaseUrl || !supabaseAnonKey) {
+      if (isNetworkError(error)) {
+        console.warn('Network error loading session, returning null');
         return null;
       }
       throw error;
@@ -1000,6 +1019,7 @@ export class SupabaseService {
           photos: decryptedPhotos, // Array de URLs desencriptadas
           isLocked: row.is_locked,
           sentiment: row.sentiment ? parseFloat(row.sentiment) : undefined,
+          blockId: row.block_id || undefined,
         };
       }));
     } catch (error: any) {
@@ -1032,6 +1052,7 @@ export class SupabaseService {
     if (encryptedPhoto !== undefined) insertData.photo = encryptedPhoto;
     if (encryptedPhotos !== undefined && encryptedPhotos.length > 0) insertData.photos = encryptedPhotos;
     if (entry.sentiment !== undefined) insertData.sentiment = entry.sentiment;
+    if (entry.blockId !== undefined) insertData.block_id = entry.blockId;
 
     const { data, error } = await supabase
       .from('journal_entries')
@@ -1055,6 +1076,7 @@ export class SupabaseService {
       photos: decryptedPhotos,
       isLocked: data.is_locked,
       sentiment: data.sentiment ? parseFloat(data.sentiment) : undefined,
+      blockId: data.block_id || undefined,
     };
   }
 
@@ -1081,6 +1103,9 @@ export class SupabaseService {
     if (updates.photo !== undefined) {
       dbUpdates.photo = await this.encryptField(updates.photo, userId);
     }
+    if (updates.blockId !== undefined) {
+      dbUpdates.block_id = updates.blockId || null;
+    }
 
     const { data, error } = await supabase
       .from('journal_entries')
@@ -1106,7 +1131,27 @@ export class SupabaseService {
       photos: decryptedPhotos,
       isLocked: data.is_locked,
       sentiment: data.sentiment ? parseFloat(data.sentiment) : undefined,
+      blockId: data.block_id || undefined,
     };
+  }
+
+  async linkJournalEntryToBlock(userId: string, entryId: string, blockId: string): Promise<JournalEntry> {
+    return this.updateJournalEntry(userId, entryId, { blockId });
+  }
+
+  async createJournalEntryFromBlock(
+    userId: string,
+    blockId: string,
+    content: string,
+    mood: JournalEntry['mood'] = 'Enfocada'
+  ): Promise<JournalEntry> {
+    return this.createJournalEntry(userId, {
+      date: new Date().toISOString(),
+      mood,
+      content,
+      isLocked: false,
+      blockId,
+    });
   }
 
   async deleteJournalEntry(userId: string, entryId: string) {
@@ -3050,6 +3095,582 @@ export class SupabaseService {
       throw error;
     }
     // NO limpiar la contraseña aquí, el usuario puede querer seguir usándola
+  }
+
+  // ============ VISION BOARD ============
+
+  private mapVisionBoard(row: any): VisionBoard {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      title: row.title,
+      isPublic: row.is_public,
+      shareToken: row.share_token || undefined,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private mapBoardBlock(row: any): BoardBlock {
+    return {
+      id: row.id,
+      boardId: row.board_id,
+      name: row.name || '',
+      description: row.description || '',
+      imageUrl: row.image_url || undefined,
+      sizePreset: row.size_preset || 'sm',
+      gridCol: row.grid_col ?? 0,
+      gridRow: row.grid_row ?? 0,
+      colSpan: row.col_span ?? 1,
+      rowSpan: row.row_span ?? 1,
+      checklist: Array.isArray(row.checklist) ? row.checklist : [],
+      links: Array.isArray(row.links) ? row.links : [],
+      moodTags: row.mood_tags || [],
+      status: row.status || 'en_proceso',
+      progressPercentage: row.progress_percentage ?? 0,
+      sortOrder: row.sort_order ?? 0,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  computeProgressPercentage(checklist: ChecklistItem[]): number {
+    if (!checklist.length) return 0;
+    const done = checklist.filter(item => item.done).length;
+    return Math.round((done / checklist.length) * 100);
+  }
+
+  getSizeSpans(preset: BlockSizePreset): { colSpan: number; rowSpan: number } {
+    const map: Record<BlockSizePreset, { colSpan: number; rowSpan: number }> = {
+      sm: { colSpan: 1, rowSpan: 1 },
+      md: { colSpan: 1, rowSpan: 2 },
+      lg: { colSpan: 2, rowSpan: 2 },
+      wide: { colSpan: 2, rowSpan: 1 },
+      tall: { colSpan: 1, rowSpan: 3 },
+    };
+    return map[preset] || map.sm;
+  }
+
+  findNextGridPosition(blocks: BoardBlock[], cols = 2): { gridCol: number; gridRow: number } {
+    const occupied = new Set<string>();
+    blocks.forEach(b => {
+      for (let r = b.gridRow; r < b.gridRow + b.rowSpan; r++) {
+        for (let c = b.gridCol; c < b.gridCol + b.colSpan; c++) {
+          occupied.add(`${c},${r}`);
+        }
+      }
+    });
+    for (let row = 0; row < 100; row++) {
+      for (let col = 0; col < cols; col++) {
+        if (!occupied.has(`${col},${row}`)) {
+          return { gridCol: col, gridRow: row };
+        }
+      }
+    }
+    return { gridCol: 0, gridRow: blocks.length };
+  }
+
+  async getVisionBoards(userId: string): Promise<VisionBoard[]> {
+    try {
+      const { data: owned, error: ownedError } = await supabase
+        .from('vision_boards')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (ownedError) {
+        if (ownedError.code === 'PGRST205') return [];
+        throw ownedError;
+      }
+
+      const { data: collabRows, error: collabError } = await supabase
+        .from('board_collaborators')
+        .select('board_id')
+        .eq('user_id', userId);
+
+      if (collabError && collabError.code !== 'PGRST205') throw collabError;
+
+      const collabBoardIds = (collabRows || [])
+        .map(r => r.board_id)
+        .filter(id => !(owned || []).some(o => o.id === id));
+
+      let shared: any[] = [];
+      if (collabBoardIds.length > 0) {
+        const { data: sharedData, error: sharedError } = await supabase
+          .from('vision_boards')
+          .select('*')
+          .in('id', collabBoardIds);
+        if (sharedError) throw sharedError;
+        shared = sharedData || [];
+      }
+
+      return [...(owned || []), ...shared].map(row => this.mapVisionBoard(row));
+    } catch (error: any) {
+      if (error.code === 'PGRST205') return [];
+      throw error;
+    }
+  }
+
+  async createVisionBoard(userId: string, title: string): Promise<VisionBoard> {
+    const profile = await this.getProfile(userId);
+    if ((profile?.tier || 'Free') === 'Free') {
+      const existing = await this.getVisionBoards(userId);
+      const ownedCount = existing.filter(b => b.userId === userId).length;
+      if (ownedCount >= 3) {
+        throw new Error('Límite de 3 Vision Boards alcanzado para usuarios Free');
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('vision_boards')
+      .insert({ user_id: userId, title })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return this.mapVisionBoard(data);
+  }
+
+  async updateVisionBoard(
+    userId: string,
+    boardId: string,
+    updates: Partial<Pick<VisionBoard, 'title' | 'isPublic' | 'shareToken'>>
+  ): Promise<VisionBoard> {
+    const dbUpdates: any = {};
+    if (updates.title !== undefined) dbUpdates.title = updates.title;
+    if (updates.isPublic !== undefined) {
+      dbUpdates.is_public = updates.isPublic;
+      if (updates.isPublic && updates.shareToken === undefined) {
+        dbUpdates.share_token = crypto.randomUUID();
+      }
+      if (!updates.isPublic) {
+        dbUpdates.share_token = null;
+      }
+    }
+    if (updates.shareToken !== undefined) dbUpdates.share_token = updates.shareToken;
+
+    const { data, error } = await supabase
+      .from('vision_boards')
+      .update(dbUpdates)
+      .eq('id', boardId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return this.mapVisionBoard(data);
+  }
+
+  async deleteVisionBoard(userId: string, boardId: string): Promise<void> {
+    const { error } = await supabase
+      .from('vision_boards')
+      .delete()
+      .eq('id', boardId)
+      .eq('user_id', userId);
+    if (error) throw error;
+  }
+
+  async getPublicBoardByShareToken(token: string): Promise<{ board: VisionBoard; blocks: BoardBlock[] } | null> {
+    const { data: board, error } = await supabase
+      .from('vision_boards')
+      .select('*')
+      .eq('share_token', token)
+      .eq('is_public', true)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!board) return null;
+
+    const { data: blocks, error: blocksError } = await supabase
+      .from('board_blocks')
+      .select('*')
+      .eq('board_id', board.id)
+      .neq('status', 'archivado')
+      .order('sort_order', { ascending: true });
+
+    if (blocksError) throw blocksError;
+
+    return {
+      board: this.mapVisionBoard(board),
+      blocks: (blocks || []).map(row => this.mapBoardBlock(row)),
+    };
+  }
+
+  async getBoardBlocks(boardId: string, includeAchieved = true): Promise<BoardBlock[]> {
+    let query = supabase
+      .from('board_blocks')
+      .select('*')
+      .eq('board_id', boardId)
+      .neq('status', 'archivado')
+      .order('sort_order', { ascending: true });
+
+    const { data, error } = await query;
+    if (error) {
+      if (error.code === 'PGRST205') return [];
+      throw error;
+    }
+
+    let blocks = (data || []).map(row => this.mapBoardBlock(row));
+    if (!includeAchieved) {
+      blocks = blocks.filter(b => b.status !== 'conseguido');
+    }
+    return blocks;
+  }
+
+  async createBoardBlock(
+    boardId: string,
+    block: Partial<BoardBlock> & { imageUrl?: string }
+  ): Promise<BoardBlock> {
+    const existing = await this.getBoardBlocks(boardId, true);
+    const preset = block.sizePreset || 'sm';
+    const spans = this.getSizeSpans(preset);
+    const position = block.gridCol !== undefined && block.gridRow !== undefined
+      ? { gridCol: block.gridCol, gridRow: block.gridRow }
+      : this.findNextGridPosition(existing.filter(b => b.status === 'en_proceso'));
+
+    const checklist = block.checklist || [];
+    const insertData = {
+      board_id: boardId,
+      name: block.name || 'Nueva meta',
+      description: block.description || '',
+      image_url: block.imageUrl || null,
+      size_preset: preset,
+      grid_col: position.gridCol,
+      grid_row: position.gridRow,
+      col_span: block.colSpan ?? spans.colSpan,
+      row_span: block.rowSpan ?? spans.rowSpan,
+      checklist,
+      links: block.links || [],
+      mood_tags: block.moodTags || [],
+      status: block.status || 'en_proceso',
+      progress_percentage: this.computeProgressPercentage(checklist),
+      sort_order: existing.length,
+    };
+
+    const { data, error } = await supabase
+      .from('board_blocks')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return this.mapBoardBlock(data);
+  }
+
+  async updateBoardBlock(blockId: string, updates: Partial<BoardBlock>): Promise<BoardBlock> {
+    const dbUpdates: any = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.description !== undefined) dbUpdates.description = updates.description;
+    if (updates.imageUrl !== undefined) dbUpdates.image_url = updates.imageUrl;
+    if (updates.sizePreset !== undefined) {
+      dbUpdates.size_preset = updates.sizePreset;
+      const spans = this.getSizeSpans(updates.sizePreset);
+      dbUpdates.col_span = updates.colSpan ?? spans.colSpan;
+      dbUpdates.row_span = updates.rowSpan ?? spans.rowSpan;
+    }
+    if (updates.gridCol !== undefined) dbUpdates.grid_col = updates.gridCol;
+    if (updates.gridRow !== undefined) dbUpdates.grid_row = updates.gridRow;
+    if (updates.colSpan !== undefined) dbUpdates.col_span = updates.colSpan;
+    if (updates.rowSpan !== undefined) dbUpdates.row_span = updates.rowSpan;
+    if (updates.checklist !== undefined) {
+      dbUpdates.checklist = updates.checklist;
+      dbUpdates.progress_percentage = this.computeProgressPercentage(updates.checklist);
+    }
+    if (updates.links !== undefined) dbUpdates.links = updates.links;
+    if (updates.moodTags !== undefined) dbUpdates.mood_tags = updates.moodTags;
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.progressPercentage !== undefined) dbUpdates.progress_percentage = updates.progressPercentage;
+    if (updates.sortOrder !== undefined) dbUpdates.sort_order = updates.sortOrder;
+
+    const { data, error } = await supabase
+      .from('board_blocks')
+      .update(dbUpdates)
+      .eq('id', blockId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return this.mapBoardBlock(data);
+  }
+
+  async deleteBoardBlock(blockId: string): Promise<void> {
+    const { error } = await supabase
+      .from('board_blocks')
+      .delete()
+      .eq('id', blockId);
+    if (error) throw error;
+  }
+
+  async toggleChecklistItem(blockId: string, itemId: string, done: boolean): Promise<BoardBlock> {
+    const { data: current, error: fetchError } = await supabase
+      .from('board_blocks')
+      .select('checklist')
+      .eq('id', blockId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const checklist: ChecklistItem[] = Array.isArray(current.checklist) ? current.checklist : [];
+    const updated = checklist.map(item =>
+      item.id === itemId ? { ...item, done } : item
+    );
+
+    return this.updateBoardBlock(blockId, { checklist: updated });
+  }
+
+  async getBlockProgressLogs(blockId: string): Promise<BlockProgressLog[]> {
+    const { data, error } = await supabase
+      .from('block_progress_logs')
+      .select('*')
+      .eq('block_id', blockId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      if (error.code === 'PGRST205') return [];
+      throw error;
+    }
+
+    return (data || []).map(row => ({
+      id: row.id,
+      blockId: row.block_id,
+      userId: row.user_id,
+      text: row.text,
+      createdAt: row.created_at,
+    }));
+  }
+
+  async addBlockProgressLog(userId: string, blockId: string, text: string): Promise<BlockProgressLog> {
+    const { data, error } = await supabase
+      .from('block_progress_logs')
+      .insert({ block_id: blockId, user_id: userId, text })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return {
+      id: data.id,
+      blockId: data.block_id,
+      userId: data.user_id,
+      text: data.text,
+      createdAt: data.created_at,
+    };
+  }
+
+  async getCollaborators(boardId: string): Promise<BoardCollaborator[]> {
+    const { data, error } = await supabase
+      .from('board_collaborators')
+      .select('*')
+      .eq('board_id', boardId);
+
+    if (error) {
+      if (error.code === 'PGRST205') return [];
+      throw error;
+    }
+
+    const collaborators = data || [];
+    const userIds = collaborators.map(c => c.user_id);
+    let profilesMap: Record<string, { email: string; full_name: string }> = {};
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .in('id', userIds);
+      (profiles || []).forEach(p => {
+        profilesMap[p.id] = { email: p.email, full_name: p.full_name };
+      });
+    }
+
+    return collaborators.map(row => ({
+      id: row.id,
+      boardId: row.board_id,
+      userId: row.user_id,
+      role: row.role,
+      invitedBy: row.invited_by || undefined,
+      email: profilesMap[row.user_id]?.email,
+      fullName: profilesMap[row.user_id]?.full_name,
+      createdAt: row.created_at,
+    }));
+  }
+
+  async searchProfilesByEmail(query: string, excludeUserId?: string): Promise<{ id: string; email: string; fullName?: string }[]> {
+    if (!query || query.length < 3) return [];
+
+    let dbQuery = supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .ilike('email', `%${query}%`)
+      .limit(10);
+
+    const { data, error } = await dbQuery;
+    if (error) throw error;
+
+    return (data || [])
+      .filter(p => p.id !== excludeUserId)
+      .map(p => ({ id: p.id, email: p.email, fullName: p.full_name }));
+  }
+
+  async inviteCollaborator(
+    ownerId: string,
+    boardId: string,
+    userId: string,
+    role: CollaboratorRole
+  ): Promise<BoardCollaborator> {
+    const { data, error } = await supabase
+      .from('board_collaborators')
+      .insert({
+        board_id: boardId,
+        user_id: userId,
+        role,
+        invited_by: ownerId,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', userId)
+      .maybeSingle();
+
+    return {
+      id: data.id,
+      boardId: data.board_id,
+      userId: data.user_id,
+      role: data.role,
+      invitedBy: data.invited_by,
+      email: profile?.email,
+      fullName: profile?.full_name,
+      createdAt: data.created_at,
+    };
+  }
+
+  async updateCollaboratorRole(collaboratorId: string, role: CollaboratorRole): Promise<void> {
+    const { error } = await supabase
+      .from('board_collaborators')
+      .update({ role })
+      .eq('id', collaboratorId);
+    if (error) throw error;
+  }
+
+  async removeCollaborator(collaboratorId: string): Promise<void> {
+    const { error } = await supabase
+      .from('board_collaborators')
+      .delete()
+      .eq('id', collaboratorId);
+    if (error) throw error;
+  }
+
+  async uploadVisionBoardImage(userId: string, boardId: string, blockId: string, file: File): Promise<string> {
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('La imagen no puede superar 5MB');
+    }
+    const fileExt = file.name.split('.').pop() || 'jpg';
+    const path = `${userId}/${boardId}/${blockId}.${fileExt}`;
+
+    const { error } = await supabase.storage
+      .from('vision-board-images')
+      .upload(path, file, { cacheControl: '3600', upsert: true });
+
+    if (error) throw error;
+
+    const { data: urlData } = supabase.storage
+      .from('vision-board-images')
+      .getPublicUrl(path);
+
+    return urlData.publicUrl;
+  }
+
+  async markBlockAsAchieved(
+    userId: string,
+    blockId: string,
+    savings: { monetaryGain?: number; savedAmount?: number; successMetrics?: Record<string, number | string> }
+  ): Promise<{ block: BoardBlock; achievement: UserAchievementSaving }> {
+    const block = await this.updateBoardBlock(blockId, { status: 'conseguido', progressPercentage: 100 });
+
+    const { data, error } = await supabase
+      .from('user_achievements_savings')
+      .upsert({
+        user_id: userId,
+        block_id: blockId,
+        monetary_gain: savings.monetaryGain ?? 0,
+        saved_amount: savings.savedAmount ?? 0,
+        success_metrics: savings.successMetrics ?? {},
+        unlocked_at: new Date().toISOString(),
+      }, { onConflict: 'block_id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      block,
+      achievement: {
+        id: data.id,
+        userId: data.user_id,
+        blockId: data.block_id,
+        monetaryGain: parseFloat(data.monetary_gain) || 0,
+        savedAmount: parseFloat(data.saved_amount) || 0,
+        successMetrics: data.success_metrics || {},
+        unlockedAt: data.unlocked_at,
+      },
+    };
+  }
+
+  async getAchievementsSavings(userId: string): Promise<UserAchievementSaving[]> {
+    const { data, error } = await supabase
+      .from('user_achievements_savings')
+      .select('*')
+      .eq('user_id', userId)
+      .order('unlocked_at', { ascending: false });
+
+    if (error) {
+      if (error.code === 'PGRST205') return [];
+      throw error;
+    }
+
+    return (data || []).map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      blockId: row.block_id,
+      monetaryGain: parseFloat(row.monetary_gain) || 0,
+      savedAmount: parseFloat(row.saved_amount) || 0,
+      successMetrics: row.success_metrics || {},
+      unlockedAt: row.unlocked_at,
+    }));
+  }
+
+  async updateAchievementSaving(
+    userId: string,
+    achievementId: string,
+    updates: Partial<Pick<UserAchievementSaving, 'monetaryGain' | 'savedAmount' | 'successMetrics'>>
+  ): Promise<UserAchievementSaving> {
+    const dbUpdates: any = {};
+    if (updates.monetaryGain !== undefined) dbUpdates.monetary_gain = updates.monetaryGain;
+    if (updates.savedAmount !== undefined) dbUpdates.saved_amount = updates.savedAmount;
+    if (updates.successMetrics !== undefined) dbUpdates.success_metrics = updates.successMetrics;
+
+    const { data, error } = await supabase
+      .from('user_achievements_savings')
+      .update(dbUpdates)
+      .eq('id', achievementId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      blockId: data.block_id,
+      monetaryGain: parseFloat(data.monetary_gain) || 0,
+      savedAmount: parseFloat(data.saved_amount) || 0,
+      successMetrics: data.success_metrics || {},
+      unlockedAt: data.unlocked_at,
+    };
   }
 }
 

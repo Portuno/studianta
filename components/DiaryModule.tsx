@@ -640,6 +640,11 @@ const DiaryModule: React.FC<DiaryModuleProps> = ({
                   <p className={`text-base uppercase font-black tracking-widest opacity-60 transition-colors duration-500 ${
                     isNightMode ? 'text-[#7A748E]' : 'text-[#8B5E75]'
                   }`}>{entry.mood}</p>
+                  {entry.blockId && (
+                    <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-[#E35B8F]/20 text-[#E35B8F] font-cinzel">
+                      Vinculada a meta del Vision Board
+                    </span>
+                  )}
                 </div>
               </div>
               <button 

@@ -222,6 +222,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     'calendar': NavView.CALENDAR,
     'focus': NavView.FOCUS,
     'diary': NavView.DIARY,
+    'vision-board': NavView.VISION_BOARD,
     'balanza': NavView.BALANZA,
     'ai': NavView.AI,
     'profile': NavView.PROFILE,

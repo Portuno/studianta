@@ -107,6 +107,83 @@ export interface JournalEntry {
   photos?: string[]; // base64 array - hasta 3 fotos
   isLocked: boolean;
   sentiment?: number;
+  blockId?: string;
+}
+
+export type BlockStatus = 'en_proceso' | 'conseguido' | 'archivado';
+export type CollaboratorRole = 'viewer' | 'editor';
+export type BlockSizePreset = 'sm' | 'md' | 'lg' | 'wide' | 'tall';
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface BlockLink {
+  id: string;
+  url: string;
+  label?: string;
+}
+
+export interface VisionBoard {
+  id: string;
+  userId: string;
+  title: string;
+  isPublic: boolean;
+  shareToken?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BoardBlock {
+  id: string;
+  boardId: string;
+  name: string;
+  description: string;
+  imageUrl?: string;
+  sizePreset: BlockSizePreset;
+  gridCol: number;
+  gridRow: number;
+  colSpan: number;
+  rowSpan: number;
+  checklist: ChecklistItem[];
+  links: BlockLink[];
+  moodTags: string[];
+  status: BlockStatus;
+  progressPercentage: number;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BoardCollaborator {
+  id: string;
+  boardId: string;
+  userId: string;
+  role: CollaboratorRole;
+  invitedBy?: string;
+  email?: string;
+  fullName?: string;
+  createdAt: string;
+}
+
+export interface BlockProgressLog {
+  id: string;
+  blockId: string;
+  userId: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface UserAchievementSaving {
+  id: string;
+  userId: string;
+  blockId: string;
+  monetaryGain: number;
+  savedAmount: number;
+  successMetrics?: Record<string, number | string>;
+  unlockedAt: string;
 }
 
 export interface CustomCalendarEvent {
@@ -138,6 +215,7 @@ export enum NavView {
   CALCULATOR = 'Calculadora',
   EXAM_GENERATOR = 'Generador de Exámenes',
   NUTRITION = 'Nutrición',
+  VISION_BOARD = 'Vision Board',
   PRIVACY_POLICY = 'Política de Privacidad',
   TERMS_OF_SERVICE = 'Términos y Condiciones',
   PAYMENT_SUCCESS = 'Pago Exitoso',

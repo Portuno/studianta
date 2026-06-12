@@ -278,6 +278,14 @@ export const getIcon = (iconName: string, className: string = 'w-6 h-6'): React.
         <line x1="6" y1="20" x2="6" y2="14" />
       </svg>
     ),
+    'layout-grid': (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+      </svg>
+    ),
     menu: (
       <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="3" y1="12" x2="21" y2="12" />
@@ -328,6 +336,14 @@ export const INITIAL_MODULES: Module[] = [
     cost: 0,
     active: true,
     icon: 'pen',
+  },
+  {
+    id: 'vision-board',
+    name: 'Vision Board',
+    description: 'Visualiza tus metas, ejecuta y celebra tus logros',
+    cost: 0,
+    active: true,
+    icon: 'layout-grid',
   },
   {
     id: 'balanza',

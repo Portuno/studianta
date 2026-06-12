@@ -1,0 +1,1307 @@
+# Studianta — Documento de contexto para IA
+
+> **Generado:** 12 de junio de 2026  
+> **Repositorio git:** `/home/lautaro/Escritorio/studianta/studianta`  
+> **Producto:** Studianta — *Santuario de Conocimiento*  
+> **Autor del producto:** [Versa Producciones](https://www.versaproducciones.com)
+
+Este documento describe el estado **actual** del codebase tal como existe hoy. Está pensado para que otra IA (o desarrollador) pueda continuar el proyecto **sin abrir el código**, aunque se incluyen rutas de archivos para verificación.
+
+---
+
+## Tabla de contenidos
+
+1. [Resumen ejecutivo](#1-resumen-ejecutivo)
+2. [Arquitectura general](#2-arquitectura-general)
+3. [Estructura de carpetas](#3-estructura-de-carpetas)
+4. [Stack tecnológico y dependencias](#4-stack-tecnológico-y-dependencias)
+5. [Puntos de entrada y bootstrap](#5-puntos-de-entrada-y-bootstrap)
+6. [Navegación, routing y vistas](#6-navegación-routing-y-vistas)
+7. [Estado global y persistencia](#7-estado-global-y-persistencia)
+8. [Autenticación, seguridad y encriptación](#8-autenticación-seguridad-y-encriptación)
+9. [Base de datos Supabase](#9-base-de-datos-supabase)
+10. [Capa de servicios y APIs serverless](#10-capa-de-servicios-y-apis-serverless)
+11. [Hooks personalizados](#11-hooks-personalizados)
+12. [Utilidades (`utils/`)](#12-utilidades-utils)
+13. [Módulos funcionales (detalle)](#13-módulos-funcionales-detalle)
+14. [Flujos de usuario](#14-flujos-de-usuario)
+15. [Integraciones externas](#15-integraciones-externas)
+16. [Variables de entorno y configuración](#16-variables-de-entorno-y-configuración)
+17. [Documentación existente en el repo](#17-documentación-existente-en-el-repo)
+18. [Estado actual: implementado vs pendiente](#18-estado-actual-implementado-vs-pendiente)
+19. [Riesgos y deuda técnica](#19-riesgos-y-deuda-técnica)
+20. [Convenciones y patrones detectados](#20-convenciones-y-patrones-detectados)
+21. [Notas útiles para continuar el desarrollo](#21-notas-útiles-para-continuar-el-desarrollo)
+22. [Ambigüedades y dudas abiertas](#22-ambigüedades-y-dudas-abiertas)
+23. [Referencias rápidas (tablas)](#23-referencias-rápidas-tablas)
+
+---
+
+## 1. Resumen ejecutivo
+
+**Studianta** es una **SPA (Single Page Application)** web orientada a estudiantes. Combina gestión académica, productividad, bienestar y finanzas personales con una estética *Princess-Academic* (rosa, dorado, ciruela) y modo nocturno.
+
+### Qué hace hoy
+
+| Área | Estado |
+|------|--------|
+| Gestión de asignaturas (materias, hitos, apuntes, materiales) | ✅ Completo |
+| Calendario académico + sync Google Calendar (web) | ✅ Completo |
+| Pomodoro / Enfoque con widget flotante global | ✅ Completo |
+| Diario personal con mood, fotos, PIN opcional | ✅ Completo |
+| Vision Board (metas visuales, colaboración, share público) | ✅ Reciente / completo |
+| Balanza Pro (finanzas avanzadas) | ✅ Completo |
+| Nutrición con análisis IA (texto/foto) | ✅ Completo |
+| Oráculo IA (Gemini) con contexto SPC | ✅ Completo |
+| Generador de exámenes IA | ✅ Completo |
+| Calculadora científica + widget flotante | ✅ Completo |
+| Bazar de módulos/artefactos | ✅ Parcial (catálogo + activación) |
+| Suscripción Premium (Stripe vía Supabase Edge Functions) | ✅ Integrado |
+| Onboarding, cookies, páginas legales, docs in-app | ✅ Completo |
+| Módulo Social | ❌ No implementado |
+| Varios artefactos del Bazar | ❌ `coming_soon` |
+
+### Supuestos del sistema
+
+- El usuario tiene conexión a internet para Supabase y APIs externas.
+- Supabase es la **única fuente de verdad** para datos persistentes (salvo tokens Google Calendar en `localStorage` en el flujo web).
+- Los scripts SQL históricos (01–23) **ya están aplicados** en el proyecto Supabase de producción; el repo solo versiona `24_vision_board.sql`.
+- La carpeta `supabase/` (Edge Functions) está **gitignored**; se despliega con CLI aparte.
+- No hay suite de tests automatizados.
+- Existe o existió una **app móvil Expo** relacionada (referencias a `EXPO_PUBLIC_*` y OAuth con deep links), pero **no está en este repositorio**.
+
+### Filosofía de producto
+
+- **Atanor:** el Dashboard principal es el hub central (grid de módulos con drag & drop).
+- **Bazar:** marketplace para activar/desactivar módulos y artefactos.
+- **Oráculo:** asistente IA con tono místico/empoderador; recibe **Student Profile Context (SPC)** agregado en cliente.
+- **Modularidad:** cada feature puede activarse/desactivarse vía tabla `user_modules`.
+
+---
+
+## 2. Arquitectura general
+
+### Patrón arquitectónico
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        NAVEGADOR (Cliente)                       │
+│  React 19 + TypeScript + TailwindCSS                            │
+│  ┌──────────────┐  ┌─────────────┐  ┌────────────────────────┐ │
+│  │   App.tsx    │  │ Components  │  │ Hooks + Utils          │ │
+│  │ (orquestador)│──│ (UI módulos)│──│ (lógica pura/SPC/etc.) │ │
+│  └──────┬───────┘  └──────┬──────┘  └───────────┬────────────┘ │
+│         │                 │                      │               │
+│         └─────────────────┼──────────────────────┘               │
+│                           ▼                                        │
+│              ┌────────────────────────┐                           │
+│              │   supabaseService.ts   │ (~3700 líneas)            │
+│              │   geminiService.ts     │                           │
+│              │   examService.ts       │                           │
+│              │   googleCalendarService│                           │
+│              │   encryptionService.ts │                           │
+│              └───────────┬────────────┘                           │
+└──────────────────────────┼────────────────────────────────────────┘
+                           │
+         ┌─────────────────┼─────────────────┐
+         ▼                 ▼                 ▼
+   ┌───────────┐    ┌─────────────┐    ┌──────────────┐
+   │ Supabase  │    │ Vercel API  │    │ Google APIs  │
+   │ Auth+DB   │    │ /api/gemini │    │ Calendar+OAuth│
+   │ Storage   │    │ /api/google │    │ Gemini (via  │
+   │ Edge Fn   │    │   /oauth/*  │    │  server)     │
+   └───────────┘    └─────────────┘    └──────────────┘
+         │
+         ▼
+   ┌───────────┐
+   │  Stripe   │ (webhooks → Edge Functions)
+   └───────────┘
+```
+
+### Decisiones arquitectónicas clave
+
+| Decisión | Detalle |
+|----------|---------|
+| **Sin React Router** | Navegación por enum `NavView` + `useState` en `App.tsx`. Solo rutas URL para páginas públicas y share de Vision Board. |
+| **Estado centralizado** | Todo el estado de dominio vive en `App.tsx` (~2600 líneas). No hay Redux, Zustand ni Context API global. |
+| **Lazy loading de datos** | Carga inicial: perfil + módulos + asignaturas. Resto bajo demanda al cambiar `activeView`. |
+| **Monolito frontend** | Un solo bundle Vite; code splitting limitado (imports estáticos en App). |
+| **BaaS** | Supabase para auth, Postgres, storage, edge functions. |
+| **IA server-side** | Gemini nunca expone API key al cliente; pasa por `/api/gemini`. |
+| **Pagos server-side** | Stripe 100% en Supabase Edge Functions; frontend solo redirige a checkout/portal. |
+
+### Diagrama de capas
+
+```mermaid
+flowchart TB
+    subgraph Cliente["Cliente React"]
+        APP[App.tsx]
+        COMP[components/]
+        HOOKS[hooks/]
+        UTILS[utils/]
+        APP --> COMP
+        APP --> HOOKS
+        COMP --> UTILS
+    end
+
+    subgraph Services["services/"]
+        SB[supabaseService]
+        GM[geminiService]
+        GC[googleCalendarService]
+        EX[examService]
+        EN[encryptionService]
+    end
+
+    subgraph Serverless["api/ (Vercel + Vite dev)"]
+        GEM[/api/gemini]
+        OAUTH[/api/google/oauth/*]
+    end
+
+    subgraph External["Externos"]
+        SUPA[(Supabase)]
+        STRIPE[Stripe]
+        GCAL[Google Calendar]
+        GAI[Gemini API]
+    end
+
+    APP --> Services
+    GM --> GEM
+    GC --> OAUTH
+    SB --> SUPA
+    GEM --> GAI
+    OAUTH --> GCAL
+    SUPA --> STRIPE
+```
+
+---
+
+## 3. Estructura de carpetas
+
+```
+studianta/                          ← RAÍZ DEL REPO GIT
+├── App.tsx                         ← Orquestador principal (~2628 líneas)
+├── index.tsx                       ← Entry React
+├── index.html                      ← Shell HTML
+├── types.ts                        ← Tipos TS + enum NavView
+├── constants.tsx                   ← COLORS, getIcon(), INITIAL_MODULES
+├── package.json
+├── vite.config.ts                  ← Vite + plugin API Gemini en dev
+├── vite-env.d.ts
+├── tailwind.config.js
+├── postcss.config.js
+├── vercel.json                     ← SPA rewrites
+├── metadata.json                   ← Metadatos PWA (cámara/mic)
+├── README.md
+├── modificaciones.md               ← Doc OAuth Google server-side
+├── colores.md                      ← Reporte de colorimetría
+├── asignaturas.md                  ← Guía técnica módulo Asignaturas
+│
+├── api/                            ← Serverless (Vercel)
+│   ├── gemini.js                   ← Handler IA Gemini
+│   └── google/oauth/
+│       ├── _lib.js                 ← Utilidades OAuth compartidas
+│       ├── start.js                ← Inicio OAuth (móvil/deep link)
+│       ├── callback.js             ← Callback OAuth
+│       ├── config.js, token.js, refresh.js, debug.js
+│
+├── components/                     ← UI ACTIVA (fuente de verdad)
+│   ├── Dashboard.tsx, Navigation.tsx, Sidebar.tsx, ...
+│   ├── AuthModule.tsx, ProfileModule.tsx, ...
+│   ├── SubjectsModule.tsx, CalendarModule.tsx, FocusModule.tsx, ...
+│   ├── DiaryModule.tsx, BalanzaModule.tsx, NutritionModule.tsx, ...
+│   ├── OraculoPage.tsx, ExamGeneratorModule.tsx, CalculatorModule.tsx, ...
+│   ├── BazarModule.tsx, DocsPage.tsx, PremiumPage.tsx, ...
+│   ├── vision-board/               ← Módulo Vision Board
+│   │   ├── VisionBoardModule.tsx
+│   │   ├── VisionBoardGrid.tsx, VisionBlock.tsx, BlockModal.tsx
+│   │   ├── BoardSelector.tsx, ShareMenu.tsx, AchievementsChest.tsx
+│   │   ├── JournalLinkPanel.tsx, PublicVisionBoardPage.tsx
+│   │   └── utils.ts
+│   ├── nutrition/                  ← Subcomponentes nutrición
+│   └── dashboard/                  ← Widgets estadísticas
+│
+├── hooks/
+│   ├── useInteractionAggregator.ts ← Agrega SPC para IA
+│   ├── useCookieConsent.ts
+│   ├── useCalculator.ts, useCalculatorSounds.ts
+│   ├── useExamGenerator.ts
+│   └── components/                 ← ⚠️ LEGACY — NO USAR
+│       └── (copias antiguas de ~15 componentes)
+│
+├── services/
+│   ├── supabaseService.ts          ← CRUD monolítico (~3665 líneas)
+│   ├── geminiService.ts
+│   ├── googleCalendarService.ts
+│   ├── examService.ts
+│   ├── encryptionService.ts
+│   ├── recurringTransactionsService.ts
+│   └── pdfTextExtractor.ts
+│
+├── utils/                          ← Lógica pura, exportadores, parsers
+│   ├── focusTracker.ts, exportUtils.ts, examPdfExporter.ts
+│   ├── calculatorEngine.ts, gradeCalculator.ts, energyCurve.ts
+│   └── ... (16 archivos)
+│
+├── scripts/
+│   ├── 24_vision_board.sql         ← Único SQL versionado
+│   ├── migrate_user_data.js
+│   ├── migrate_user_data_browser.js
+│   └── migrate_user_encryption.ts
+│
+├── src/
+│   └── index.css                   ← Estilos globales
+│
+├── public/
+│   ├── robots.txt, seal.png, favicon.svg
+│
+├── dist/                           ← Build producción (gitignored parcialmente)
+└── node_modules/
+```
+
+### ⚠️ Carpeta legacy
+
+`hooks/components/` contiene duplicados obsoletos de componentes que **no** importa `App.tsx`. **Nunca editar ni importar desde ahí.** La fuente de verdad es `components/`.
+
+### ⚠️ Carpeta no versionada
+
+`supabase/` está en `.gitignore`. Contiene Edge Functions (`create-checkout-session`, `create-portal-session`, `stripe-webhook`, `verify-checkout-session`) desplegadas con:
+
+```bash
+npm run deploy:checkout
+npm run deploy:portal
+npm run deploy:webhook
+npm run deploy:all
+```
+
+---
+
+## 4. Stack tecnológico y dependencias
+
+### Runtime y build
+
+| Tecnología | Versión | Uso |
+|------------|---------|-----|
+| Node.js | 20.x (`engines`) | Dev y Vercel |
+| React | 19.2.3 | UI |
+| React DOM | 19.2.3 | Render |
+| TypeScript | ~5.8.2 | Tipado |
+| Vite | 6.2.0 | Bundler, dev server puerto 3000 |
+| TailwindCSS | 3.4.19 | Estilos utility-first |
+| PostCSS + Autoprefixer | — | Pipeline CSS |
+
+### Dependencias de producción
+
+| Paquete | Versión | Uso |
+|---------|---------|-----|
+| `@supabase/supabase-js` | ^2.39.0 | Cliente Supabase |
+| `@google/genai` | ^1.34.0 | Gemini (solo servidor en `api/gemini.js`) |
+| `@vercel/analytics` | ^1.6.1 | Analytics |
+| `lucide-react` | ^0.562.0 | Iconos (uso limitado; mayoría son SVG custom en `constants.tsx`) |
+| `jspdf` | ^4.0.0 | Export PDF |
+| `html2canvas` | ^1.4.1 | Capturas para PDF |
+| `pdfjs-dist` | ^4.0.379 | Extracción texto PDF (exámenes) |
+| `xlsx` | ^0.18.5 | Export Excel (Balanza) |
+| `howler` | ^2.2.4 | Sonidos calculadora |
+
+### Scripts npm
+
+```json
+"dev": "vite",
+"build": "vite build",
+"preview": "vite preview",
+"deploy:checkout": "supabase functions deploy create-checkout-session",
+"deploy:portal": "supabase functions deploy create-portal-session",
+"deploy:webhook": "supabase functions deploy stripe-webhook",
+"deploy:all": "..."
+```
+
+**No hay scripts de test.**
+
+---
+
+## 5. Puntos de entrada y bootstrap
+
+### Cadena de arranque
+
+```
+index.html → index.tsx → App.tsx
+```
+
+| Archivo | Responsabilidad |
+|---------|-----------------|
+| `index.html` | `#root`, fuentes Google (Marcellus, Inter, EB Garamond), favicon |
+| `index.tsx` | Monta React; **StrictMode deshabilitado** intencionalmente; polyfill mínimo de `window.process` |
+| `App.tsx` | Auth, estado, navegación, render condicional de módulos |
+
+### Detección de rutas especiales al inicio
+
+1. **Vision Board público:** si `pathname` coincide con `/vision-board/share/:token` → renderiza `PublicVisionBoardPage` **sin auth** (early return antes del layout principal).
+2. **Páginas legales/premium:** `getInitialView()` lee pathname (`/privacidad`, `/terminosycondiciones`, `/docs`, `/premium`) o query params legacy (`?page=...`).
+
+### Analytics
+
+`<Analytics />` de `@vercel/analytics/react` se monta en `App.tsx`.
+
+---
+
+## 6. Navegación, routing y vistas
+
+### Enum `NavView` (`types.ts`)
+
+```typescript
+export enum NavView {
+  DASHBOARD = 'Dashboard',
+  DASHBOARD_STATS = 'Dashboard Estadísticas',
+  SUBJECTS = 'Asignaturas',
+  CALENDAR = 'Calendario',
+  FOCUS = 'Enfoque',
+  DIARY = 'Diario',
+  BALANZA = 'Balanza',
+  SOCIAL = 'Social',
+  PROFILE = 'Perfil',
+  SECURITY = 'Seguridad',
+  AI = 'IA',                    // ⚠️ Bug potencial — ver sección 19
+  ORACLE = 'Oráculo',
+  DOCS = 'Documentación',
+  BAZAR = 'Bazar',
+  CALCULATOR = 'Calculadora',
+  EXAM_GENERATOR = 'Generador de Exámenes',
+  NUTRITION = 'Nutrición',
+  VISION_BOARD = 'Vision Board',
+  PRIVACY_POLICY = 'Política de Privacidad',
+  TERMS_OF_SERVICE = 'Términos y Condiciones',
+  PAYMENT_SUCCESS = 'Pago Exitoso',
+  PREMIUM = 'Premium'
+}
+```
+
+### Mapeo módulo → vista
+
+| `module.id` (`INITIAL_MODULES`) | `NavView` | Render en `App.tsx` |
+|---------------------------------|-----------|---------------------|
+| `subjects` | SUBJECTS | ✅ |
+| `calendar` | CALENDAR | ✅ |
+| `focus` | FOCUS | ✅ |
+| `diary` | DIARY | ✅ |
+| `vision-board` | VISION_BOARD | ✅ |
+| `balanza` | BALANZA | ✅ (requiere login) |
+| `nutrition` | NUTRITION | ✅ (requiere login) |
+| `bazar` | BAZAR | ✅ |
+| `scientific-calculator` | CALCULATOR | ✅ |
+| `exam-generator` | EXAM_GENERATOR | ✅ (requiere login) |
+| `dashboard-stats` | DASHBOARD_STATS | ✅ |
+| `ai` | **AI** | ❌ **No hay `case NavView.AI`** → cae al default (Dashboard) |
+| `profile` | PROFILE | ✅ (sidebar fijo, no en grid) |
+| `security` | SECURITY | ❌ Sin vista propia |
+| `social` | SOCIAL | ❌ Sin vista propia |
+
+**Nota:** El Oráculo se accede por botón fijo en sidebar (`NavView.ORACLE`), no por activar módulo `ai` desde el grid.
+
+### Rutas URL (Vercel + `history.pushState`)
+
+| URL | Vista | Auth requerida |
+|-----|-------|----------------|
+| `/` | Dashboard | No |
+| `/privacidad` | PrivacyPolicy | No |
+| `/terminosycondiciones` | TermsOfService | No |
+| `/docs` | DocsPage | No |
+| `/premium` | PremiumPage | No (checkout sí) |
+| `/vision-board/share/:token` | PublicVisionBoardPage | No |
+| `?session_id=` (Stripe) | PAYMENT_SUCCESS | Sí |
+
+`vercel.json` reescribe todas las rutas a `index.html` (SPA).
+
+### Layout responsivo
+
+| Breakpoint | Comportamiento |
+|------------|----------------|
+| `< 768px` | Mobile: `MobileTopBar` + bottom nav |
+| `768–1024px` | Tablet |
+| `≥ 1024px` | Desktop: sidebar colapsable |
+
+### Navegación configurable
+
+- Tabla `user_navigation_config` almacena orden de módulos para desktop y mobile.
+- `Navigation.tsx` carga config vía `supabaseService.getNavigationConfig()`.
+- Long-press en mobile abre selector para reemplazar slot de módulo.
+- Defaults en `supabaseService.getDefaultNavigationConfig()`.
+
+### Elementos fijos fuera del grid configurable
+
+- **Atanor** (Dashboard) — botón central/rosa en mobile
+- **Oráculo** — sidebar desktop
+- **Perfil** — sidebar desktop + top bar mobile
+
+---
+
+## 7. Estado global y persistencia
+
+### Estado en `App.tsx`
+
+| Estado | Tipo | Origen / persistencia |
+|--------|------|------------------------|
+| `user` | Supabase User | `supabase.auth` |
+| `userProfile` | `UserProfile` | Tabla `profiles` |
+| `subjects` | `Subject[]` | Tabla `subjects` (JSON embebido) |
+| `modules` | `Module[]` | Tabla `user_modules` + `INITIAL_MODULES` |
+| `transactions` | `Transaction[]` | Tabla `transactions` (legacy/simple) |
+| `monthlyBudget` | number | Campo en `profiles` |
+| `journalEntries` | `JournalEntry[]` | Tabla `journal_entries` |
+| `customEvents` | `CustomCalendarEvent[]` | Tabla `calendar_events` |
+| `securityPin` | string (hash) | Tabla `security_config` |
+| `balanzaProTransactions` | `BalanzaProTransaction[]` | Tabla `balanza_pro_transactions` |
+| `nutritionEntries/Goals/Correlations` | — | Tablas nutrición |
+| `exams`, `examResults` | — | Tablas exámenes |
+| `focusState` | objeto timer | **`localStorage`** (`focusTimerState`) |
+| `isNightMode` | boolean | **`localStorage`** |
+| `sidebarCollapsed` | boolean | **`localStorage`** |
+| `activeView` | `NavView` | Memoria (+ URL para páginas públicas) |
+| `dataLoadedFlags` | flags cache | Memoria (lazy load) |
+
+### Estrategia de carga de datos
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant A as App.tsx
+    participant S as supabaseService
+
+    U->>A: Abre app
+    A->>S: getSession()
+    alt Sesión válida
+        A->>S: getProfile, getSecurityConfig
+        A->>S: getModules, getSubjects (paralelo)
+    end
+    U->>A: Cambia activeView
+    A->>A: loadDataForView(userId, view)
+    Note over A,S: CALENDAR → transactions, journal, events<br/>DIARY/VISION_BOARD → journal<br/>EXAM_GENERATOR → exams<br/>ORACLE/PROFILE → transactions, journal, events
+```
+
+### Student Profile Context (SPC)
+
+- Hook `useInteractionAggregator` agrega todos los dominios en `StudentProfileContext`.
+- Se pasa a Oráculo, mentor por asignatura, análisis financiero, etc.
+- Incluye: perfil, finanzas, asignaturas, calendario, diario, focus (localStorage), módulos activos, balanza pro, nutrición, exámenes.
+
+### Focus Timer global
+
+- Timer Pomodoro persiste en `localStorage` con timestamps (`startTime`, `pausedTime`, `accumulatedPauseTime`).
+- Sigue corriendo al cambiar de vista; muestra `FocusFloatingWidget` cuando activo y no en vista Focus.
+- Recalcula al volver a pestaña visible (`visibilitychange`).
+- Heartbeat cada 5s corrige drift.
+
+---
+
+## 8. Autenticación, seguridad y encriptación
+
+### Auth (`AuthModule` + `supabaseService`)
+
+| Método | Función |
+|--------|---------|
+| Email/password signup | `signUp()` → crea usuario + perfil |
+| Email/password login | `signIn()` |
+| Google OAuth | `signInWithGoogle()` |
+| Logout | `signOut()` |
+| Sesión | `getSession()`, `onAuthStateChange` |
+
+**Comportamiento auth en App.tsx:**
+
+- `INITIAL_SESSION` ignorado para recargas (evita refresh al cambiar pestaña).
+- `SIGNED_IN` recarga datos en background.
+- `TOKEN_REFRESHED` solo actualiza user, no recarga datos.
+- `SIGNED_OUT` limpia todo el estado local.
+
+### Protección de módulos
+
+- `handleNavigationClick`: sin user → modal login (excepto Dashboard y páginas públicas).
+- Algunos módulos verifican `user` en `renderView()` (Balanza, Nutrition, Exam Generator, Vision Board).
+
+### PIN de diario (`security` module)
+
+- Módulo `security` en `INITIAL_MODULES` (`active: false` por defecto).
+- Al activarlo, pide configurar PIN → `security_config.security_pin` (hash).
+- `DiaryModule` usa PIN si `securityModuleActive`.
+- **No hay vista `NavView.SECURITY`** — la funcionalidad está embebida en Diario.
+
+### Encriptación client-side (`encryptionService.ts`)
+
+- **Algoritmo:** AES-GCM 256, PBKDF2 100k iteraciones.
+- **Salt por usuario** en tabla `user_encryption_keys`.
+- Contraseña de encriptación en memoria durante sesión (`supabaseService.setEncryptionPassword`).
+- Campos sensibles (diario, etc.) se encriptan antes de guardar si hay contraseña configurada.
+- Migración manual disponible: `scripts/migrate_user_*.js/ts`.
+
+### Cookies
+
+- `CookieConsentBanner` + `useCookieConsent` para consentimiento GDPR-style.
+
+---
+
+## 9. Base de datos Supabase
+
+### Tablas inferidas del código
+
+| Tabla | Propósito |
+|-------|-----------|
+| `profiles` | Perfil usuario, tier, Stripe IDs, onboarding, moneda |
+| `subjects` | Asignaturas con JSON embebido (hitos, horarios, apuntes, materiales) |
+| `transactions` | Transacciones financieras simples (legacy/timeline calendario) |
+| `journal_entries` | Entradas diario (+ `block_id` para Vision Board, `photos[]`) |
+| `calendar_events` | Eventos custom del calendario |
+| `user_modules` | Módulos activos/inactivos por usuario |
+| `balanza_pro_transactions` | Finanzas avanzadas Balanza Pro |
+| `security_config` | PIN, biometría |
+| `user_encryption_keys` | Salt encriptación |
+| `google_calendar_sync_tracking` | Mapeo evento local ↔ Google Calendar |
+| `google_calendar_tokens` | Tokens OAuth (flujo server-side móvil) |
+| `nutrition_entries` | Registros nutricionales |
+| `nutrition_goals` | Metas macros |
+| `nutrition_correlations` | Correlación comida ↔ sesiones focus |
+| `user_navigation_config` | Orden nav desktop/mobile |
+| `exams` | Exámenes generados |
+| `exam_questions` | Preguntas por examen |
+| `exam_responses` | Respuestas usuario |
+| `exam_results` | Resultados/score |
+| `exam_flashcards` | Flashcards derivadas |
+| `vision_boards` | Tableros vision board |
+| `board_blocks` | Bloques/metas en grid |
+| `board_collaborators` | Colaboradores (viewer/editor) |
+| `block_progress_logs` | Log de progreso por bloque |
+| `user_achievements_savings` | Cofre de logros / ahorro simbólico |
+
+### Buckets Storage
+
+| Bucket | Uso |
+|--------|-----|
+| `avatars` | Fotos perfil |
+| `journal-photos` | Fotos diario |
+| `nutrition-photos` | Fotos comidas |
+| `vision-board-images` | Imágenes bloques Vision Board |
+
+### Scripts SQL en repo
+
+**Solo existe:** `scripts/24_vision_board.sql`
+
+Contenido principal:
+- Crea tablas Vision Board + extensión `journal_entries.block_id`
+- Funciones RLS: `is_board_owner`, `is_board_collaborator`, `is_board_editor`, `can_view_board`, `can_edit_board`
+- Trigger límite Free: máx. 3 tableros (`check_vision_board_limit`)
+- Triggers `updated_at`
+- Políticas RLS por tabla
+- Bucket `vision-board-images` con políticas storage
+
+### Scripts SQL referenciados pero AUSENTES del repo
+
+| Script | Referencia |
+|--------|------------|
+| `03_navigation_config.sql` | `user_navigation_config` |
+| `09_security_config.sql` | `security_config` |
+| `14_google_calendar_sync_tracking.sql` | sync tracking |
+| `19_add_photos_array_to_journal_entries.sql` | campo `photos` |
+| `23_balanza_pro_transactions.sql` | Balanza Pro |
+
+**⚠️ Ambigüedad:** El esquema completo de producción no está versionado. Reconstruir desde Supabase dashboard o backups.
+
+### Modelo de datos de Asignaturas (patrón importante)
+
+Una fila en `subjects` contiene **todo el JSON anidado**:
+
+```
+Subject {
+  milestones[], schedules[], notes[], materials[]
+}
+```
+
+No hay tablas hijas normalizadas. Ver `asignaturas.md` para detalle completo.
+
+---
+
+## 10. Capa de servicios y APIs serverless
+
+### `supabaseService.ts` — Clase monolítica
+
+Exporta: `supabase` (cliente singleton), `supabaseService` (instancia), `UserProfile`, `SecurityConfig`.
+
+Secciones principales de métodos:
+
+| Sección | Métodos clave |
+|---------|---------------|
+| Encriptación | `setEncryptionPassword`, `loadEncryptionPasswordFromSupabase`, `migrateUserData`, `isEncrypted` |
+| Auth | `signUp`, `signIn`, `signInWithGoogle`, `signOut`, `getSession` |
+| Perfil | `createProfile`, `getProfile`, `updateProfile` |
+| Asignaturas | `getSubjects`, `createSubject`, `updateSubject`, `deleteSubject` |
+| Transacciones | CRUD `transactions` |
+| Diario | CRUD + `linkJournalEntryToBlock`, `createJournalEntryFromBlock` |
+| Calendario | CRUD `calendar_events` |
+| Módulos | `getModules`, `updateModule`, `initializeModules` |
+| Balanza Pro | CRUD + `getBalanzaProPaymentMethods`, `getBalanzaProTags` |
+| Storage | `uploadFile`, `uploadAvatar`, `uploadJournalPhoto`, `uploadNutritionPhoto`, `uploadVisionBoardImage` |
+| Seguridad | `getSecurityConfig`, `verifySecurityPin` |
+| Google sync | `getSyncTracking`, `saveSyncTracking`, `deleteSyncTracking` |
+| Stripe | `createCheckoutSession`, `createPortalSession`, `getSubscriptionStatus`, `verifyCheckoutSession` |
+| Nutrición | CRUD entries/goals/correlations |
+| Navegación | `getNavigationConfig`, `updateNavigationConfig`, `getDefaultNavigationConfig` |
+| Vision Board | CRUD boards/blocks/collaborators/logs/achievements + helpers grid |
+
+**Patrones internos:**
+- `retryWithBackoff` para errores de red
+- Encriptación/desencriptación transparente en campos sensibles cuando hay password de sesión
+- Mapeo snake_case DB ↔ camelCase TS en Vision Board y otros
+
+### `geminiService.ts`
+
+Cliente que llama `POST /api/gemini`:
+
+| Método | `type` en body |
+|--------|----------------|
+| `queryAcademicOracle` | `academic` |
+| `analyzeFinancialHealth` | `finance` |
+| `queryPersonalOracle` | `personal` |
+| `analyzeNutritionText` | `nutrition-text` |
+| `analyzeNutritionPhoto` | `nutrition-photo` |
+| `generateExam` | `exam-generation` |
+
+### `api/gemini.js`
+
+- Modelo principal: `gemini-3-flash-preview`
+- Tipos soportados: `academic`, `finance`, `personal`, `nutrition-text`, `nutrition-photo`, `exam-generation`
+- API key: `process.env.GEMINI_API_KEY` o `VITE_GEMINI_API_KEY`
+- **⚠️ Contiene debug logging** a `http://127.0.0.1:7242/ingest/...` (agent log regions) — probablemente residual de debugging Cursor
+
+### `googleCalendarService.ts`
+
+- Flujo **web actual:** OAuth en cliente, tokens en `localStorage`, redirect URI = `window.location.origin`
+- Sync bidireccional: hitos de asignaturas + eventos custom
+- Usa endpoints auxiliares `/api/google/oauth/config`, `token`, `refresh`
+- Tabla `google_calendar_sync_tracking` para IDs de eventos Google
+
+### `api/google/oauth/` (server-side, para móvil)
+
+Documentado en `modificaciones.md`:
+- `GET /api/google/oauth/start?return_to=studianta://...&access_token=JWT`
+- `GET /api/google/oauth/callback` → guarda en `google_calendar_tokens`, redirige deep link
+- **El flujo web NO usa estos endpoints** (sigue intacto en cliente)
+
+### `examService.ts`
+
+CRUD completo sobre `exams`, `exam_questions`, `exam_responses`, `exam_results`, `exam_flashcards`. Orquesta generación vía `geminiService.generateExam`.
+
+### `encryptionService.ts`
+
+Web Crypto API: AES-GCM, PBKDF2, gestión salt en `user_encryption_keys`.
+
+### `recurringTransactionsService.ts`
+
+Lógica de gastos recurrentes para Balanza Pro (generación de instancias).
+
+### `pdfTextExtractor.ts`
+
+Extrae texto de PDFs con `pdfjs-dist` para alimentar generador de exámenes.
+
+---
+
+## 11. Hooks personalizados
+
+| Hook | Archivo | Propósito |
+|------|---------|-----------|
+| `useInteractionAggregator` | `hooks/useInteractionAggregator.ts` | Construye `StudentProfileContext` memoizado |
+| `useCookieConsent` | `hooks/useCookieConsent.ts` | Estado consentimiento cookies |
+| `useCalculator` | `hooks/useCalculator.ts` | Estado calculadora científica |
+| `useCalculatorSounds` | `hooks/useCalculatorSounds.ts` | Sonidos via Howler |
+| `useExamGenerator` | `hooks/useExamGenerator.ts` | Flujo generación/resolución exámenes |
+
+---
+
+## 12. Utilidades (`utils/`)
+
+| Archivo | Función |
+|---------|---------|
+| `focusTracker.ts` | Sesiones focus en localStorage; usado por SPC |
+| `exportUtils.ts` | Export JSON contexto, PDFs varios |
+| `examPdfExporter.ts` | PDF de exámenes |
+| `examUtils.ts` | Helpers exámenes (scoring, etc.) |
+| `calculatorEngine.ts` | Motor evaluación expresiones |
+| `calculatorStorage.ts` | Persistencia historial/memoria calculadora |
+| `gradeCalculator.ts` | Cálculos notas |
+| `currencyFormatter.ts` | Formato moneda según perfil |
+| `dashboardAlerts.ts` | Alertas dashboard stats |
+| `energyCurve.ts` | Curva energía nutrición |
+| `nutritionCorrelation.ts` | Correlaciones comida-focus |
+| `nutritionDatabase.ts` | Datos referencia alimentos |
+| `brainFoodClassifier.ts` | Tags brain food |
+| `pdfSeal.ts` | Sello PDF simbólico |
+| `oracleTextParser.tsx` | Parser respuestas Oráculo |
+| `markdownProcessor.ts` | Procesamiento markdown |
+| `unitConverter.ts` | Conversiones calculadora |
+
+---
+
+## 13. Módulos funcionales (detalle)
+
+### 13.1 Dashboard (Atanor)
+
+**Archivos:** `components/Dashboard.tsx`, `App.tsx`
+
+- Grid de módulos con drag & drop (mouse + touch).
+- Módulos inactivos aparecen **primero** (pendientes de activar).
+- Posiciones guardadas en `user_modules.gridPosition`.
+- Click navega según mapa `moduleId → NavView`.
+- Modal login embebido (`AuthModule`) si no autenticado.
+
+**Bug conocido:** módulo `ai` mapea a `NavView.AI` pero App no tiene case → vuelve al Dashboard.
+
+### 13.2 Dashboard Estadísticas
+
+**Archivo:** `components/DashboardStatsModule.tsx`, widgets en `components/dashboard/`
+
+- Visualiza métricas derivadas del SPC.
+- Alertas via `dashboardAlerts.ts`.
+
+### 13.3 Asignaturas
+
+**Archivo:** `components/SubjectsModule.tsx` (~muy grande)
+
+- CRUD materias, detalle fullscreen con pestañas.
+- Apuntes rich-text, materiales PDF, hitos, horarios.
+- Mentor IA por materia (`geminiService.queryAcademicOracle`).
+- Export dossier PDF.
+- Sync hitos → Google Calendar.
+
+**Documentación extendida:** `asignaturas.md`
+
+### 13.4 Calendario
+
+**Archivo:** `components/CalendarModule.tsx`
+
+- Vista mensual/semanal agregando: clases, hitos, eventos custom, transacciones, entradas diario.
+- OAuth Google Calendar (flujo web).
+- Export `.ics`.
+- Callback OAuth procesado en frontend.
+
+### 13.5 Enfoque (Pomodoro)
+
+**Archivos:** `components/FocusModule.tsx`, `FocusFloatingWidget.tsx`
+
+- Timer configurable, modo santuario.
+- Vinculación a asignatura.
+- Al completar → apunte "Cosecha de Enfoque" en materia.
+- Estado global en App (ver sección 7).
+
+### 13.6 Diario
+
+**Archivo:** `components/DiaryModule.tsx`
+
+- Moods: Radiante, Enfocada, Equilibrada, Agotada, Estresada.
+- Hasta 3 fotos por entrada (`photos[]`).
+- Búsqueda, PIN opcional.
+- Campo `blockId` para vincular con Vision Board.
+
+### 13.7 Vision Board
+
+**Directorio:** `components/vision-board/`
+
+| Componente | Rol |
+|------------|-----|
+| `VisionBoardModule.tsx` | Orquestador del módulo |
+| `BoardSelector.tsx` | Selector/CRUD tableros |
+| `VisionBoardGrid.tsx` | Grid 2 columnas |
+| `VisionBlock.tsx` | Bloque visual |
+| `BlockModal.tsx` | Edición bloque (checklist, links, imagen, mood tags) |
+| `ShareMenu.tsx` | Compartir con `share_token` |
+| `AchievementsChest.tsx` | Cofre logros al marcar "conseguido" |
+| `JournalLinkPanel.tsx` | Vincular/crear entradas diario |
+| `PublicVisionBoardPage.tsx` | Vista pública sin auth |
+| `utils.ts` | Helpers UI |
+
+**Reglas de negocio:**
+- Tier Free: máx. 3 tableros (trigger SQL).
+- Estados bloque: `en_proceso`, `conseguido`, `archivado`.
+- Colaboradores: `viewer` | `editor`.
+- Progreso calculado desde checklist.
+
+### 13.8 Balanza
+
+**Archivo:** `components/BalanzaModule.tsx`
+
+- Balanza Pro: métodos de pago, tags, recurrentes, pendientes/completados.
+- Reportes Excel (`xlsx`).
+- Análisis IA financiero.
+- Datos en `balanza_pro_transactions` (autocontenido en módulo, no en estado App principal).
+
+### 13.9 Nutrición
+
+**Archivos:** `components/NutritionModule.tsx`, `components/nutrition/*`
+
+- Registro por texto o foto → Gemini analiza macros.
+- Anillos macro (`MacroRing`), curva energía (`EnergyCurveChart`).
+- Correlaciones con sesiones focus.
+- Metas en `nutrition_goals`.
+
+### 13.10 Oráculo
+
+**Archivos:** `components/OraculoPage.tsx`, `OracleTextRenderer.tsx`
+
+- Chat con contexto SPC completo.
+- Tipos consulta: académica (por materia), personal, financiera.
+- Export PDF conversaciones.
+- Acceso fijo sidebar (no depende de activar módulo `ai`).
+
+### 13.11 Generador de Exámenes
+
+**Archivo:** `components/ExamGeneratorModule.tsx`
+
+- Selección materiales PDF de asignaturas.
+- Tipos: multiple-choice, true-false, open-ended, cloze, case-study.
+- Modos: real, guided.
+- Historial y resultados persistidos.
+
+### 13.12 Calculadora
+
+**Archivos:** `components/CalculatorModule.tsx`, `CalculatorFloatingWidget.tsx`
+
+- Científica: trig, log, memoria M1–M4, conversiones unidades.
+- Modo widget flotante desde cualquier vista.
+- Sonidos Howler configurables.
+
+### 13.13 Bazar
+
+**Archivo:** `components/BazarModule.tsx`
+
+**Artefactos `available`:** exam-generator, scientific-calculator, balanza, nutrition-macros
+
+**Artefactos `coming_soon`:** pdf-reader, cv-builder, privacy-lock, safety-companion, menstrual-cycle, sleep-tracker, outfit-organizer, focus-sounds, achievement-badges, study-community
+
+Activar artefacto → `toggleModule()` en App → persiste en `user_modules`.
+
+### 13.14 Perfil
+
+**Archivo:** `components/ProfileModule.tsx`
+
+- Datos académicos, avatar, moneda.
+- Gestión suscripción Stripe (checkout/portal).
+- Export JSON contexto (SPC).
+- Redirect post-pago `?session_id=`.
+
+### 13.15 Premium
+
+**Archivo:** `components/PremiumPage.tsx`
+
+- Landing beneficios Premium.
+- Producto Stripe: `prod_TpNYbWp1N8BZUH`, ~14,99€/mes.
+
+### 13.16 Páginas legales y docs
+
+- `PrivacyPolicy.tsx`, `TermsOfService.tsx`, `DocsPage.tsx` (documentación in-app por módulo).
+
+### 13.17 Onboarding
+
+**Archivo:** `components/OnboardingModal.tsx`
+
+- Se muestra si `profiles.onboarding_completed === false`.
+- Recopila etapa académica, intereses, referral source.
+
+---
+
+## 14. Flujos de usuario
+
+### Diagrama general
+
+```mermaid
+flowchart TD
+    START([Usuario visita app]) --> SHARE{¿/vision-board/share/token?}
+    SHARE -->|Sí| PV[PublicVisionBoardPage]
+    SHARE -->|No| AUTH{¿Sesión Supabase?}
+    AUTH -->|No| DASH[Dashboard Atanor]
+    AUTH -->|Sí| LOAD[Cargar perfil + módulos + asignaturas]
+    LOAD --> ONB{¿onboarding_completed?}
+    ONB -->|No| ONBM[OnboardingModal]
+    ONB -->|Sí| DASH2[Dashboard personalizado]
+    DASH --> MOD[Seleccionar módulo]
+    DASH2 --> MOD
+    MOD --> VIEW[Vista NavView]
+    VIEW --> LAZY[loadDataForView si necesario]
+```
+
+### Flujo autenticación
+
+1. Usuario abre modal login (desde nav, módulo protegido, o premium).
+2. Email/password o Google OAuth.
+3. `SIGNED_IN` → `loadAllData()` en background.
+4. Perfil auto-creado si no existe (OAuth Google).
+5. Opcional: modal PIN (activar security) o contraseña encriptación.
+
+### Flujo Premium
+
+1. Usuario en Perfil o `/premium` → "Suscribirse".
+2. `supabaseService.createCheckoutSession()` → Edge Function → redirect Stripe.
+3. Pago exitoso → redirect con `?session_id=`.
+4. App verifica con `verifyCheckoutSession` → `NavView.PAYMENT_SUCCESS`.
+5. Webhook Stripe actualiza `profiles` (tier, subscription_status, etc.).
+
+### Flujo Vision Board compartido
+
+1. Owner genera `share_token` → URL `/vision-board/share/{token}`.
+2. Visitante anónimo ve tablero público (solo lectura).
+3. RLS permite SELECT si `is_public = true` o token válido.
+
+### Flujo Google Calendar (web)
+
+1. Usuario conecta desde Calendario.
+2. Redirect a Google → callback en `window.location.origin`.
+3. `CalendarModule` procesa code, guarda tokens localStorage.
+4. Sync crea/actualiza eventos; tracking en Supabase.
+
+---
+
+## 15. Integraciones externas
+
+| Servicio | Uso | Dónde |
+|----------|-----|-------|
+| **Supabase Auth** | Login email + Google | Cliente |
+| **Supabase Postgres** | Toda persistencia | `supabaseService` |
+| **Supabase Storage** | Archivos/imágenes | `supabaseService.upload*` |
+| **Supabase Edge Functions** | Stripe checkout/portal/webhook/verify | Invocadas desde cliente con JWT |
+| **Google Gemini** | IA Oráculo, nutrición, exámenes | `api/gemini.js` |
+| **Google Calendar API** | Sync eventos | `googleCalendarService` + OAuth |
+| **Google OAuth** | Auth Supabase + Calendar | Ambos flujos |
+| **Stripe** | Suscripciones Premium | Edge Functions + webhooks |
+| **Vercel** | Hosting SPA + serverless API | `vercel.json` |
+| **Vercel Analytics** | Métricas | `@vercel/analytics` |
+
+### Edge Functions Supabase (no en repo)
+
+Inferidas de `package.json` y README:
+
+- `create-checkout-session`
+- `create-portal-session`
+- `stripe-webhook`
+- `verify-checkout-session` (referenciada en código)
+
+---
+
+## 16. Variables de entorno y configuración
+
+### Frontend (`VITE_*`)
+
+| Variable | Requerida | Uso |
+|----------|-----------|-----|
+| `VITE_SUPABASE_URL` | ✅ | Cliente Supabase |
+| `VITE_SUPABASE_ANON_KEY` | ✅ | Cliente Supabase |
+| `VITE_BACKEND_URL` | Dev | URL backend OAuth/Gemini en dev |
+| `VITE_GOOGLE_CLIENT_ID` | Legacy | Flujo calendar web (preferir backend) |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Opcional | README dice que Stripe es 100% backend |
+
+### Servidor / Vercel / Edge
+
+| Variable | Uso |
+|----------|-----|
+| `GEMINI_API_KEY` | `api/gemini.js` |
+| `GOOGLE_CLIENT_ID` | OAuth server |
+| `GOOGLE_CLIENT_SECRET` | OAuth server |
+| `GOOGLE_OAUTH_STATE_SECRET` | Firma state OAuth |
+| `SUPABASE_URL` / `VITE_SUPABASE_URL` | OAuth callback |
+| `SUPABASE_SERVICE_ROLE_KEY` | OAuth callback, webhooks |
+| `WEB_APP_URL` | Redirects OAuth |
+| `STRIPE_SECRET_KEY` | Edge Functions |
+| `STRIPE_WEBHOOK_SECRET` | Webhook |
+| `STRIPE_PRICE_ID` | Precio suscripción |
+
+### Archivos env
+
+- `.env.local` / `env.local` — gitignored via `*.local`
+- `vite.config.ts` lee `.env.local` manualmente para inyectar en plugin API dev
+
+### ⚠️ Seguridad
+
+- **No commitear** `.env.local` con claves live.
+- Existe riesgo histórico de `VITE_GOOGLE_CLIENT_SECRET` en variables cliente — **no debería estar en frontend**.
+- Debug ingest URLs en `vite.config.ts`, `api/gemini.js`, `supabaseService.ts` (createCheckoutSession) — eliminar en producción.
+
+---
+
+## 17. Documentación existente en el repo
+
+| Archivo | Contenido |
+|---------|-----------|
+| `README.md` | Producto, stack, Stripe setup, product ID |
+| `modificaciones.md` | OAuth Google server-side para móvil |
+| `colores.md` | Auditoría colorimetría día/noche (~447 líneas) |
+| `asignaturas.md` | Guía técnica completa módulo Asignaturas (~600 líneas) |
+| `components/DocsPage.tsx` | Docs in-app interactiva |
+| `metadata.json` | Permisos PWA cámara/micrófono |
+
+---
+
+## 18. Estado actual: implementado vs pendiente
+
+### ✅ Implementado y funcional
+
+- Todos los módulos listados en sección 13 excepto Social/Security standalone
+- Auth completa + onboarding
+- Encriptación opcional
+- Premium/Stripe
+- Vision Board con colaboración y share público
+- Cookie consent
+- Modo nocturno
+- Navegación configurable mobile/desktop
+- Drag & drop módulos dashboard
+
+### 🟡 Parcial / con gaps
+
+| Item | Gap |
+|------|-----|
+| Módulo `ai` en grid | Mapea a `NavView.AI` sin render → usar `ORACLE` |
+| Módulo `security` | PIN funciona en Diario; no hay vista Seguridad |
+| Módulo `social` | Definido pero sin UI |
+| Bazar | Solo 4 artefactos activos; resto coming_soon |
+| SQL migrations | Solo 24 en repo; esquema histórico no versionado |
+| Edge Functions | No en git |
+| Tests | Ninguno |
+| App móvil Expo | Referenciada pero no en repo |
+
+### ❌ No implementado (explícito en código/docs)
+
+- Social / Comunidad de estudio
+- Lector PDF Inteligente
+- Constructor CV
+- Bloqueo privacidad biométrico (PIN parcial existe)
+- Acompañante de seguridad / geolocalización
+- Calendario ciclo menstrual
+- Registro de sueño
+- Organizador outfits
+- Sonidos de enfoque
+- Insignias de logro globales (Vision Board tiene cofre propio)
+
+---
+
+## 19. Riesgos y deuda técnica
+
+### Alta prioridad
+
+1. **`App.tsx` monolítico (~2600 líneas)** — difícil mantener; todo estado y handlers CRUD centralizados.
+2. **`supabaseService.ts` monolítico (~3700 líneas)** — mismo problema.
+3. **Esquema DB no versionado** — solo `24_vision_board.sql`; riesgo al recrear entorno.
+4. **Bug NavView.AI** — Dashboard navega a vista inexistente.
+5. **Debug logging a localhost:7242** — en código de producción (gemini, stripe checkout).
+6. **Código legacy `hooks/components/`** — confusión para IAs/devs nuevos.
+
+### Media prioridad
+
+7. **StrictMode deshabilitado** — puede ocultar bugs React.
+8. **Tokens Google Calendar en localStorage** — no sincroniza entre dispositivos (flujo web).
+9. **Sin tests** — regresiones no detectadas.
+10. **Encriptación opt-in compleja** — migración manual, UX fricción.
+11. **`user: any`** en varios componentes — tipado laxo.
+12. **Tailwind content paths** — no incluye `hooks/` ni `vision-board/` explícitamente (funciona por glob en components).
+
+### Baja prioridad / estilo
+
+13. Duplicación iconos: SVG custom en `constants.tsx` + lucide-react instalado pero poco usado.
+14. `dist/` presente en workspace (build artifact).
+15. Import map CDN en `index.html` (verificar si redundante con Vite bundle).
+
+---
+
+## 20. Convenciones y patrones detectados
+
+### Código
+
+- **Idioma UI:** Español en toda la interfaz y prompts IA.
+- **Naming:** camelCase TS; snake_case en DB; mapeo manual en services.
+- **Componentes:** Functional components + hooks; props `isMobile`, `isNightMode` omnipresentes.
+- **Estilos:** Tailwind inline con colores hex literales + tokens en `tailwind.config.js`.
+- **Fuentes:** Marcellus (títulos/Cinzel alias), Inter (UI), EB Garamond (cuerpo elegante).
+- **Módulos:** ID string kebab-case (`vision-board`, `exam-generator`).
+- **Errores Supabase:** `Promise.allSettled` + warnings silenciosos si tabla no existe.
+
+### UX/Producto
+
+- Metáfora "Santuario/Oráculo/Atanor" en copy y prompts Gemini.
+- Módulos inactivos prominentes en dashboard (gamificación activación).
+- Widgets flotantes para Focus y Calculadora.
+- Premium tier en `profiles.tier`: `'Free' | 'Premium'`.
+
+### Git
+
+- `.gitignore`: `node_modules`, `dist`, `*.local`, `supabase/`, `.cursor/`
+
+### Deploy
+
+- Vercel para frontend + API routes en `/api/*`
+- Supabase CLI para Edge Functions
+- Node 20.x
+
+---
+
+## 21. Notas útiles para continuar el desarrollo
+
+### Arrancar localmente
+
+```bash
+cd studianta
+npm install
+# Crear .env.local con VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, GEMINI_API_KEY
+npm run dev   # http://localhost:3000
+```
+
+### Checklist para nuevo módulo
+
+1. Añadir entrada en `INITIAL_MODULES` (`constants.tsx`).
+2. Añadir valor en enum `NavView` (`types.ts`) si necesita vista propia.
+3. Añadir `case` en `renderView()` (`App.tsx`).
+4. Mapear en `Dashboard.tsx` (`moduleId → NavView`).
+5. Mapear en `Navigation.tsx` (desktop/mobile config).
+6. Crear componente en `components/`.
+7. Añadir métodos CRUD en `supabaseService.ts` + script SQL + RLS.
+8. Documentar sección en `DocsPage.tsx`.
+9. **No tocar** `hooks/components/`.
+
+### Fix rápido bug NavView.AI
+
+Opciones:
+- Cambiar mapa en `Dashboard.tsx`: `'ai': NavView.ORACLE`
+- O añadir `case NavView.AI: return <OraculoPage .../>`
+
+### Vision Board en Supabase nuevo
+
+Ejecutar `scripts/24_vision_board.sql` en SQL Editor.
+
+### Trabajar con IA (Gemini)
+
+- Siempre vía `geminiService` → nunca `@google/genai` en cliente.
+- En dev, Vite plugin intercepta `/api/gemini`.
+- En prod, Vercel ejecuta `api/gemini.js`.
+
+### Stripe
+
+- Secrets en Supabase Edge Functions, no en frontend.
+- Webhook URL: `https://[proyecto].supabase.co/functions/v1/stripe-webhook`
+- Ver README para eventos webhook requeridos.
+
+### Qué NO hacer
+
+- Importar desde `hooks/components/`.
+- Commitear `.env.local` o `supabase/` con secrets.
+- Asumir que scripts SQL 01–23 están en el repo.
+- Añadir React Router sin refactor grande (patrón actual es NavView stateful).
+
+---
+
+## 22. Ambigüedades y dudas abiertas
+
+| # | Dudas | Notas |
+|---|-------|-------|
+| 1 | ¿URL producción exacta? | No está hardcodeada; inferir de deploy Vercel |
+| 2 | ¿Estado app móvil Expo? | Referencias OAuth/deep link existen; código no está en repo |
+| 3 | ¿Esquema SQL completo? | Solo inferido del código + 1 script; pedir dump Supabase |
+| 4 | ¿Edge Functions source? | Carpeta gitignored; posiblemente solo en máquina dev / Supabase dashboard |
+| 5 | ¿`transactions` vs `balanza_pro_transactions`? | Coexisten; calendario usa simple, Balanza Pro es separado |
+| 6 | ¿Campo `monthly_budget` en profiles? | Usado en App pero no en interface `UserProfile` exportada (puede existir en DB) |
+| 7 | ¿Premium desbloquea qué exactamente? | Tier usado en Vision Board límite; otros gates Premium no auditados exhaustivamente |
+| 8 | ¿Import map en index.html? | Posible reliquia AI Studio; verificar necesidad |
+| 9 | ¿Nombre archivo doc? | Usuario pidió `STUDIANTA_contexto12junmd` (sin extensión `.md`) |
+
+---
+
+## 23. Referencias rápidas (tablas)
+
+### INITIAL_MODULES (resumen)
+
+| id | name | active default |
+|----|------|----------------|
+| subjects | Asignaturas | true |
+| calendar | Calendario | true |
+| focus | Enfoque | true |
+| diary | Diario | true |
+| vision-board | Vision Board | true |
+| balanza | Balanza | true |
+| ai | Oráculo | **false** |
+| profile | Perfil | true |
+| security | Seguridad | false |
+| social | Social | false |
+| bazar | Bazar | true |
+| scientific-calculator | Calculadora | false |
+| exam-generator | Generador de Exámenes | false |
+| nutrition | Nutrición | true |
+| dashboard-stats | Dashboard | true |
+
+### Tipos Gemini (`api/gemini.js`)
+
+| type | Entrada principal | Salida |
+|------|-------------------|--------|
+| academic | subjectName, prompt, context, studentProfileContext | text |
+| finance | budget, transactions | text |
+| personal | prompt, studentProfileContext, messageHistory | text |
+| nutrition-text | text | JSON analysis |
+| nutrition-photo | imageBase64 | JSON analysis |
+| exam-generation | subjectName, materialsText[], examType, questionCount, difficulty | exam JSON |
+
+### Paleta principal
+
+| Token | Hex | Uso |
+|-------|-----|-----|
+| sophisticated-pink | #E35B8F | Primary, CTAs |
+| gold | #D4AF37 | Acentos premium |
+| mauve | #8B5E75 | Intermedios |
+| plum | #4A233E | Texto principal |
+| border-pink | #F8C8DC | Bordes suaves |
+| rosy-bg | #FFF0F5 | Fondo día |
+| (night bg) | #1A1A2E | Fondo noche |
+
+Ver `colores.md` para auditoría completa.
+
+### Mapa de dependencias internas (simplificado)
+
+```mermaid
+graph LR
+    App --> Navigation
+    App --> Dashboard
+    App --> AllModules[components/*]
+    App --> supabaseService
+    App --> useInteractionAggregator
+    
+    SubjectsModule --> geminiService
+    SubjectsModule --> googleCalendarService
+    OraculoPage --> geminiService
+    OraculoPage --> useInteractionAggregator
+    
+    ExamGeneratorModule --> examService
+    examService --> geminiService
+    examService --> pdfTextExtractor
+    
+    NutritionModule --> geminiService
+    CalendarModule --> googleCalendarService
+    
+    VisionBoardModule --> supabaseService
+    ProfileModule --> supabaseService
+    
+    AllModules --> constants
+    AllModules --> types
+```
+
+---
+
+## Apéndice: comandos útiles
+
+```bash
+# Desarrollo
+npm run dev
+
+# Build producción
+npm run build
+npm run preview
+
+# Deploy Edge Functions Stripe
+npm run deploy:all
+
+# Buscar código legacy (no usar)
+ls hooks/components/
+
+# Ver estructura componentes activos
+ls components/
+ls components/vision-board/
+```
+
+---
+
+*Fin del documento de contexto Studianta — generado por análisis estático del codebase el 12/06/2026.*
